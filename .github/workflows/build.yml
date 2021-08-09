@@ -1,0 +1,58 @@
+name: Build
+
+on: [push]
+
+jobs:
+  upload-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-linux-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: renkit
+      - name: Create Release
+        uses: softprops/action-gh-release@v0.1.7
+        with:
+          files: '*.zip'
+
+  build-linux-windows:
+    runs-on: ubuntu-latest
+    container: nimlang/nim
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Project
+        run: |
+          apt-get install -y mingw-w64 zip
+          nimble build_all_windows
+          nimble build_all_linux
+      - name: Zip Artifacts
+        run: |
+          zip -j renkit-windows.zip bin/windows/*
+          zip -j renkit-linux.zip bin/linux/*
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: renkit
+          path: '*.zip'
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Nim
+        run: |
+          brew install nim
+      - name: Build Project
+        run: |
+          nimble build_all_macos
+      - name: Zip Artifacts
+        run: |
+          zip -j renkit-macos.zip bin/macos/*
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: renkit
+          path: '*.zip'

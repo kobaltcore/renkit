@@ -1,0 +1,44 @@
+import strformat
+
+# Package
+
+version = "0.1.0"
+author = "kobaltcore"
+description = "A collection of tools to help you organise and use Ren'Py instances from the command line. Especially useful for headless servers."
+license = "MIT"
+srcDir = "src"
+bin = @["renutil", "renconstruct"]
+
+# Dependencies
+
+requires "nim >= 1.4.8"
+requires "zippy >= 0.6.2"
+requires "cligen >= 1.5.9"
+requires "parsetoml >= 0.6.0"
+
+# Tasks
+
+task renutil, "Executes 'nimble run' with extra compiler options.":
+  let args = join(commandLineParams[3..^1], " ")
+  exec(&"nimble -d:ssl --gc:orc run renutil {args}")
+
+task renconstruct, "Executes 'nimble run' with extra compiler options.":
+  let args = join(commandLineParams[3..^1], " ")
+  exec(&"nimble -d:ssl --gc:orc run renconstruct {args}")
+
+task build_all_macos, "Executes 'nimble build' with extra compiler options.":
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:macosx -y")
+  exec("strip renutil renconstruct")
+  exec("mkdir -p bin/macos")
+  exec("mv renutil bin/macos && mv renconstruct bin/macos")
+
+task build_all_windows, "Executes 'nimble build' with extra compiler options.":
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger -d:mingw -y")
+  exec("mkdir -p bin/windows")
+  exec("mv renutil.exe bin/windows && mv renconstruct.exe bin/windows")
+
+task build_all_linux, "Executes 'nimble build' with extra compiler options.":
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:linux -y")
+  exec("strip renutil renconstruct")
+  exec("mkdir -p bin/linux")
+  exec("mv renutil bin/linux && mv renconstruct bin/linux")
