@@ -39,7 +39,7 @@ task build_all_macos, "Executes 'nimble build' with extra compiler options.":
 task build_all_windows, "Executes 'nimble build' with extra compiler options.":
   exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger -d:mingw -y")
   exec("mkdir -p bin/windows")
-  exec("mv renutil.exe bin/windows && mv renotize bin/windows && mv renconstruct.exe bin/windows")
+  exec("mv renutil.exe bin/windows && mv renotize.exe bin/windows && mv renconstruct.exe bin/windows")
 
 task build_all_linux, "Executes 'nimble build' with extra compiler options.":
   exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:linux -y")

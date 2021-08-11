@@ -240,3 +240,6 @@ nimbledeps/
 renutil
 renotize
 renconstruct
+renutil.exe
+renotize.exe
+renconstruct.exe
