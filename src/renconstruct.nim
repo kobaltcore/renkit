@@ -113,10 +113,18 @@ proc build*(
       quit(1)
 
   var platforms_to_build: seq[string]
-  if config["build"]["pc"].getBool():
+  if "pc" in config["build"] and config["build"]["pc"].getBool():
     platforms_to_build.add("pc")
-  if config["build"]["mac"].getBool():
+  if "mac" in config["build"] and config["build"]["mac"].getBool():
     platforms_to_build.add("mac")
+  if "win" in config["build"] and config["build"]["win"].getBool():
+    platforms_to_build.add("win")
+  if "market" in config["build"] and config["build"]["market"].getBool():
+    platforms_to_build.add("market")
+  if "steam" in config["build"] and config["build"]["steam"].getBool():
+    platforms_to_build.add("steam")
+  if "web" in config["build"] and config["build"]["web"].getBool():
+    platforms_to_build.add("web")
 
   if len(platforms_to_build) > 0:
     var cmd = &"distribute {input_dir} --destination {output_dir}"
