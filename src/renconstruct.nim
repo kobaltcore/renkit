@@ -64,7 +64,7 @@ proc build*(
     renutil_target_version = list_available()[0]
 
   if not (renutil_target_version in list_installed(registry_path)):
-    echo(&"Installing Renpy {renutil_target_version}")
+    echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
 
   let keystore_path = joinPath(
@@ -73,6 +73,7 @@ proc build*(
     "rapt",
     "android.keystore"
   )
+
   let keystore_path_backup = joinPath(
     registry_path,
     renutil_target_version,
@@ -82,28 +83,20 @@ proc build*(
 
   if config["tasks"]["keystore"].getBool():
     var keystore = getEnv("RC_KEYSTORE")
+
     if keystore == "":
       keystore = config["task_keystore"]["keystore"].getStr()
+
     if keystore == "":
       echo("Keystore override was requested, but no keystore could be found.")
       quit(1)
+
     if not fileExists(keystore_path_backup):
       moveFile(keystore_path, keystore_path_backup)
+
     let stream_out = newFileStream(keystore_path, fmWrite)
     stream_out.write(decode(keystore))
     stream_out.close()
-
-  # setCurrentDir("tasks")
-
-  # let pysys = pyImport("sys")
-  # echo pysys.version
-  # echo pysys.path
-
-  # let clean = pyImport("tasks.clean")
-  # echo clean
-  # echo "Current dir is: ", os.getcwd().to(string)
-
-  # return
 
   if config["build"]["android"].getBool():
     echo("Building Android package.")
@@ -130,8 +123,8 @@ proc build*(
     for package in platforms_to_build:
       cmd = cmd & &" --package {package}"
     let joined_packages = join(platforms_to_build, ", ")
+
     echo(&"Building {joined_packages} packages.")
-    echo cmd
     try:
       launch(
         renutil_target_version,
@@ -144,11 +137,11 @@ proc build*(
       echo("Aborted.")
       quit(1)
 
-  if config["tasks"]["clean"].getBool():
-    task_post_clean(renutil_target_version, registry_path, output_dir)
-
   if config["tasks"]["notarize"].getBool():
     task_post_notarize()
+
+  if config["tasks"]["clean"].getBool():
+    task_post_clean(renutil_target_version, registry_path, output_dir)
 
   if config["tasks"]["keystore"].getBool() and fileExists(keystore_path_backup):
     moveFile(keystore_path_backup, keystore_path)
