@@ -185,6 +185,12 @@ proc install*(
     &"renpy-{version}-rapt.zip"
   )
 
+  let web_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-web.zip"
+  let web_file = joinPath(
+    registry_path,
+    &"renpy-{version}-web.zip"
+  )
+
   proc onProgressChanged(total, progress, speed: BiggestInt) =
     let prog = int((int(progress) / int(total)) * 100)
     echo &"{prog}% @ {int(speed) / 1_000_000:.2f}Mb/s"
@@ -198,6 +204,14 @@ proc install*(
   except KeyboardInterrupt:
     echo "Aborted, cleaning up."
     removeFile(rapt_file)
+    quit(1)
+
+  try:
+    echo "Downloading Web"
+    client.downloadFile(web_url, web_file)
+  except KeyboardInterrupt:
+    echo "Aborted, cleaning up."
+    removeFile(web_file)
     quit(1)
 
   try:
@@ -215,6 +229,15 @@ proc install*(
   moveDir(
     joinPath(registry_path, "extracted", &"renpy-{version}-sdk"),
     joinPath(registry_path, version)
+  )
+
+  removeDir(joinPath(registry_path, "extracted"))
+
+  extractAll(web_file, joinPath(registry_path, "extracted"))
+
+  moveDir(
+    joinPath(registry_path, "extracted", "web"),
+    joinPath(registry_path, version, "web")
   )
 
   removeDir(joinPath(registry_path, "extracted"))
