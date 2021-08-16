@@ -45,10 +45,10 @@ proc is_installed*(version: string, registry: string): bool =
   return list_installed(registry).contains(version)
 
 proc list_available*(): seq[string] =
-  var client = newHttpClient()
-  let html = parseHtml(client.getContent("https://www.renpy.org/dl"))
-
   var versions: seq[string]
+
+  let client = newHttpClient()
+  let html = parseHtml(client.getContent("https://www.renpy.org/dl"))
 
   for a in html.findAll("a"):
     if not a.attrs.hasKey("href"):
@@ -66,7 +66,7 @@ proc list_available*(): seq[string] =
   return sorted(versions, Descending)
 
 proc list*(n = 0, all = false, registry = "") =
-  ## List all available versions of Ren'Py.
+  ## List all available versions of Ren'Py, either local or remote.
   var versions: seq[string]
 
   var limit = n - 1
@@ -82,12 +82,12 @@ proc list*(n = 0, all = false, registry = "") =
     limit = high(versions)
 
   for version in versions[..limit]:
-    echo(version)
+    echo version
 
 proc get_exe*(version: string, registry: string): (string, string) =
   var
     arch: string
-    exe: string
+    exe = "python"
 
   if hostOS == "windows":
     if hostCPU == "amd64":
@@ -100,13 +100,11 @@ proc get_exe*(version: string, registry: string): (string, string) =
       arch = "linux-x86_64"
     else:
       arch = "linux-i686"
-    exe = "python"
   elif hostOS == "macosx":
     if version < "7.4":
       arch = "darwin-x86_64"
     else:
       arch = "mac-x86_64"
-    exe = "python"
 
   let python = joinPath(registry, version, "lib", arch, exe)
   let base_file = joinPath(registry, version, "renpy.py")
@@ -116,30 +114,31 @@ proc show*(version: string, registry = "") =
   ## Show information about a specific version of Ren'Py.
   let registry_path = get_registry(registry)
 
-  echo(&"Version: {version}")
+  echo &"Version: {version}"
   if is_installed(version, registry_path):
     let (python, base_file) = get_exe(version, registry_path)
-    echo("Installed: Yes")
-    echo(&"Location: {joinPath(registry_path, version)}")
-    echo(&"Architecture: {splitPath(splitPath(python)[0])[1]}")
+    echo "Installed: Yes"
+    echo &"Location: {joinPath(registry_path, version)}"
+    echo &"Architecture: {splitPath(splitPath(python)[0])[1]}"
   else:
-    echo("Installed: No")
-  echo(&"SDK URL: https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip")
-  echo(&"RAPT URL: https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip")
+    echo "Installed: No"
+  echo &"SDK URL: https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip"
+  echo &"RAPT URL: https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip"
 
 proc launch*(
   version: string,
-  no_headless = false,
+  headless = false,
   direct = false,
   args = "",
   registry = ""
 ) =
   ## Launch the given version of Ren'Py.
   var cmd: string
+
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
-    echo(&"{version} is not installed.")
+    echo &"{version} is not installed."
     quit(1)
 
   let (python, base_file) = get_exe(version, registry_path)
@@ -151,7 +150,7 @@ proc launch*(
     let launcher_path = joinPath(registry_path, version, "launcher")
     cmd = &"{base_cmd} {launcher_path} {args}"
 
-  if not no_headless:
+  if headless:
     putEnv("SDL_AUDIODRIVER", "dummy")
     putEnv("SDL_VIDEODRIVER", "dummy")
 
@@ -165,8 +164,9 @@ proc install*(
 ) =
   ## Install the given version of Ren'Py.
   let registry_path = get_registry(registry)
+
   if is_installed(version, registry_path) and not force:
-    echo(&"{version} is already installed.")
+    echo &"{version} is already installed."
     quit(1)
 
   let target_dir = joinPath(registry_path, version)
@@ -187,41 +187,52 @@ proc install*(
 
   proc onProgressChanged(total, progress, speed: BiggestInt) =
     let prog = int((int(progress) / int(total)) * 100)
-    echo(&"{prog}% @ {int(speed) / 1000000:.2f}Mb/s")
+    echo &"{prog}% @ {int(speed) / 1_000_000:.2f}Mb/s"
 
-  var client = newHttpClient()
+  let client = newHttpClient()
   client.onProgressChanged = onProgressChanged
 
   try:
-    echo("Downloading RAPT")
+    echo "Downloading RAPT"
     client.downloadFile(rapt_url, rapt_file)
   except KeyboardInterrupt:
-    echo("Aborted, cleaning up.")
+    echo "Aborted, cleaning up."
     removeFile(rapt_file)
     quit(1)
 
   try:
-    echo("Downloading Ren'Py")
+    echo "Downloading Ren'Py"
     client.downloadFile(sdk_url, sdk_file)
   except KeyboardInterrupt:
-    echo("Aborted, cleaning up.")
+    echo "Aborted, cleaning up."
     removeFile(sdk_file)
     removeFile(rapt_file)
     quit(1)
 
-  extractAll(sdk_file, registry_path)
+  echo "Extracting"
+  extractAll(sdk_file, joinPath(registry_path, "extracted"))
 
   moveDir(
-    joinPath(registry_path, &"renpy-{version}-sdk"),
+    joinPath(registry_path, "extracted", &"renpy-{version}-sdk"),
     joinPath(registry_path, version)
   )
 
-  extractAll(rapt_file, joinPath(registry_path, version))
+  removeDir(joinPath(registry_path, "extracted"))
+
+  extractAll(rapt_file, joinPath(registry_path, "extracted"))
+
+  moveDir(
+    joinPath(registry_path, "extracted", "rapt"),
+    joinPath(registry_path, version, "rapt")
+  )
+
+  removeDir(joinPath(registry_path, "extracted"))
 
   if not no_cleanup:
     removeFile(sdk_file)
     removeFile(rapt_file)
 
+  echo "Setting up permissions"
   let (python, base_file) = get_exe(version, registry_path)
 
   var paths: array[0..6, string]
@@ -253,15 +264,16 @@ proc install*(
   setCurrentDir(joinPath(registry_path, version, "rapt"))
 
   if not fileExists("android.keystore"):
-    echo("Generating Keystore")
+    echo "Generating Keystore"
     let java_home = getEnv("JAVA_HOME")
     if java_home == "":
-      echo("JAVA_HOME is empty. Please check if you need to install OpenJDK 8.")
+      echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
       quit(1)
     let keytool_path = joinPath(java_home, "bin", "keytool")
     let dname = "renutil"
     discard execProcess(&"{keytool_path} -genkey -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
+  echo "Preparing RAPT"
   let interface_file_source = joinPath(target_dir, "rapt", "buildlib", "rapt", "interface.py")
   let interface_file_target = joinPath(target_dir, "rapt", "buildlib", "rapt", "interface.py.new")
 
@@ -290,18 +302,18 @@ proc install*(
 
   # TODO: tweak gradle.properties RAM allocation
 
-  echo("Installing RAPT")
+  echo "Installing RAPT"
   putEnv("RAPT_NO_TERMS", "1")
   let output = execProcess(&"{python} -EO android.py installsdk")
 
   setCurrentDir(original_dir)
 
 proc cleanup*(version: string, registry = "") =
-  ## Cleans up temporary directory for the given version of Ren'Py.
+  ## Cleans up temporary directories for the given version of Ren'Py.
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
-    echo(&"{version} is not installed.")
+    echo &"{version} is not installed."
     quit(1)
 
   let paths = [
@@ -315,16 +327,17 @@ proc cleanup*(version: string, registry = "") =
       "src", "main", "assets"
     ),
   ]
+
   for path in paths:
     if dirExists(path):
       removeDir(path)
 
-proc remove*(version: string, registry = "") =
+proc uninstall*(version: string, registry = "") =
   ## Uninstalls the given version of Ren'Py.
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
-    echo(&"{version} is not installed.")
+    echo &"{version} is not installed."
     quit(1)
 
   removeDir(joinPath(registry_path, version))
@@ -342,7 +355,7 @@ when isMainModule:
     }],
     [launch, help = {
         "version": "The version to launch.",
-        "no-headless": "If given, enables audio drivers for desktop operation.",
+        "headless": "If given, disables audio and video drivers for headless operation.",
         "direct": "If given, invokes Ren'Py directly without the launcher project.",
         "args": "The arguments to forward to Ren'Py.",
         "registry": "The registry to use. Defaults to ~/.renutil",
@@ -356,7 +369,7 @@ when isMainModule:
         "version": "The version to clean up.",
         "registry": "The registry to use. Defaults to ~/.renutil",
     }],
-    [remove, help = {
+    [uninstall, help = {
         "version": "The version to uninstall.",
         "registry": "The registry to use. Defaults to ~/.renutil",
     }],
