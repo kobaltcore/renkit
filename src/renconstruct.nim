@@ -1,5 +1,4 @@
 import os
-# import osproc
 import base64
 import system
 import cligen
@@ -7,13 +6,6 @@ import streams
 import strutils
 import strformat
 import parsetoml
-
-# import nimpy
-# import nimpy / py_lib
-
-# pyInitLibPath("/usr/local/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/lib/libpython3.9.dylib")
-# pyInitLibPath(execProcess("which python").strip())
-# pyInitLibPath(execProcess("python -c 'from distutils import sysconfig; print(sysconfig.get_config_var(\"LIBDIR\"))' | xargs -I{} find {} -name \"libpython*\" -maxdepth 1").strip())
 
 import renutil
 
@@ -40,7 +32,7 @@ proc task_post_notarize() =
   # run renotize
   discard
 
-proc build(
+proc build*(
   input_dir: string,
   output_dir: string,
   config: string,
@@ -164,7 +156,7 @@ proc build(
 when isMainModule:
   dispatchMulti(
     [build, help = {
-        "input_dir": "The Ren'Py project to build",
+        "input_dir": "The Ren'Py project to build.",
         "output_dir": "The directory to output distributions to.",
         "config": "The configuration file to use.",
         "registry": "The registry to use. Defaults to ~/.renutil",
