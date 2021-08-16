@@ -16,7 +16,7 @@ proc handler() {.noconv.} =
 
 setControlCHook(handler)
 
-proc unpack_app(input_file: string, output_dir = "") =
+proc unpack_app*(input_file: string, output_dir = "") =
   var target_dir = output_dir
   if target_dir != "" and dirExists(target_dir):
     removeDir(target_dir)
@@ -24,7 +24,7 @@ proc unpack_app(input_file: string, output_dir = "") =
     target_dir = splitPath(input_file)[0]
   extractAll(input_file, target_dir)
 
-proc sign_app(input_file: string, identity: string) =
+proc sign_app*(input_file: string, identity: string) =
   let entitlements = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"""
 
   let cmd = &"codesign --entitlements=entitlements.plist --options=runtime --timestamp -s '{identity}' -f --deep --no-strict {input_file}"
@@ -32,7 +32,7 @@ proc sign_app(input_file: string, identity: string) =
 
   removeFile("entitlements.plist")
 
-proc notarize_app(
+proc notarize_app*(
   input_file: string,
   bundle_id: string,
   apple_id: string,
@@ -58,11 +58,11 @@ proc notarize_app(
 
   return uuid
 
-proc staple_app(input_file: string) =
+proc staple_app*(input_file: string) =
   let cmd = &"xcrun stapler staple {input_file}"
   discard execShellCmd(cmd)
 
-proc pack_dmg(
+proc pack_dmg*(
   input_file: string,
   output_file: string,
   volume_name = "",
@@ -70,11 +70,11 @@ proc pack_dmg(
   let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {volume_name} -srcfolder {input_file} {output_file}"
   discard execShellCmd(cmd)
 
-proc sign_dmg(input_file: string, identity: string) =
+proc sign_dmg*(input_file: string, identity: string) =
   let cmd = &"codesign --timestamp -s {identity} -f {input_file}"
   discard execShellCmd(cmd)
 
-proc notarize_dmg(
+proc notarize_dmg*(
   input_file: string,
   bundle_id: string,
   apple_id: string,
@@ -96,11 +96,11 @@ proc notarize_dmg(
 
   return uuid
 
-proc staple_dmg(input_file: string) =
+proc staple_dmg*(input_file: string) =
   let cmd = &"xcrun stapler staple {input_file}"
   discard execShellCmd(cmd)
 
-proc status(
+proc status*(
   uuid: string,
   apple_id: string,
   password: string,
@@ -115,7 +115,7 @@ proc status(
 
   return status
 
-proc full_run(input_file: string, config: string) =
+proc full_run*(input_file: string, config: string) =
   var
     uuid: string
     status: string
