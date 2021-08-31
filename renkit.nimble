@@ -31,18 +31,13 @@ task renconstruct, "Executes 'nimble run' with extra compiler options.":
   exec(&"nimble -d:ssl --gc:orc run renconstruct {args}")
 
 task build_all_macos, "Executes 'nimble build' with extra compiler options.":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:macosx -y")
-  exec("strip renutil renotize renconstruct")
-  exec("mkdir -p bin/macos")
-  exec("mv renutil bin/macos && mv renotize bin/macos && mv renconstruct bin/macos")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:macosx -d:strip -y")
+  exec("mkdir -p bin/macos && mv renutil bin/macos && mv renotize bin/macos && mv renconstruct bin/macos")
 
 task build_all_windows, "Executes 'nimble build' with extra compiler options.":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger -d:mingw -y")
-  exec("mkdir -p bin/windows")
-  exec("mv renutil.exe bin/windows && mv renotize.exe bin/windows && mv renconstruct.exe bin/windows")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger -d:mingw -d:strip -y")
+  exec("mkdir -p bin/windows && mv renutil.exe bin/windows && mv renotize.exe bin/windows && mv renconstruct.exe bin/windows")
 
 task build_all_linux, "Executes 'nimble build' with extra compiler options.":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:linux -y")
-  exec("strip renutil renconstruct")
-  exec("mkdir -p bin/linux")
-  exec("mv renutil bin/linux && mv renotize bin/linux && mv renconstruct bin/linux")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:danger --os:linux -d:strip -y")
+  exec("mkdir -p bin/linux && mv renutil bin/linux && mv renotize bin/linux && mv renconstruct bin/linux")
