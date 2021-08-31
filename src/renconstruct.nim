@@ -105,32 +105,35 @@ proc build*(
     stream_out.write(decode(keystore))
     stream_out.close()
 
-  if config["tasks"]["manifest"].getBool():
-    if config["task_manifest"]["legacy_storage"].getBool():
-      let data = loadXml(
-        joinPath(
-          registry_path,
-          renutil_target_version,
-          "rapt",
-          "templates",
-          "app-AndroidManifest.xml"
-        ),
-      )
-      let application_tag = data.findAll("application")[0]
+  # update manifest file
+  let data = loadXml(
+    joinPath(
+      registry_path,
+      renutil_target_version,
+      "rapt",
+      "templates",
+      "app-AndroidManifest.xml"
+    ),
+  )
+  let application_tag = data.findAll("application")[0]
 
-      let dict: StringTableRef = application_tag.attrs
-      dict["android:requestLegacyExternalStorage"] = "true"
+  let dict: StringTableRef = application_tag.attrs
+  if config["tasks"]["manifest"].getBool() and
+    config["task_manifest"]["legacy_storage"].getBool():
+    dict["android:requestLegacyExternalStorage"] = "true"
+  else:
+    dict["android:requestLegacyExternalStorage"] = "false"
 
-      var kv_list = newSeq[kv_tuple]()
-      for k, v in dict:
-        kv_list.add((k, v))
+  var kv_list = newSeq[kv_tuple]()
+  for k, v in dict:
+    kv_list.add((k, v))
 
-      application_tag.attrs = kv_list.toXmlAttributes
+  application_tag.attrs = kv_list.toXmlAttributes
 
-      let f = open("out.xml", fmWrite)
-      f.write("""<?xml version="1.0" encoding="utf-8"?>""")
-      f.write($data)
-      f.close()
+  let f = open("out.xml", fmWrite)
+  f.write("""<?xml version="1.0" encoding="utf-8"?>""")
+  f.write($data)
+  f.close()
 
   if config["build"]["android"].getBool():
     echo("Building Android package.")
