@@ -78,5 +78,64 @@ where subcommand syntaxes are as follows:
 ## renotize
 
 ```bash
+Usage is like:
+    renotize {SUBCMD} [subcommand-opts & args]
+where subcommand syntaxes are as follows:
 
+  unpack_app [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      -o=, --output-dir=  string  ""        set output_dir
+
+  sign_app [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      --identity=         string  REQUIRED  set identity
+
+  notarize_app [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      -b=, --bundle-id=   string  REQUIRED  set bundle_id
+      -a=, --apple-id=    string  REQUIRED  set apple_id
+      -p=, --password=    string  REQUIRED  set password
+      --altool-extra=     string  ""        set altool_extra
+
+  staple_app [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+
+  pack_dmg [required&optional-params]
+  Options:
+      -i=, --input-file=   string  REQUIRED  set input_file
+      -o=, --output-file=  string  REQUIRED  set output_file
+      -v=, --volume-name=  string  ""        set volume_name
+
+  sign_dmg [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      --identity=         string  REQUIRED  set identity
+
+  notarize_dmg [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      -b=, --bundle-id=   string  REQUIRED  set bundle_id
+      -a=, --apple-id=    string  REQUIRED  set apple_id
+      -p=, --password=    string  REQUIRED  set password
+      --altool-extra=     string  ""        set altool_extra
+
+  staple_dmg [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+
+  status [required&optional-params]
+  Options:
+      -u=, --uuid=      string  REQUIRED  set uuid
+      -a=, --apple-id=  string  REQUIRED  set apple_id
+      -p=, --password=  string  REQUIRED  set password
+      --altool-extra=   string  ""        set altool_extra
+
+  full_run [required&optional-params]
+  Options:
+      -i=, --input-file=  string  REQUIRED  set input_file
+      -c=, --config=      string  REQUIRED  set config
 ```
