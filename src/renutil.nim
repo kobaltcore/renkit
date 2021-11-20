@@ -81,7 +81,7 @@ proc list*(n = 0, all = false, registry = "") =
   if limit < 0 or limit > high(versions):
     limit = high(versions)
 
-  for version in versions[..limit]:
+  for version in versions[0..limit]:
     echo version
 
 proc get_exe*(version: string, registry: string): (string, string) =
