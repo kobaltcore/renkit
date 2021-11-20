@@ -18,6 +18,9 @@ requires "parsetoml >= 0.6.0"
 
 # Tasks
 
+task gendoc, "Generates documentation for this project":
+  exec("nimble doc --outdir:docs --project src/*.nim")
+
 task renutil, "Executes 'nimble run' with extra compiler options.":
   let args = join(commandLineParams[3..^1], " ")
   exec(&"nimble -d:ssl --gc:orc run renutil {args}")
