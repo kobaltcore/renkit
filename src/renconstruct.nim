@@ -106,15 +106,15 @@ proc build*(
     stream_out.close()
 
   # update manifest file
-  let data = loadXml(
-    joinPath(
-      registry_path,
-      renutil_target_version,
-      "rapt",
-      "templates",
-      "app-AndroidManifest.xml"
-    ),
+  discard """
+  let manifest_path = joinPath(
+    registry_path,
+    renutil_target_version,
+    "rapt",
+    "templates",
+    "app-AndroidManifest.xml",
   )
+  let data = loadXml(manifest_path)
   let application_tag = data.findAll("application")[0]
 
   let dict: StringTableRef = application_tag.attrs
@@ -130,10 +130,11 @@ proc build*(
 
   application_tag.attrs = kv_list.toXmlAttributes
 
-  let f = open("out.xml", fmWrite)
-  f.write("""<?xml version="1.0" encoding="utf-8"?>""")
+  let f = open(manifest_path, fmWrite)
+  f.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
   f.write($data)
   f.close()
+  """
 
   if config["build"]["android"].getBool():
     echo("Building Android package.")
