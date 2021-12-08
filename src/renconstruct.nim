@@ -24,13 +24,19 @@ setControlCHook(handler)
 type
   kv_tuple = tuple[key, val: string]
 
-proc task_post_clean(version: string, registry: string, output_dir: string) =
+proc task_post_clean(
+  version: string,
+  version_semver: Version,
+  registry: string,
+  output_dir: string
+) =
   cleanup(version, registry)
   for kind, path in walkDir(output_dir):
     if kind != pcFile:
       continue
-    if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
-      removeFile(path)
+    if version_semver < newVersion(7, 4, 9):
+      if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
+        removeFile(path)
 
 proc task_pre_keystore() =
   # overwrite keystore file with the one from config.toml
@@ -180,12 +186,12 @@ proc build*(
     config["build"]["android"].getBool(): # for backwards-compatibility with older config files
     echo("Building Android APK package.")
     try:
-      if renutil_target_version_semver >= newVersion(7, 4, 11):
+      if renutil_target_version_semver >= newVersion(7, 4, 9):
         launch(
           renutil_target_version,
           false,
           false,
-          &"android_build {input_dir} --destination {output_dir}",
+          &"android_build {input_dir} --dest {absolutePath(output_dir)}",
           registry_path
         )
       else:
@@ -193,7 +199,7 @@ proc build*(
           renutil_target_version,
           false,
           false,
-          &"android_build {input_dir} assembleRelease --destination {output_dir}",
+          &"android_build {input_dir} assembleRelease --dest {absolutePath(output_dir)}",
           registry_path
         )
     except KeyboardInterrupt:
@@ -203,16 +209,16 @@ proc build*(
   if config["build"]["android_aab"].getBool():
     echo("Building Android AAB package.")
     try:
-      if renutil_target_version_semver >= newVersion(7, 4, 11):
+      if renutil_target_version_semver >= newVersion(7, 4, 9):
         launch(
           renutil_target_version,
           false,
           false,
-          &"android_build {input_dir} --bundle --destination {output_dir}",
+          &"android_build {input_dir} --bundle --dest {absolutePath(output_dir)}",
           registry_path
         )
       else:
-        echo "Not supported for Ren'Py versions <7.4.11"
+        echo "Not supported for Ren'Py versions <7.4.9"
         quit(1)
     except KeyboardInterrupt:
       echo("Aborted.")
@@ -233,7 +239,7 @@ proc build*(
     platforms_to_build.add("web")
 
   if len(platforms_to_build) > 0:
-    var cmd = &"distribute {input_dir} --destination {output_dir}"
+    var cmd = &"distribute {input_dir} --destination {absolutePath(output_dir)}"
     for package in platforms_to_build:
       cmd = cmd & &" --package {package}"
     let joined_packages = join(platforms_to_build, ", ")
@@ -255,7 +261,12 @@ proc build*(
     task_post_notarize()
 
   if config["tasks"]["clean"].getBool():
-    task_post_clean(renutil_target_version, registry_path, output_dir)
+    task_post_clean(
+      renutil_target_version,
+      renutil_target_version_semver,
+      registry_path,
+      output_dir
+    )
 
   if config["tasks"]["keystore"].getBool() and fileExists(keystore_path_backup):
     moveFile(keystore_path_backup, keystore_path)
