@@ -288,7 +288,7 @@ proc install*(
   setCurrentDir(joinPath(registry_path, version, "rapt"))
 
   if not fileExists("android.keystore"):
-    echo "Generating Keystore"
+    echo "Generating Application Keystore"
     let java_home = getEnv("JAVA_HOME")
     if java_home == "":
       echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
@@ -296,6 +296,16 @@ proc install*(
     let keytool_path = joinPath(java_home, "bin", "keytool")
     let dname = "renutil"
     discard execProcess(&"{keytool_path} -genkey -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
+
+  if not fileExists("bundle.keystore"):
+    echo "Generating Bundle Keystore"
+    let java_home = getEnv("JAVA_HOME")
+    if java_home == "":
+      echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
+      quit(1)
+    let keytool_path = joinPath(java_home, "bin", "keytool")
+    let dname = "renutil"
+    discard execProcess(&"{keytool_path} -genkey -keystore bundle.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
   echo "Preparing RAPT"
   let interface_file_source = joinPath(target_dir, "rapt", "buildlib", "rapt", "interface.py")
