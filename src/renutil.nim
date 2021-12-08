@@ -252,6 +252,7 @@ proc install*(
   removeDir(joinPath(registry_path, "extracted"))
 
   if not no_cleanup:
+    removeFile(web_file)
     removeFile(sdk_file)
     removeFile(rapt_file)
 
