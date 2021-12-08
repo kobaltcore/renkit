@@ -92,13 +92,18 @@ proc build*(
   )
 
   if config["tasks"]["keystore"].getBool():
-    var keystore = getEnv("RC_KEYSTORE")
+    var keystore = getEnv(
+      "RC_KEYSTORE_APK",
+      getEnv("RC_KEYSTORE"), # for backwards-compatibility
+    )
 
+    if keystore == "":
+      keystore = config["task_keystore"]["keystore_apk"].getStr()
     if keystore == "":
       keystore = config["task_keystore"]["keystore"].getStr()
 
     if keystore == "":
-      echo("Keystore override was requested, but no keystore could be found.")
+      echo("Keystore override was requested, but no APK keystore could be found.")
       quit(1)
 
     if not fileExists(keystore_path_backup):
@@ -107,6 +112,38 @@ proc build*(
     let stream_out = newFileStream(keystore_path, fmWrite)
     stream_out.write(decode(keystore))
     stream_out.close()
+
+  let keystore_bundle_path = joinPath(
+    registry_path,
+    renutil_target_version,
+    "rapt",
+    "bundle.keystore"
+  )
+
+  let keystore_bundle_path_backup = joinPath(
+    registry_path,
+    renutil_target_version,
+    "rapt",
+    "bundle.keystore.original"
+  )
+
+  if config["tasks"]["keystore"].getBool():
+    var keystore = getEnv("RC_KEYSTORE_AAB")
+
+    if keystore == "":
+      keystore = config["task_keystore"]["keystore_aab"].getStr()
+
+    if keystore == "":
+      echo("Keystore override was requested, but no AAB keystore could be found.")
+      quit(1)
+
+    if not fileExists(keystore_bundle_path_backup):
+      moveFile(keystore_bundle_path, keystore_bundle_path_backup)
+
+    let stream_out = newFileStream(keystore_bundle_path, fmWrite)
+    stream_out.write(decode(keystore))
+    stream_out.close()
+
 
   # update manifest file
   discard """
@@ -222,6 +259,7 @@ proc build*(
 
   if config["tasks"]["keystore"].getBool() and fileExists(keystore_path_backup):
     moveFile(keystore_path_backup, keystore_path)
+    moveFile(keystore_bundle_path_backup, keystore_bundle_path)
 
 when isMainModule:
   dispatchMulti(
