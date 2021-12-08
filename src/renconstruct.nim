@@ -4,13 +4,13 @@ import system
 import cligen
 import tables
 import semver
-import strtabs
 import streams
-import xmltree
 import strutils
-import xmlparser
 import strformat
 import parsetoml
+# import strtabs
+# import xmltree
+# import xmlparser
 
 import renutil
 
