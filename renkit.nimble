@@ -14,6 +14,7 @@ bin = @["renutil", "renotize", "renconstruct"]
 requires "nim >= 1.4.8"
 requires "zippy >= 0.6.2"
 requires "cligen >= 1.5.9"
+requires "semver >= 1.1.1"
 requires "parsetoml >= 0.6.0"
 
 # Tasks

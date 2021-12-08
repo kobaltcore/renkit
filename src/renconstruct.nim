@@ -3,6 +3,7 @@ import base64
 import system
 import cligen
 import tables
+import semver
 import strtabs
 import streams
 import xmltree
@@ -70,6 +71,8 @@ proc build*(
   if renutil_target_version == "latest":
     renutil_target_version = list_available()[0]
 
+  let renutil_target_version_semver = parseVersion(renutil_target_version)
+
   if not (renutil_target_version in list_installed(registry_path)):
     echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
@@ -136,16 +139,44 @@ proc build*(
   f.close()
   """
 
-  if config["build"]["android"].getBool():
-    echo("Building Android package.")
+  if config["build"]["android_apk"].getBool() or
+    config["build"]["android"].getBool(): # for backwards-compatibility with older config files
+    echo("Building Android APK package.")
     try:
-      launch(
-        renutil_target_version,
-        false,
-        false,
-        &"android_build {input_dir} assembleRelease --destination {output_dir}",
-        registry_path
-      )
+      if renutil_target_version_semver >= newVersion(7, 4, 11):
+        launch(
+          renutil_target_version,
+          false,
+          false,
+          &"android_build {input_dir} --destination {output_dir}",
+          registry_path
+        )
+      else:
+        launch(
+          renutil_target_version,
+          false,
+          false,
+          &"android_build {input_dir} assembleRelease --destination {output_dir}",
+          registry_path
+        )
+    except KeyboardInterrupt:
+      echo("Aborted.")
+      quit(1)
+
+  if config["build"]["android_aab"].getBool():
+    echo("Building Android AAB package.")
+    try:
+      if renutil_target_version_semver >= newVersion(7, 4, 11):
+        launch(
+          renutil_target_version,
+          false,
+          false,
+          &"android_build {input_dir} --bundle --destination {output_dir}",
+          registry_path
+        )
+      else:
+        echo "Not supported for Ren'Py versions <7.4.11"
+        quit(1)
     except KeyboardInterrupt:
       echo("Aborted.")
       quit(1)
