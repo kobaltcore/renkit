@@ -1,5 +1,6 @@
 FROM openjdk:8-jdk-slim-bullseye
 ARG renpy_version
+ARG renkit_version=v1.0.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -12,7 +13,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install renkit tools
-RUN wget https://github.com/kobaltcore/renkit/releases/download/v1.0.0/renkit-linux.zip && \
+RUN wget https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-linux.zip && \
     unzip renkit-linux.zip -d /usr/local/bin && \
     rm renkit-linux.zip
 
