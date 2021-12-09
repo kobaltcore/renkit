@@ -338,7 +338,7 @@ proc install*(
 
   echo "Installing RAPT"
   putEnv("RAPT_NO_TERMS", "1")
-  let output = execProcess(&"{python} -EO android.py installsdk")
+  discard execCmd(&"{python} -EO android.py installsdk")
 
   setCurrentDir(original_dir)
 
