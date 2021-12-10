@@ -1,0 +1,30 @@
+[tasks]
+  clean = false # cleans up temporary files after the build has completed
+  notarize = false # notarizes the macOS output using Apple's notarization service
+  keystore = false # overrides Android keystores with custom ones
+
+[task_keystore] # (required if matching task is enabled)
+  keystore_apk = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the APK bundles
+  keystore_aab = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the AAB bundles
+
+[task_notarize] # (required if matching task is enabled)
+  bundle = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
+  sign_cert = "<base64-encoded certificate file>" # the base-64 encoded binary certificate file for the codesign process
+  sign_cert_pwd = "<certificate password>" # the password used to protect the exported certificate
+  apple_id = "<e-mail>"
+  identity = "<apple developer identity UUID>"
+  password = "<one-time password from Apple>"
+
+[build] # (required, at least one item must be 'true')
+  pc = false  # Windows + Linux
+  win = false # Windows
+  mac = false # macOS
+  web = false # Web
+  steam = false # Steam
+  market = false # Multiple Markets (i.e. Itch.io)
+  android_apk = false # Android Universal APK
+  android_aab = false # Android Play Store Bundle
+
+[renutil]
+  version = "7.4.11" # the Ren'Py version to use (required)
+  registry = "cache" # the directory to store installation files in
