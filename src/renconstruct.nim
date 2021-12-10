@@ -46,6 +46,84 @@ proc task_post_notarize() =
   # run renotize
   discard
 
+proc validate*(config: var TomlValueRef) =
+  if "build" notin config:
+    echo "Section 'build' not found, please add it."
+    quit(1)
+
+  if "pc" notin config["build"]:
+    config{"pc"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "win" notin config["build"]:
+    config{"win"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "mac" notin config["build"]:
+    config{"mac"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "web" notin config["build"]:
+    config{"web"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "steam" notin config["build"]:
+    config{"steam"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "market" notin config["build"]:
+    config{"market"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "android_apk" notin config["build"]:
+    config{"android_apk"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "android_aab" notin config["build"]:
+    config{"android_aab"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  var found_true = false
+  for k, v in config["build"].getTable():
+    if v.getBool():
+      found_true = true
+      break
+
+  if not found_true:
+    echo "No option is enabled in the 'build' section."
+    quit(1)
+
+  if "renutil" notin config:
+    echo "Section 'renutil' not found, please add it."
+    quit(1)
+
+  if "version" notin config["renutil"]:
+    echo "Please specify the Ren'Py version in the 'renutil' section."
+    quit(1)
+
+  if "tasks" notin config:
+    config{"tasks", "keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "keystore" in config["tasks"]:
+    if config["tasks"]["keystore"].getBool() and "task_keystore" notin config:
+      echo "Task 'keystore' is enabled but no 'task_keystore' section was found."
+      quit(1)
+  else:
+    config{"keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "clean" notin config["tasks"]:
+    config{"clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "notarize" in config["tasks"]:
+    if config["tasks"]["notarize"].getBool() and "task_notarize" notin config:
+      echo "Task 'notarize' is enabled but no 'task_notarize' section was found."
+      quit(1)
+  else:
+    config{"notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "manifest" in config["tasks"]:
+    if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
+      echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
+      quit(1)
+  else:
+    config{"manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "convert_images" in config["tasks"]:
+    if config["tasks"]["convert_images"].getBool() and "task_convert_images" notin config:
+      echo "Task 'convert_images' is enabled but no 'task_convert_images' section was found."
+      quit(1)
+  else:
+    config{"convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
 proc build*(
   input_dir: string,
   output_dir: string,
@@ -55,7 +133,9 @@ proc build*(
   ## Builds a Ren'Py project with the specified configuration.
   var registry_path: string
 
-  let config = parseFile(config)
+  var config = parseFile(config)
+
+  config.validate()
 
   if registry != "":
     registry_path = get_registry(registry)
@@ -83,6 +163,10 @@ proc build*(
     echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
 
+  # sleep(10_000)
+
+  # return
+
   let keystore_path = joinPath(
     registry_path,
     renutil_target_version,
@@ -96,28 +180,6 @@ proc build*(
     "rapt",
     "android.keystore.original"
   )
-
-  if config["tasks"]["keystore"].getBool():
-    var keystore = getEnv(
-      "RC_KEYSTORE_APK",
-      getEnv("RC_KEYSTORE"), # for backwards-compatibility
-    )
-
-    if keystore == "":
-      keystore = config["task_keystore"]["keystore_apk"].getStr()
-    if keystore == "":
-      keystore = config["task_keystore"]["keystore"].getStr()
-
-    if keystore == "":
-      echo("Keystore override was requested, but no APK keystore could be found.")
-      quit(1)
-
-    if not fileExists(keystore_path_backup):
-      moveFile(keystore_path, keystore_path_backup)
-
-    let stream_out = newFileStream(keystore_path, fmWrite)
-    stream_out.write(decode(keystore))
-    stream_out.close()
 
   let keystore_bundle_path = joinPath(
     registry_path,
@@ -134,7 +196,28 @@ proc build*(
   )
 
   if config["tasks"]["keystore"].getBool():
-    var keystore = getEnv("RC_KEYSTORE_AAB")
+    var keystore = getEnv(
+      "RC_KEYSTORE_APK",
+      getEnv("RC_KEYSTORE"), # for backwards-compatibility
+    )
+
+    if keystore == "" and "keystore_apk" in config["task_keystore"]:
+      keystore = config["task_keystore"]["keystore_apk"].getStr()
+    if keystore == "":
+      keystore = config["task_keystore"]["keystore"].getStr()
+
+    if keystore == "":
+      echo("Keystore override was requested, but no APK keystore could be found.")
+      quit(1)
+
+    if not fileExists(keystore_path_backup):
+      moveFile(keystore_path, keystore_path_backup)
+
+    let stream_out_ks_apk = newFileStream(keystore_path, fmWrite)
+    stream_out_ks_apk.write(decode(keystore))
+    stream_out_ks_apk.close()
+
+    keystore = getEnv("RC_KEYSTORE_AAB")
 
     if keystore == "":
       keystore = config["task_keystore"]["keystore_aab"].getStr()
@@ -146,9 +229,9 @@ proc build*(
     if not fileExists(keystore_bundle_path_backup):
       moveFile(keystore_bundle_path, keystore_bundle_path_backup)
 
-    let stream_out = newFileStream(keystore_bundle_path, fmWrite)
-    stream_out.write(decode(keystore))
-    stream_out.close()
+    let stream_out_ks_bundle = newFileStream(keystore_bundle_path, fmWrite)
+    stream_out_ks_bundle.write(decode(keystore))
+    stream_out_ks_bundle.close()
 
 
   # update manifest file
@@ -185,43 +268,35 @@ proc build*(
   if config["build"]["android_apk"].getBool() or
     config["build"]["android"].getBool(): # for backwards-compatibility with older config files
     echo("Building Android APK package.")
-    try:
-      if renutil_target_version_semver >= newVersion(7, 4, 9):
-        launch(
-          renutil_target_version,
-          false,
-          false,
-          &"android_build {input_dir} --dest {absolutePath(output_dir)}",
-          registry_path
-        )
-      else:
-        launch(
-          renutil_target_version,
-          false,
-          false,
-          &"android_build {input_dir} assembleRelease --dest {absolutePath(output_dir)}",
-          registry_path
-        )
-    except KeyboardInterrupt:
-      echo("Aborted.")
-      quit(1)
+    if renutil_target_version_semver >= newVersion(7, 4, 9):
+      launch(
+        renutil_target_version,
+        false,
+        false,
+        &"android_build {input_dir} --dest {absolutePath(output_dir)}",
+        registry_path
+      )
+    else:
+      launch(
+        renutil_target_version,
+        false,
+        false,
+        &"android_build {input_dir} assembleRelease --dest {absolutePath(output_dir)}",
+        registry_path
+      )
 
   if config["build"]["android_aab"].getBool():
     echo("Building Android AAB package.")
-    try:
-      if renutil_target_version_semver >= newVersion(7, 4, 9):
-        launch(
-          renutil_target_version,
-          false,
-          false,
-          &"android_build {input_dir} --bundle --dest {absolutePath(output_dir)}",
-          registry_path
-        )
-      else:
-        echo "Not supported for Ren'Py versions <7.4.9"
-        quit(1)
-    except KeyboardInterrupt:
-      echo("Aborted.")
+    if renutil_target_version_semver >= newVersion(7, 4, 9):
+      launch(
+        renutil_target_version,
+        false,
+        false,
+        &"android_build {input_dir} --bundle --dest {absolutePath(output_dir)}",
+        registry_path
+      )
+    else:
+      echo "Not supported for Ren'Py versions <7.4.9"
       quit(1)
 
   var platforms_to_build: seq[string]
@@ -236,6 +311,12 @@ proc build*(
   if "steam" in config["build"] and config["build"]["steam"].getBool():
     platforms_to_build.add("steam")
   if "web" in config["build"] and config["build"]["web"].getBool():
+    # make out_dir = {project-name}-{version}-web directory in output directory
+    # modify build command:
+    # --destination {out_dir} --packagedest joinPath(out_dir, "game") --package web --no-archive
+    # TODO: somehow trigger repack_for_progressive_download()
+    # copy files from {version}/web except for hash.txt to the web output directory
+    # modify index.html and replace %%TITLE%% with the game's display name
     platforms_to_build.add("web")
 
   if len(platforms_to_build) > 0:
@@ -245,17 +326,13 @@ proc build*(
     let joined_packages = join(platforms_to_build, ", ")
 
     echo(&"Building {joined_packages} packages.")
-    try:
-      launch(
-        renutil_target_version,
-        false,
-        false,
-        cmd,
-        registry_path
-      )
-    except KeyboardInterrupt:
-      echo("Aborted.")
-      quit(1)
+    launch(
+      renutil_target_version,
+      false,
+      false,
+      cmd,
+      registry_path
+    )
 
   if config["tasks"]["notarize"].getBool():
     task_post_notarize()
@@ -273,11 +350,15 @@ proc build*(
     moveFile(keystore_bundle_path_backup, keystore_bundle_path)
 
 when isMainModule:
-  dispatchMulti(
-    [build, help = {
-        "input_dir": "The Ren'Py project to build.",
-        "output_dir": "The directory to output distributions to.",
-        "config": "The configuration file to use.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
-    }],
-  )
+  try:
+    dispatchMulti(
+      [build, help = {
+          "input_dir": "The Ren'Py project to build.",
+          "output_dir": "The directory to output distributions to.",
+          "config": "The configuration file to use.",
+          "registry": "The registry to use. Defaults to ~/.renutil",
+      }],
+    )
+  except KeyboardInterrupt:
+    echo "\nAborted by SIGINT"
+    quit(1)
