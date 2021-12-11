@@ -163,10 +163,6 @@ proc build*(
     echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
 
-  # sleep(10_000)
-
-  # return
-
   let keystore_path = joinPath(
     registry_path,
     renutil_target_version,
