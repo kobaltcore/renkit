@@ -229,7 +229,6 @@ proc build*(
     stream_out_ks_bundle.write(decode(keystore))
     stream_out_ks_bundle.close()
 
-
   # update manifest file
   discard """
   let manifest_path = joinPath(

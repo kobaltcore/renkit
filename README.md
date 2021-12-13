@@ -11,6 +11,47 @@ RenKit is written in Nim and compiled into standalone executables, so it's easy 
 
 ## renutil
 
+### List all installed versions
+```bash
+renutil list
+```
+
+### List all remote versions
+```bash
+renutil list -a
+```
+
+### Show information about a specific version
+```bash
+renutil show -v 7.4.11
+```
+
+### Launch the Ren'Py Launcher
+```bash
+renutil launch -v 7.4.11
+```
+
+### Launch a Ren'Py project directly
+```bash
+renutil launch -v 7.4.11 -d -a ~/my-project
+```
+
+### Install a specific version
+```bash
+renutil install -v 7.4.11
+```
+
+### Remove a specific version
+```bash
+renutil uninstall -v 7.4.11
+```
+
+### Clean up an instance after use
+```bash
+renutil clean -v 7.4.11
+```
+
+### Full Usage
 ```bash
 Usage is like:
     renutil {SUBCMD} [subcommand-opts & args]
@@ -61,6 +102,17 @@ where subcommand syntaxes are as follows:
 
 ## renconstruct
 
+### Writing a config file
+renconstruct uses a TOML file for configuration.
+
+WIP
+
+### Build a set of distributions
+```bash
+renconstruct build -i ~/my-project -o out/ -c my-config.toml
+```
+
+### Full Usage
 ```bash
 Usage is like:
     renconstruct {SUBCMD} [subcommand-opts & args]
@@ -77,6 +129,12 @@ where subcommand syntaxes are as follows:
 
 ## renotize
 
+### Writing a config file
+renotize uses a TOML file for configuration.
+
+WIP
+
+### Full Usage
 ```bash
 Usage is like:
     renotize {SUBCMD} [subcommand-opts & args]
