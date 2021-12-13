@@ -122,11 +122,11 @@ proc full_run*(input_file: string, config: string) =
     base_name: string
 
   let config = parsetoml.parseFile(config)
-  let altool_extra = config["config"]["altool_extra"].getStr()
-  let bundle_id = config["config"]["bundle_id"].getStr()
-  let identity = config["config"]["identity"].getStr()
-  let apple_id = config["config"]["apple_id"].getStr()
-  let password = config["config"]["password"].getStr()
+  let altool_extra = config["altool_extra"].getStr()
+  let bundle_id = config["bundle_id"].getStr()
+  let identity = config["identity"].getStr()
+  let apple_id = config["apple_id"].getStr()
+  let password = config["password"].getStr()
 
   unpack_app(input_file)
 
