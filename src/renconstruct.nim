@@ -98,31 +98,37 @@ proc validate*(config: var TomlValueRef) =
       echo "Task 'keystore' is enabled but no 'task_keystore' section was found."
       quit(1)
   else:
-    config{"keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
   if "clean" notin config["tasks"]:
-    config{"clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
   if "notarize" in config["tasks"]:
     if config["tasks"]["notarize"].getBool() and "task_notarize" notin config:
       echo "Task 'notarize' is enabled but no 'task_notarize' section was found."
       quit(1)
   else:
-    config{"notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
   if "manifest" in config["tasks"]:
     if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
       echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
       quit(1)
   else:
-    config{"manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
   if "convert_images" in config["tasks"]:
     if config["tasks"]["convert_images"].getBool() and "task_convert_images" notin config:
       echo "Task 'convert_images' is enabled but no 'task_convert_images' section was found."
       quit(1)
   else:
-    config{"convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "options" notin config:
+    config{"options", "clear_output_dir"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+
+  if "clear_output_dir" notin config["options"]:
+    config{"options", "clear_output_dir"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
 proc build*(
   input_dir: string,
@@ -147,7 +153,7 @@ proc build*(
   if not dirExists(input_dir):
     createDir(input_dir)
 
-  if dirExists(output_dir):
+  if config["options"]["clear_output_dir"].getBool() and dirExists(output_dir):
     removeDir(output_dir)
 
   createDir(output_dir)

@@ -25,6 +25,9 @@
   android_apk = false # Android Universal APK
   android_aab = false # Android Play Store Bundle
 
+[options]
+  clear_output_dir = false
+
 [renutil]
   version = "7.4.11" # the Ren'Py version to use (required)
   registry = "cache" # the directory to store installation files in
