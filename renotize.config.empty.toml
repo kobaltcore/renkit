@@ -1,0 +1,5 @@
+apple_id = "<apple-email>"
+password = "<app-specific-passport>"
+identity = "<developer-identity>"
+bundle_id = "com.example.mygame"
+altool_extra = "<extra-altool-arguments>"

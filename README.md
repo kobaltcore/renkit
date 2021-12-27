@@ -103,9 +103,48 @@ where subcommand syntaxes are as follows:
 ## renconstruct
 
 ### Writing a config file
-renconstruct uses a TOML file for configuration.
+renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various platforms. An empty template is provided in this repository under the name `renconstruct.config.empty.toml`
 
-WIP
+It consists of the following sections:
+
+#### `tasks`
+Each of these keys may have a value of `true` or `false`.
+
+- `clean`: Enables the cleanup task, which cleans up temporary files after the build has completed
+- `notarize`: Enables the notarization task
+- `keystore`: Enables the keystore override task
+
+#### `task_keystore`
+- `keystore_apk`: The base-64 encoded binary keystore file for the APK bundles
+- `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles
+
+#### `task_notarize`
+Same as the configuration for `renotize` below.
+
+- `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
+- `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
+- `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
+- `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
+- `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
+
+#### `build`
+Each of these keys may have a value of `true` or `false`.
+
+_ `pc`: Build the Windows/Linux  distribution
+- `win`: Build the Windows distribution
+- `mac`: Build the macOS distribution
+_ `web`: Build the Web distribution
+_ `steam`: Build the Steam distribution
+_ `market`: Build the external marketplace distribution (i.e. Itch.io)
+- `android_apk`: Build the Android distribution as an APK
+- `android_aab`: Build the Android distribution as an AAB
+
+#### `options`
+- `clear_output_dir`: A value of `true` or `false` determining whether to clear the output directory on invocation or not. Useful for repeated runs where you want to persist previous results.
+
+#### `renutil`
+- `version`: The version of Ren'Py to use while building the distributions
+- `registry`: The path where `renutil` data is stored. Mostly useful for CI environments
 
 ### Build a set of distributions
 ```bash
@@ -130,9 +169,14 @@ where subcommand syntaxes are as follows:
 ## renotize
 
 ### Writing a config file
-renotize uses a TOML file for configuration.
+renotize uses a TOML file for configuration to supply the information required to sign apps on macOS. An empty template is provided in this repository under the name `renotize.config.empty.toml`
 
-WIP
+It consists of the following keys:
+- `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
+- `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
+- `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
+- `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
+- `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
 
 ### Full Usage
 ```bash

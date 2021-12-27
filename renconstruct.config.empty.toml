@@ -26,7 +26,7 @@
   android_aab = false # Android Play Store Bundle
 
 [options]
-  clear_output_dir = false
+  clear_output_dir = false # whether to clear the output directory on startup
 
 [renutil]
   version = "7.4.11" # the Ren'Py version to use (required)
