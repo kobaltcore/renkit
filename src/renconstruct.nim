@@ -151,7 +151,8 @@ proc build*(
     registry_path = get_registry(registry)
 
   if not dirExists(input_dir):
-    createDir(input_dir)
+    echo(&"Game directory '{input_dir}' does not exist.")
+    quit(1)
 
   if config["options"]["clear_output_dir"].getBool() and dirExists(output_dir):
     removeDir(output_dir)
