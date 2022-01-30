@@ -149,7 +149,7 @@ proc launch*(
   if direct:
     cmd = &"{base_cmd} {args}"
   else:
-    let launcher_path = joinPath(registry_path, version, "launcher")
+    let launcher_path = quoteShell(joinPath(registry_path, version, "launcher"))
     cmd = &"{base_cmd} {launcher_path} {args}"
 
   if headless:
@@ -295,7 +295,7 @@ proc install*(
     if java_home == "":
       echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
       quit(1)
-    let keytool_path = joinPath(java_home, "bin", "keytool")
+    let keytool_path = quoteShell(joinPath(java_home, "bin", "keytool"))
     let dname = "renutil"
     discard execProcess(&"{keytool_path} -genkey -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
@@ -305,7 +305,7 @@ proc install*(
     if java_home == "":
       echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
       quit(1)
-    let keytool_path = joinPath(java_home, "bin", "keytool")
+    let keytool_path = quoteShell(joinPath(java_home, "bin", "keytool"))
     let dname = "renutil"
     discard execProcess(&"{keytool_path} -genkey -keystore bundle.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
