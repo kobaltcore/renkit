@@ -21,8 +21,8 @@ proc handler() {.noconv.} =
 
 setControlCHook(handler)
 
-type
-  kv_tuple = tuple[key, val: string]
+# type
+#   kv_tuple = tuple[key, val: string]
 
 proc task_post_clean(
   version: string,
