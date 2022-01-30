@@ -55,6 +55,8 @@ proc validate*(config: var TomlValueRef) =
     config{"pc"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
   if "win" notin config["build"]:
     config{"win"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+  if "linux" notin config["build"]:
+    config{"linux"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
   if "mac" notin config["build"]:
     config{"mac"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
   if "web" notin config["build"]:
@@ -308,6 +310,8 @@ proc build*(
     platforms_to_build.add("mac")
   if "win" in config["build"] and config["build"]["win"].getBool():
     platforms_to_build.add("win")
+  if "linux" in config["build"] and config["build"]["linux"].getBool():
+    platforms_to_build.add("linux")
   if "market" in config["build"] and config["build"]["market"].getBool():
     platforms_to_build.add("market")
   if "steam" in config["build"] and config["build"]["steam"].getBool():

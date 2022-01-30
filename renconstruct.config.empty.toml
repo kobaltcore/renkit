@@ -18,6 +18,7 @@
 [build] # (required, at least one item must be 'true')
   pc = false  # Windows + Linux
   win = false # Windows
+  linux = false # Linux
   mac = false # macOS
   web = false # Web
   steam = false # Steam
