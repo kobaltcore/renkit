@@ -275,7 +275,7 @@ proc build*(
         renutil_target_version,
         false,
         false,
-        &"android_build {input_dir} --dest {absolutePath(output_dir)}",
+        &"android_build {quoteShell(input_dir)} --dest {quoteShell(absolutePath(output_dir))}",
         registry_path
       )
     else:
@@ -283,7 +283,7 @@ proc build*(
         renutil_target_version,
         false,
         false,
-        &"android_build {input_dir} assembleRelease --dest {absolutePath(output_dir)}",
+        &"android_build {quoteShell(input_dir)} assembleRelease --dest {quoteShell(absolutePath(output_dir))}",
         registry_path
       )
 
@@ -294,7 +294,7 @@ proc build*(
         renutil_target_version,
         false,
         false,
-        &"android_build {input_dir} --bundle --dest {absolutePath(output_dir)}",
+        &"android_build {quoteShell(input_dir)} --bundle --dest {quoteShell(absolutePath(output_dir))}",
         registry_path
       )
     else:
@@ -322,7 +322,7 @@ proc build*(
     platforms_to_build.add("web")
 
   if len(platforms_to_build) > 0:
-    var cmd = &"distribute {input_dir} --destination {absolutePath(output_dir)}"
+    var cmd = &"distribute {quoteShell(input_dir)} --destination {quoteShell(absolutePath(output_dir))}"
     for package in platforms_to_build:
       cmd = cmd & &" --package {package}"
     let joined_packages = join(platforms_to_build, ", ")
