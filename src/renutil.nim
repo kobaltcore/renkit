@@ -200,30 +200,33 @@ proc install*(
   let client = newHttpClient()
   client.onProgressChanged = onProgressChanged
 
-  try:
-    echo "Downloading RAPT"
-    client.downloadFile(rapt_url, rapt_file)
-  except KeyboardInterrupt:
-    echo "Aborted, cleaning up."
-    removeFile(rapt_file)
-    quit(1)
+  if not fileExists(rapt_file):
+    try:
+      echo "Downloading RAPT"
+      client.downloadFile(rapt_url, rapt_file)
+    except KeyboardInterrupt:
+      echo "Aborted, cleaning up."
+      removeFile(rapt_file)
+      quit(1)
 
-  try:
-    echo "Downloading Web"
-    client.downloadFile(web_url, web_file)
-  except KeyboardInterrupt:
-    echo "Aborted, cleaning up."
-    removeFile(web_file)
-    quit(1)
+  if not fileExists(web_file):
+    try:
+      echo "Downloading Web"
+      client.downloadFile(web_url, web_file)
+    except KeyboardInterrupt:
+      echo "Aborted, cleaning up."
+      removeFile(web_file)
+      quit(1)
 
-  try:
-    echo "Downloading Ren'Py"
-    client.downloadFile(sdk_url, sdk_file)
-  except KeyboardInterrupt:
-    echo "Aborted, cleaning up."
-    removeFile(sdk_file)
-    removeFile(rapt_file)
-    quit(1)
+  if not fileExists(sdk_file):
+    try:
+      echo "Downloading Ren'Py"
+      client.downloadFile(sdk_url, sdk_file)
+    except KeyboardInterrupt:
+      echo "Aborted, cleaning up."
+      removeFile(sdk_file)
+      removeFile(rapt_file)
+      quit(1)
 
   echo "Extracting"
   extractAll(sdk_file, joinPath(registry_path, "extracted"))
