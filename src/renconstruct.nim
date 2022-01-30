@@ -267,7 +267,7 @@ proc build*(
   """
 
   if config["build"]["android_apk"].getBool() or
-    config["build"]["android"].getBool(): # for backwards-compatibility with older config files
+    config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
     echo("Building Android APK package.")
     if renutil_target_version_semver >= newVersion(7, 4, 9):
       launch(
