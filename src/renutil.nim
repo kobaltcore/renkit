@@ -103,8 +103,10 @@ proc get_exe*(version: string, registry: string): (string, string) =
   elif hostOS == "macosx":
     if version < "7.4":
       arch = "darwin-x86_64"
-    else:
+    elif version < "8.0":
       arch = "mac-x86_64"
+    else:
+      arch = "py3-mac-x86_64"
 
   let python = joinPath(registry, version, "lib", arch, exe)
   let base_file = joinPath(registry, version, "renpy.py")
