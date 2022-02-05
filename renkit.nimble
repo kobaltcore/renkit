@@ -2,7 +2,7 @@ import strformat
 
 # Package
 
-version = "1.1.3"
+version = "1.2.0"
 author = "kobaltcore"
 description = "A collection of tools to help you organise and use Ren'Py instances from the command line. Especially useful for headless servers."
 license = "MIT"
