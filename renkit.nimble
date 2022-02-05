@@ -51,10 +51,10 @@ task build_linux_i386, "Builds for linux (i386)":
 
 task build_windows_amd64, "Builds for Windows (amd64)":
   exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:mingw --cpu:amd64 -d:strip -y")
-  exec("mkdir -p bin/amd64/windows && mv renutil bin/amd64/windows && mv renotize bin/amd64/windows && mv renconstruct bin/amd64/windows")
+  exec("mkdir -p bin/amd64/windows && mv renutil.exe bin/amd64/windows && mv renotize.exe bin/amd64/windows && mv renconstruct.exe bin/amd64/windows")
   exec("upx --best bin/amd64/windows/*")
 
 task build_windows_i386, "Builds for Windows (i386)":
   exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:mingw --cpu:i386 -d:strip -y")
-  exec("mkdir -p bin/i386/windows && mv renutil bin/i386/windows && mv renotize bin/i386/windows && mv renconstruct bin/i386/windows")
+  exec("mkdir -p bin/i386/windows && mv renutil.exe bin/i386/windows && mv renotize.exe bin/i386/windows && mv renconstruct.exe bin/i386/windows")
   exec("upx --best bin/i386/windows/*")
