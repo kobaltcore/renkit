@@ -25,13 +25,16 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build Project
         run: |
-          apt-get install -y mingw-w64 zip upx
-          nimble build_all_windows
-          nimble build_all_linux
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64 zip upx
+          nimble build_linux_amd64
+          nimble build_windows_amd64
+          nimble build_windows_i386
       - name: Zip Artifacts
         run: |
-          zip -j renkit-windows.zip bin/windows/*
-          zip -j renkit-linux.zip bin/linux/*
+          zip -j renkit-linux-amd64.zip bin/amd64/linux/*
+          zip -j renkit-windows-amd64.zip bin/amd64/windows/*
+          zip -j renkit-windows-i386.zip bin/i386/windows/*
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
@@ -47,10 +50,10 @@ jobs:
           brew install nim upx
       - name: Build Project
         run: |
-          nimble build_all_macos
+          nimble build_macos_amd64
       - name: Zip Artifacts
         run: |
-          zip -j renkit-macos.zip bin/macos/*
+          zip -j renkit-macos-amd64.zip bin/amd64/macos/*
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
