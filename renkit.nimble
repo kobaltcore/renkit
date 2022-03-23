@@ -40,12 +40,12 @@ task build_macos_amd64, "Builds for macOS (amd64)":
   exec("upx --best bin/amd64/macos/*")
 
 task build_linux_amd64, "Builds for linux (amd64)":
-  exec("nimble build -d:diadogGTK -d:release --opt:size --gc:orc --os:linux --cpu:amd64 -d:strip -y")
+  exec("nimble build -d:diadogGTK -d:ssl -d:release --opt:size --gc:orc --os:linux --cpu:amd64 -d:strip -y")
   exec("mkdir -p bin/amd64/linux && mv renutil bin/amd64/linux && mv renotize bin/amd64/linux && mv renconstruct bin/amd64/linux")
   exec("upx --best bin/amd64/linux/*")
 
 task build_linux_i386, "Builds for linux (i386)":
-  exec("nimble build -d:diadogGTK -d:release --opt:size --gc:orc --os:linux --cpu:i386 -d:strip -y")
+  exec("nimble build -d:diadogGTK -d:ssl -d:release --opt:size --gc:orc --os:linux --cpu:i386 -d:strip -y")
   exec("mkdir -p bin/i386/linux && mv renutil bin/i386/linux && mv renotize bin/i386/linux && mv renconstruct bin/i386/linux")
   exec("upx --best bin/i386/linux/*")
 
