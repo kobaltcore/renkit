@@ -31,16 +31,12 @@ proc task_post_clean(
   output_dir: string
 ) =
   cleanup(version, registry)
-  for kind, path in walkDir(output_dir):
-    if kind != pcFile:
-      continue
-    if version_semver < newVersion(7, 4, 9):
+  if version_semver < newVersion(7, 4, 9):
+    for kind, path in walkDir(output_dir):
+      if kind != pcFile:
+        continue
       if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
         removeFile(path)
-
-proc task_pre_keystore() =
-  # overwrite keystore file with the one from config.toml
-  discard
 
 proc task_post_notarize() =
   # run renotize
