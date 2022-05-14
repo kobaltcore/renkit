@@ -242,6 +242,8 @@ proc install*(
   echo "Extracting"
   let path_extracted = joinPath(registry_path, "extracted")
 
+  ### SDK
+
   extractAll(sdk_file, path_extracted)
 
   moveDir(
@@ -251,15 +253,16 @@ proc install*(
 
   removeDir(path_extracted)
 
-  ###
+  ### Steam
 
   extractAll(steam_file, path_extracted)
 
-  # todo: iterate through files in extracted and move to lib/ folder
+  for path in walkDirRec(path_extracted):
+    copyFile(path, joinPath(registry_path, version, relativePath(path, path_extracted)))
 
   removeDir(path_extracted)
 
-  ###
+  ### Web
 
   extractAll(web_file, path_extracted)
 
@@ -270,7 +273,7 @@ proc install*(
 
   removeDir(path_extracted)
 
-  ###
+  ### RAPT
 
   extractAll(rapt_file, path_extracted)
 
