@@ -7,9 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # install dependencies and MEGAcmd
 RUN apt-get update && \
     apt-get install -y wget unzip && \
-    wget https://mega.nz/linux/MEGAsync/Debian_11/amd64/megacmd_1.4.0-3.1_amd64.deb && \
-    apt-get install -y ./megacmd_1.4.0-3.1_amd64.deb && \
-    rm megacmd_1.4.0-3.1_amd64.deb && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install renkit tools
