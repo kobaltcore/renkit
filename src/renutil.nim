@@ -133,8 +133,6 @@ proc launch*(
   registry = ""
 ) =
   ## Launch the given version of Ren'Py.
-  var cmd: string
-
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
@@ -144,11 +142,11 @@ proc launch*(
   let (python, base_file) = get_exe(version, registry_path)
   let base_cmd = &"{python} -EO {base_file}"
 
-  if direct:
-    cmd = &"{base_cmd} {args}"
-  else:
-    let launcher_path = quoteShell(joinPath(registry_path, version, "launcher"))
-    cmd = &"{base_cmd} {launcher_path} {args}"
+  let cmd = case direct:
+    of true:
+      &"{base_cmd} {args}"
+    of false:
+      &"{base_cmd} {quoteShell(joinPath(registry_path, version, \"launcher\"))} {args}"
 
   if headless:
     putEnv("SDL_AUDIODRIVER", "dummy")
@@ -173,10 +171,16 @@ proc install*(
   if force and dirExists(target_dir):
     removeDir(target_dir)
 
-  let sdk_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip"
-  let sdk_file = joinPath(
+  let steam_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-steam.zip"
+  let steam_file = joinPath(
     registry_path,
-    &"renpy-{version}-sdk.zip"
+    &"renpy-{version}-steam.zip"
+  )
+
+  let web_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-web.zip"
+  let web_file = joinPath(
+    registry_path,
+    &"renpy-{version}-web.zip"
   )
 
   let rapt_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip"
@@ -185,10 +189,10 @@ proc install*(
     &"renpy-{version}-rapt.zip"
   )
 
-  let web_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-web.zip"
-  let web_file = joinPath(
+  let sdk_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip"
+  let sdk_file = joinPath(
     registry_path,
-    &"renpy-{version}-web.zip"
+    &"renpy-{version}-sdk.zip"
   )
 
   proc onProgressChanged(total, progress, speed: BiggestInt) =
@@ -198,13 +202,13 @@ proc install*(
   let client = newHttpClient()
   client.onProgressChanged = onProgressChanged
 
-  if not fileExists(rapt_file):
+  if not fileExists(steam_file):
     try:
-      echo "Downloading RAPT"
-      client.downloadFile(rapt_url, rapt_file)
+      echo "Downloading Web"
+      client.downloadFile(steam_url, steam_file)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
-      removeFile(rapt_file)
+      removeFile(steam_file)
       quit(1)
 
   if not fileExists(web_file):
@@ -214,6 +218,15 @@ proc install*(
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
       removeFile(web_file)
+      quit(1)
+
+  if not fileExists(rapt_file):
+    try:
+      echo "Downloading RAPT"
+      client.downloadFile(rapt_url, rapt_file)
+    except KeyboardInterrupt:
+      echo "Aborted, cleaning up."
+      removeFile(rapt_file)
       quit(1)
 
   if not fileExists(sdk_file):
@@ -227,62 +240,80 @@ proc install*(
       quit(1)
 
   echo "Extracting"
-  extractAll(sdk_file, joinPath(registry_path, "extracted"))
+  let path_extracted = joinPath(registry_path, "extracted")
+
+  extractAll(sdk_file, path_extracted)
 
   moveDir(
-    joinPath(registry_path, "extracted", &"renpy-{version}-sdk"),
+    joinPath(path_extracted, &"renpy-{version}-sdk"),
     joinPath(registry_path, version)
   )
 
-  removeDir(joinPath(registry_path, "extracted"))
+  removeDir(path_extracted)
 
-  extractAll(web_file, joinPath(registry_path, "extracted"))
+  ###
+
+  extractAll(steam_file, path_extracted)
+
+  # todo: iterate through files in extracted and move to lib/ folder
+
+  removeDir(path_extracted)
+
+  ###
+
+  extractAll(web_file, path_extracted)
 
   moveDir(
-    joinPath(registry_path, "extracted", "web"),
+    joinPath(path_extracted, "web"),
     joinPath(registry_path, version, "web")
   )
 
-  removeDir(joinPath(registry_path, "extracted"))
+  removeDir(path_extracted)
 
-  extractAll(rapt_file, joinPath(registry_path, "extracted"))
+  ###
+
+  extractAll(rapt_file, path_extracted)
 
   moveDir(
-    joinPath(registry_path, "extracted", "rapt"),
+    joinPath(path_extracted, "rapt"),
     joinPath(registry_path, version, "rapt")
   )
 
-  removeDir(joinPath(registry_path, "extracted"))
+  removeDir(path_extracted)
+
+  ###
 
   if not no_cleanup:
+    removeFile(steam_file)
     removeFile(web_file)
-    removeFile(sdk_file)
     removeFile(rapt_file)
+    removeFile(sdk_file)
 
   echo "Setting up permissions"
   let (python, base_file) = get_exe(version, registry_path)
 
-  var paths: array[0..6, string]
-  if hostOS == "windows":
-    paths = [
-        joinPath(splitPath(python)[0], "python.exe"),
-        joinPath(splitPath(python)[0], "pythonw.exe"),
-        joinPath(splitPath(python)[0], "renpy.exe"),
-        joinPath(splitPath(python)[0], "zsync.exe"),
-        joinPath(splitPath(python)[0], "zsyncmake.exe"),
-        joinPath(registry_path, version, "rapt", "prototype", "gradlew.exe"),
-        joinPath(registry_path, version, "rapt", "project", "gradlew.exe"),
-    ]
-  else:
-    paths = [
-        joinPath(splitPath(python)[0], "python"),
-        joinPath(splitPath(python)[0], "pythonw"),
-        joinPath(splitPath(python)[0], "renpy"),
-        joinPath(splitPath(python)[0], "zsync"),
-        joinPath(splitPath(python)[0], "zsyncmake"),
-        joinPath(registry_path, version, "rapt", "prototype", "gradlew"),
-        joinPath(registry_path, version, "rapt", "project", "gradlew"),
-    ]
+  let paths = case hostOS:
+    of "windows":
+      [
+          joinPath(splitPath(python)[0], "python.exe"),
+          joinPath(splitPath(python)[0], "pythonw.exe"),
+          joinPath(splitPath(python)[0], "renpy.exe"),
+          joinPath(splitPath(python)[0], "zsync.exe"),
+          joinPath(splitPath(python)[0], "zsyncmake.exe"),
+          joinPath(registry_path, version, "rapt", "prototype", "gradlew.exe"),
+          joinPath(registry_path, version, "rapt", "project", "gradlew.exe"),
+      ]
+    else:
+      [
+          joinPath(splitPath(python)[0], "python"),
+          joinPath(splitPath(python)[0], "pythonw"),
+          joinPath(splitPath(python)[0], "renpy"),
+          joinPath(splitPath(python)[0], "zsync"),
+          joinPath(splitPath(python)[0], "zsyncmake"),
+          joinPath(registry_path, version, "rapt", "prototype", "gradlew"),
+          joinPath(registry_path, version, "rapt", "project", "gradlew"),
+      ]
+
   for path in paths:
     if fileExists(path):
       setFilePermissions(path, {fpUserRead, fpUserExec})
