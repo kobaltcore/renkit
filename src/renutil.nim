@@ -13,6 +13,8 @@ import httpclient
 import htmlparser
 import zippy/ziparchives
 
+import natsort
+
 type KeyboardInterrupt = object of CatchableError
 
 proc handler() {.noconv.} =
@@ -63,23 +65,19 @@ proc list_available*(): seq[string] =
 
     versions.add(version)
 
-  return sorted(versions, Descending)
+  return sorted(versions, naturalCmp).reversed
 
 proc list*(n = 0, all = false, registry = "") =
   ## List all available versions of Ren'Py, either local or remote.
-  var versions: seq[string]
-
-  var limit = n - 1
-
   let registry_path = get_registry(registry)
 
-  if all:
-    versions = list_available()
-  else:
-    versions = list_installed(registry_path)
+  let versions = case all:
+    of true:
+      list_available()
+    of false:
+      list_installed(registry_path)
 
-  if limit < 0 or limit > high(versions):
-    limit = high(versions)
+  let limit = if n < 1 or n > high(versions): high(versions) else: n
 
   for version in versions[0..limit]:
     echo version
