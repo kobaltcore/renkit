@@ -1,11 +1,14 @@
 import os
+import json
 import base64
 import system
+import osproc
 import cligen
 import tables
 import semver
 import streams
 import strutils
+import sequtils
 import strformat
 import parsetoml
 # import strtabs
@@ -23,6 +26,36 @@ setControlCHook(handler)
 
 # type
 #   kv_tuple = tuple[key, val: string]
+
+proc task_pre_convert_images(
+  input_dir: string,
+  lossy_paths: seq[string] = @[],
+  lossless_paths: seq[string] = @[],
+  n = countProcessors(),
+) =
+  var lossy_cmds = newSeq[string]()
+  for file in lossy_paths:
+    let (dir, name, ext) = splitFile(file)
+    let input_file = joinPath(dir, &"{name}{ext}")
+    let output_file = joinPath(dir, &"{name}.webp")
+    lossy_cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(input_file)} -o {quoteShell(output_file)}")
+
+  discard execProcesses(lossy_cmds, n = n, options = {poUsePath})
+
+  for file in lossy_paths:
+    removeFile(file)
+
+  var lossless_cmds = newSeq[string]()
+  for file in lossless_paths:
+    let (dir, name, ext) = splitFile(file)
+    let input_file = joinPath(dir, &"{name}{ext}")
+    let output_file = joinPath(dir, &"{name}.webp")
+    lossless_cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(input_file)} -o {quoteShell(output_file)}")
+
+  discard execProcesses(lossless_cmds, n = n, options = {poUsePath})
+
+  for file in lossless_paths:
+    removeFile(file)
 
 proc task_post_clean(
   version: string,
@@ -128,6 +161,37 @@ proc validate*(config: var TomlValueRef) =
   if "clear_output_dir" notin config["options"]:
     config{"options", "clear_output_dir"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
 
+proc convert_to_json(value: TomlValueRef): JsonNode =
+  case value.kind:
+    of TomlValueKind.Int:
+      %value.intVal
+    of TomlValueKind.Float:
+      %value.floatVal
+    of TomlValueKind.Bool:
+      %value.boolVal
+    of TomlValueKind.Datetime:
+      %value.dateTimeVal
+    of TomlValueKind.Date:
+      %value.dateVal
+    of TomlValueKind.Time:
+      %value.timeVal
+    of TomlValueKind.String:
+      %value.stringVal
+    of TomlValueKind.Array:
+      if value.arrayVal.len == 0:
+        %[]
+      elif value.arrayVal[0].kind == TomlValueKind.Table:
+        %value.arrayVal.map(convert_to_json)
+      else:
+        %*value.arrayVal.map(convert_to_json)
+    of TomlValueKind.Table:
+      result = %*{}
+      for k, v in value.tableVal:
+        result[k] = v.convert_to_json
+      return result
+    of TomlValueKind.None:
+      %nil
+
 proc build*(
   input_dir: string,
   output_dir: string,
@@ -137,7 +201,7 @@ proc build*(
   ## Builds a Ren'Py project with the specified configuration.
   var registry_path: string
 
-  var config = parseFile(config)
+  var config = parsetoml.parseFile(config)
 
   config.validate()
 
@@ -147,6 +211,15 @@ proc build*(
     registry_path = get_registry(config["renutil"]["registry"].getStr())
   else:
     registry_path = get_registry(registry)
+
+  # scan for tasks
+  # each task is a file with a shebang that takes care of running itself
+  # we pass in input_dir, output_dir, config
+  #!/usr/bin/env bash
+  # let success = execShellCmd(&"./test.py {input_dir} {output_dir} {quoteShell($config.convert_to_json)}")
+  # if success != 0:
+  #   echo "Task failed"
+  #   return
 
   if not dirExists(input_dir):
     echo(&"Game directory '{input_dir}' does not exist.")
@@ -167,6 +240,53 @@ proc build*(
   if not (renutil_target_version in list_installed(registry_path)):
     echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
+
+  if config["tasks"]["convert_images"].getBool():
+    var lossy_paths = newSeq[string]()
+    for path_item in config["task_convert_images"]["lossy_paths"].getElems():
+      let path_string = path_item.getStr()
+      let full_path = joinPath(
+        input_dir,
+        joinPath(path_string.split("/")[0..^2])
+      )
+
+      let path_split = path_string.split("/")
+      var exts = newSeq[string]()
+      if "|" in path_split[^1]:
+        exts = path_split[^1].split("|")
+      else:
+        exts = @[path_split[^1]]
+
+      for file in walkDirRec(full_path):
+        for ext in exts:
+          if file.endsWith(ext):
+            lossy_paths.add(file)
+
+    var lossless_paths = newSeq[string]()
+    for path_item in config["task_convert_images"]["lossless_paths"].getElems():
+      let path_string = path_item.getStr()
+      let full_path = joinPath(
+        input_dir,
+        joinPath(path_string.split("/")[0..^2])
+      )
+
+      let path_split = path_string.split("/")
+      var exts = newSeq[string]()
+      if "|" in path_split[^1]:
+        exts = path_split[^1].split("|")
+      else:
+        exts = @[path_split[^1]]
+
+      for file in walkDirRec(full_path):
+        for ext in exts:
+          if file.endsWith(ext):
+            lossless_paths.add(file)
+
+    task_pre_convert_images(
+      input_dir,
+      lossy_paths,
+      lossless_paths,
+    )
 
   let keystore_path = joinPath(
     registry_path,
