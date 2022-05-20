@@ -19,7 +19,7 @@ jobs:
           files: '*.zip'
 
   build-linux-windows:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container: nimlang/nim
     steps:
       - uses: actions/checkout@v2
