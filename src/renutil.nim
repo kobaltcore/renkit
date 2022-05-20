@@ -1,18 +1,20 @@
-import os
-import nre
-import osproc
 import system
+import std/os
+import std/nre
+import std/osproc
+import std/streams
+import std/strtabs
+import std/xmltree
+import std/strutils
+import std/strformat
+import std/algorithm
+import std/htmlparser
+import std/httpclient
+
 import cligen
-import streams
-import strtabs
-import xmltree
-import strutils
-import strformat
-import algorithm
-import httpclient
-import htmlparser
 import zippy/ziparchives
 
+import common
 import natsort
 
 type KeyboardInterrupt = object of CatchableError
@@ -87,24 +89,49 @@ proc get_exe*(version: string, registry: string): (string, string) =
     arch: string
     exe = "python"
 
-  if hostOS == "windows":
-    if hostCPU == "amd64":
-      arch = "windows-x86_64"
-    else:
-      arch = "windows-i686"
-    exe = "python.exe"
-  elif hostOS == "linux":
-    if hostCPU == "amd64":
-      arch = "linux-x86_64"
-    else:
-      arch = "linux-i686"
-  elif hostOS == "macosx":
-    if version < "7.4":
-      arch = "darwin-x86_64"
-    elif version < "8.0":
-      arch = "mac-x86_64"
-    else:
-      arch = "py3-mac-x86_64"
+  case hostOS:
+    of "windows":
+      exe = "python.exe"
+      case hostCPU:
+        of "amd64":
+          if version < "7.4": # Pre-v8 strain
+            arch = "windows-x86_64"
+          elif version < "8.0.0": # Python 2 strain
+            arch = "py2-windows-x86_64"
+          else: # Python 3 strain
+            arch = "py3-windows-x86_64"
+        else:
+          if version < "7.4": # Pre-v8 strain
+            arch = "windows-i686"
+          elif version < "8.0.0": # Python 2 strain
+            arch = "py2-windows-i686"
+          else: # Python 3 strain
+            arch = "py3-windows-i686"
+    of "linux":
+      case hostCPU:
+        of "amd64":
+          if version < "7.4": # Pre-v8 strain
+            arch = "linux-x86_64"
+          elif version < "8.0.0": # Python 2 strain
+            arch = "py2-linux-x86_64"
+          else: # Python 3 strain
+            arch = "py3-linux-x86_64"
+        else:
+          if version < "7.4": # Pre-v8 strain
+            arch = "linux-i686"
+          elif version < "8.0.0": # Python 2 strain
+            arch = "py2-linux-i686"
+          else: # Python 3 strain
+            arch = "py3-linux-i686"
+    of "macosx":
+      if version < "7.4": # Pre-v8 strain
+        arch = "darwin-x86_64"
+      elif version <= "7.4.8": # Weird naming scheme change just for this version
+        arch = "mac-x86_64"
+      elif version < "8.0.0": # Python 2 strain
+        arch = "py2-mac-x86_64"
+      else: # Python 3 strain
+        arch = "py3-mac-x86_64"
 
   let python = joinPath(registry, version, "lib", arch, exe)
   let base_file = joinPath(registry, version, "renpy.py")
@@ -195,17 +222,15 @@ proc install*(
     &"renpy-{version}-sdk.zip"
   )
 
-  proc onProgressChanged(total, progress, speed: BiggestInt) =
-    let prog = int((int(progress) / int(total)) * 100)
-    echo &"{prog}% @ {int(speed) / 1_000_000:.2f}Mb/s"
-
-  let client = newHttpClient()
-  client.onProgressChanged = onProgressChanged
-
   if not fileExists(steam_file):
     try:
-      echo "Downloading Web"
-      client.downloadFile(steam_url, steam_file)
+      echo "Downloading Steam support"
+      download(steam_url, steam_file)
+    except HttpRequestError:
+      if getCurrentExceptionMsg() == "404 Not Found":
+        echo "Not supported on this version, skipping"
+      else:
+        raise getCurrentException()
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
       removeFile(steam_file)
@@ -213,8 +238,8 @@ proc install*(
 
   if not fileExists(web_file):
     try:
-      echo "Downloading Web"
-      client.downloadFile(web_url, web_file)
+      echo "Downloading Web Support"
+      download(web_url, web_file)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
       removeFile(web_file)
@@ -223,7 +248,7 @@ proc install*(
   if not fileExists(rapt_file):
     try:
       echo "Downloading RAPT"
-      client.downloadFile(rapt_url, rapt_file)
+      download(rapt_url, rapt_file)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
       removeFile(rapt_file)
@@ -232,7 +257,7 @@ proc install*(
   if not fileExists(sdk_file):
     try:
       echo "Downloading Ren'Py"
-      client.downloadFile(sdk_url, sdk_file)
+      download(sdk_url, sdk_file)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
       removeFile(sdk_file)
@@ -255,12 +280,13 @@ proc install*(
 
   ### Steam
 
-  extractAll(steam_file, path_extracted)
+  if fileExists(steam_file):
+    extractAll(steam_file, path_extracted)
 
-  for path in walkDirRec(path_extracted):
-    copyFile(path, joinPath(registry_path, version, relativePath(path, path_extracted)))
+    for path in walkDirRec(path_extracted):
+      copyFile(path, joinPath(registry_path, version, relativePath(path, path_extracted)))
 
-  removeDir(path_extracted)
+    removeDir(path_extracted)
 
   ### Web
 
@@ -354,9 +380,21 @@ proc install*(
   var
     line = ""
     is_patched = false
-  let ssl_patch = "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
+  let ssl_patch = case version:
+    of "8.0.0":
+      "import ssl; ssl._create_default_https_context = ssl._create_unverified_context; import urllib.request as urllib"
+    else:
+      "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
 
+  var line_count = 0
   while strm_in.readLine(line):
+    line_count += 1
+    if version == "8.0.0":
+      if line == "import urllib":
+        continue
+      if line_count == 227:
+        strm_out.writeLine("""                    p.stdin.write(b'y\n')""")
+        continue
     if line == ssl_patch:
       is_patched = true
     if not is_patched and line == "":
@@ -375,7 +413,16 @@ proc install*(
 
   echo "Installing RAPT"
   putEnv("RAPT_NO_TERMS", "1")
-  discard execCmd(&"{python} -EO android.py installsdk")
+  let err = execCmd(&"{python} -EO android.py installsdk")
+  if err != 0 and version >= "8.0.0":
+    echo "Fixing RAPT sdk manager permissions issue"
+    let path = case hostOS:
+      of "windows":
+        joinPath(registry_path, version, "rapt", "Sdk", "cmdline-tools", "latest", "bin", "sdkmanager.exe")
+      else:
+        joinPath(registry_path, version, "rapt", "Sdk", "cmdline-tools", "latest", "bin", "sdkmanager")
+    setFilePermissions(path, {fpUserRead, fpUserExec})
+    discard execCmd(&"{python} -EO android.py installsdk")
 
   setCurrentDir(original_dir)
 
