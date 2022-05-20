@@ -19,7 +19,7 @@ jobs:
           files: '*.zip'
 
   build-linux-windows:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container: nimlang/nim
     steps:
       - uses: actions/checkout@v2
@@ -27,6 +27,8 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64 zip upx
+          wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1l-1ubuntu1.3_amd64.deb
+          dpkg -i libssl1.1_1.1.1l-1ubuntu1.3_amd64.deb
           nimble build_linux_amd64
           nimble build_windows_amd64
           nimble build_windows_i386
