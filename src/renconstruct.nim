@@ -1,19 +1,20 @@
-import os
-import json
-import base64
 import system
-import osproc
-import cligen
-import tables
+import std/os
+import std/json
+import std/base64
+import std/osproc
+import std/tables
+import std/streams
+import std/strutils
+import std/sequtils
+import std/strformat
+# import std/strtabs
+# import std/xmltree
+# import std/xmlparser
+
 import semver
-import streams
-import strutils
-import sequtils
-import strformat
+import cligen
 import parsetoml
-# import strtabs
-# import xmltree
-# import xmlparser
 
 import renutil
 

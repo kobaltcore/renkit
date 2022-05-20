@@ -1,12 +1,13 @@
-import os
-import nre
-import json
-import osproc
+import std/os
+import std/nre
+import std/json
+import std/osproc
+import std/options
+import std/strutils
+import std/sequtils
+import std/strformat
+
 import cligen
-import options
-import strutils
-import sequtils
-import strformat
 import parsetoml
 import zippy/internal
 import zippy/ziparchives

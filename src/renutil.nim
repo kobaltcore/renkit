@@ -5,7 +5,6 @@ import std/osproc
 import std/streams
 import std/strtabs
 import std/xmltree
-import std/strutils
 import std/strformat
 import std/algorithm
 import std/htmlparser
