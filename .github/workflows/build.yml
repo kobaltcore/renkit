@@ -26,7 +26,7 @@ jobs:
       - name: Build Project
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64 zip upx
+          DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64 zip upx libssl-dev
           nimble build_linux_amd64
           nimble build_windows_amd64
           nimble build_windows_i386
