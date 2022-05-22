@@ -379,21 +379,9 @@ proc install*(
   var
     line = ""
     is_patched = false
-  let ssl_patch = case version:
-    of "8.0.0":
-      "import ssl; ssl._create_default_https_context = ssl._create_unverified_context; import urllib.request as urllib"
-    else:
-      "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
+  let ssl_patch = "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
 
-  var line_count = 0
   while strm_in.readLine(line):
-    line_count += 1
-    if version == "8.0.0":
-      if line == "import urllib":
-        continue
-      if line_count == 227:
-        strm_out.writeLine("""                    p.stdin.write(b'y\n')""")
-        continue
     if line == ssl_patch:
       is_patched = true
     if not is_patched and line == "":
@@ -411,17 +399,17 @@ proc install*(
   # TODO: tweak gradle.properties RAM allocation
 
   echo "Installing RAPT"
+  if version >= "7.5.0":
+    # in versions above 7.5.0, the RAPT installer tries to import renpy.compat
+    # this is not in the path by default, and since PYTHONPATH is ignored, we
+    # symlink it instead to make it visible during installation.
+    createSymlink(
+      joinPath(registry_path, version, "renpy"),
+      joinPath(registry_path, version, "rapt", "renpy")
+    )
+
   putEnv("RAPT_NO_TERMS", "1")
   let err = execCmd(&"{python} -EO android.py installsdk")
-  if err != 0 and version >= "8.0.0":
-    echo "Fixing RAPT sdk manager permissions issue"
-    let path = case hostOS:
-      of "windows":
-        joinPath(registry_path, version, "rapt", "Sdk", "cmdline-tools", "latest", "bin", "sdkmanager.exe")
-      else:
-        joinPath(registry_path, version, "rapt", "Sdk", "cmdline-tools", "latest", "bin", "sdkmanager")
-    setFilePermissions(path, {fpUserRead, fpUserExec})
-    discard execCmd(&"{python} -EO android.py installsdk")
 
   setCurrentDir(original_dir)
 
