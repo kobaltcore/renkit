@@ -1,10 +1,10 @@
 FROM openjdk:8-jdk-slim-bullseye
 ARG renpy_version
-ARG renkit_version=v1.0.0
+ARG renkit_version=v1.2.3
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# install dependencies and MEGAcmd
+# install dependencies
 RUN apt-get update && \
     apt-get install -y wget unzip && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -18,4 +18,4 @@ RUN wget https://github.com/kobaltcore/renkit/releases/download/$renkit_version/
 RUN renutil install -v $renpy_version
 
 # build for a specific version of Ren'Py with:
-# docker build . --tag renpy:7.4.11 --build-arg renpy_version=7.4.11
+# docker build . --tag renpy:8.0.0 --build-arg renpy_version=8.0.0
