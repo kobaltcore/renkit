@@ -38,25 +38,17 @@ proc task_pre_convert_images(
   for file in lossy_paths:
     let (dir, name, ext) = splitFile(file)
     let input_file = joinPath(dir, &"{name}{ext}")
-    let output_file = joinPath(dir, &"{name}.webp")
-    lossy_cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(input_file)} -o {quoteShell(output_file)}")
+    lossy_cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(input_file)} -o {quoteShell(input_file)}")
 
   discard execProcesses(lossy_cmds, n = n, options = {poUsePath})
-
-  for file in lossy_paths:
-    removeFile(file)
 
   var lossless_cmds = newSeq[string]()
   for file in lossless_paths:
     let (dir, name, ext) = splitFile(file)
     let input_file = joinPath(dir, &"{name}{ext}")
-    let output_file = joinPath(dir, &"{name}.webp")
-    lossless_cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(input_file)} -o {quoteShell(output_file)}")
+    lossless_cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(input_file)} -o {quoteShell(input_file)}")
 
   discard execProcesses(lossless_cmds, n = n, options = {poUsePath})
-
-  for file in lossless_paths:
-    removeFile(file)
 
 proc task_post_clean(
   version: string,
@@ -193,6 +185,24 @@ proc convert_to_json(value: TomlValueRef): JsonNode =
     of TomlValueKind.None:
       %nil
 
+proc find_files(input_dir: string, paths: seq[TomlValueRef]): seq[string] =
+  for path_item in paths:
+    let path_string = path_item.getStr()
+    let full_path = joinPath(input_dir, joinPath(path_string.split("/")[0..^2]))
+
+    let path_split = path_string.split("/")
+    var exts = newSeq[string]()
+    if "|" in path_split[^1]:
+      exts = path_split[^1].split("|")
+    else:
+      exts = @[path_split[^1]]
+
+    for file in walkDirRec(full_path):
+      for ext in exts:
+        if file.endsWith(ext):
+          result.add(file)
+
+
 proc build*(
   input_dir: string,
   output_dir: string,
@@ -243,51 +253,14 @@ proc build*(
     install(renutil_target_version, registry_path)
 
   if config["tasks"]["convert_images"].getBool():
-    var lossy_paths = newSeq[string]()
-    for path_item in config["task_convert_images"]["lossy_paths"].getElems():
-      let path_string = path_item.getStr()
-      let full_path = joinPath(
-        input_dir,
-        joinPath(path_string.split("/")[0..^2])
-      )
-
-      let path_split = path_string.split("/")
-      var exts = newSeq[string]()
-      if "|" in path_split[^1]:
-        exts = path_split[^1].split("|")
-      else:
-        exts = @[path_split[^1]]
-
-      for file in walkDirRec(full_path):
-        for ext in exts:
-          if file.endsWith(ext):
-            lossy_paths.add(file)
-
-    var lossless_paths = newSeq[string]()
-    for path_item in config["task_convert_images"]["lossless_paths"].getElems():
-      let path_string = path_item.getStr()
-      let full_path = joinPath(
-        input_dir,
-        joinPath(path_string.split("/")[0..^2])
-      )
-
-      let path_split = path_string.split("/")
-      var exts = newSeq[string]()
-      if "|" in path_split[^1]:
-        exts = path_split[^1].split("|")
-      else:
-        exts = @[path_split[^1]]
-
-      for file in walkDirRec(full_path):
-        for ext in exts:
-          if file.endsWith(ext):
-            lossless_paths.add(file)
-
+    echo "Converting images"
     task_pre_convert_images(
       input_dir,
-      lossy_paths,
-      lossless_paths,
+      input_dir.find_files(config["task_convert_images"]["lossy_paths"].getElems()),
+      input_dir.find_files(config["task_convert_images"]["lossless_paths"].getElems()),
     )
+
+  return
 
   let keystore_path = joinPath(
     registry_path,
