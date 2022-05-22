@@ -260,8 +260,6 @@ proc build*(
       input_dir.find_files(config["task_convert_images"]["lossless_paths"].getElems()),
     )
 
-  return
-
   let keystore_path = joinPath(
     registry_path,
     renutil_target_version,
