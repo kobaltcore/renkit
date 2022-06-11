@@ -2,12 +2,13 @@
   clean = false # cleans up temporary files after the build has completed
   notarize = false # notarizes the macOS output using Apple's notarization service
   keystore = false # overrides Android keystores with custom ones
+  convert_images = true # converts images to WebP
 
-[task_keystore] # (required if matching task is enabled)
+[task_keystore] # required if matching task is enabled
   keystore_apk = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the APK bundles
   keystore_aab = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the AAB bundles
 
-[task_notarize] # (required if matching task is enabled)
+[task_notarize] # required if matching task is enabled
   bundle_id = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
   sign_cert = "<base64-encoded certificate file>" # the base-64 encoded binary certificate file for the codesign process
   sign_cert_pwd = "<certificate password>" # the password used to protect the exported certificate
@@ -15,7 +16,15 @@
   identity = "<apple developer identity UUID>"
   password = "<one-time password from Apple>"
 
-[build] # (required, at least one item must be 'true')
+[task_convert_images]
+  # extensions: a list of file extensions to convert
+  # recursive: scans directories recursively if enabled, otherwise only scans the immediate directory
+  # lossless: converts to lossless WebP if enabled, otherwise converts to lossy WebP
+  "game/images/cg" = { extensions = ["png", "jpg"], recursive = true, lossless = true } # default values
+  "game/images/bg" = { lossless = false }
+  "game/images" = { } # all parameters are optional
+
+[build] # required, at least one item must be 'true'
   pc = false  # Windows + Linux
   win = false # Windows
   linux = false # Linux
@@ -30,5 +39,5 @@
   clear_output_dir = false # whether to clear the output directory on startup
 
 [renutil]
-  version = "7.4.11" # the Ren'Py version to use (required)
+  version = "7.5.0" # the Ren'Py version to use (required)
   registry = "cache" # the directory to store installation files in

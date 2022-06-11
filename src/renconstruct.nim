@@ -16,6 +16,7 @@ import semver
 import cligen
 import parsetoml
 
+import common
 import renutil
 
 type KeyboardInterrupt = object of CatchableError
@@ -30,25 +31,37 @@ setControlCHook(handler)
 
 proc task_pre_convert_images(
   input_dir: string,
-  lossy_paths: seq[string] = @[],
-  lossless_paths: seq[string] = @[],
+  config: JsonNode,
   n = countProcessors(),
 ) =
-  var lossy_cmds = newSeq[string]()
-  for file in lossy_paths:
-    let (dir, name, ext) = splitFile(file)
-    let input_file = joinPath(dir, &"{name}{ext}")
-    lossy_cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(input_file)} -o {quoteShell(input_file)}")
+  for path, options in config["task_convert_images"]:
+    let
+      lossless = options{"lossless"}.getBool(true)
+      recursive = options{"recursive"}.getBool(true)
+      extensions = options{"extensions"}.getElems(@[%"png", %"jpg"]).mapIt(it.getStr())
 
-  discard execProcesses(lossy_cmds, n = n, options = {poUsePath})
+    let files = input_dir.find_files(path, extensions, recursive)
 
-  var lossless_cmds = newSeq[string]()
-  for file in lossless_paths:
-    let (dir, name, ext) = splitFile(file)
-    let input_file = joinPath(dir, &"{name}{ext}")
-    lossless_cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(input_file)} -o {quoteShell(input_file)}")
+    var attributes: seq[string]
+    if recursive:
+      attributes.add("recursive")
+    if lossless:
+      attributes.add("lossless")
 
-  discard execProcesses(lossless_cmds, n = n, options = {poUsePath})
+    if attributes.len == 0:
+      echo &"Processing {path} with {files.len} files"
+    else:
+      echo &"Processing {path} with {files.len} files ({attributes.join(\", \")})"
+
+    var cmds: seq[string]
+    if lossless:
+      for file in files:
+        cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
+    else:
+      for file in files:
+        cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
+
+    discard execProcesses(cmds, n = n, options = {poUsePath})
 
 proc task_post_clean(
   version: string,
@@ -68,32 +81,32 @@ proc task_post_notarize() =
   # run renotize
   discard
 
-proc validate*(config: var TomlValueRef) =
+proc validate*(config: JsonNode) =
   if "build" notin config:
     echo "Section 'build' not found, please add it."
     quit(1)
 
   if "pc" notin config["build"]:
-    config{"pc"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"pc"} = %false
   if "win" notin config["build"]:
-    config{"win"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"win"} = %false
   if "linux" notin config["build"]:
-    config{"linux"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"linux"} = %false
   if "mac" notin config["build"]:
-    config{"mac"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"mac"} = %false
   if "web" notin config["build"]:
-    config{"web"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"web"} = %false
   if "steam" notin config["build"]:
-    config{"steam"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"steam"} = %false
   if "market" notin config["build"]:
-    config{"market"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"market"} = %false
   if "android_apk" notin config["build"]:
-    config{"android_apk"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"android_apk"} = %false
   if "android_aab" notin config["build"]:
-    config{"android_aab"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"android_aab"} = %false
 
   var found_true = false
-  for k, v in config["build"].getTable():
+  for k, v in config["build"]:
     if v.getBool():
       found_true = true
       break
@@ -111,97 +124,48 @@ proc validate*(config: var TomlValueRef) =
     quit(1)
 
   if "tasks" notin config:
-    config{"tasks", "keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
-    config{"tasks", "clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
-    config{"tasks", "notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
-    config{"tasks", "manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
-    config{"tasks", "convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "keystore"} = %false
+    config{"tasks", "clean"} = %false
+    config{"tasks", "notarize"} = %false
+    config{"tasks", "manifest"} = %false
+    config{"tasks", "convert_images"} = %false
 
   if "keystore" in config["tasks"]:
     if config["tasks"]["keystore"].getBool() and "task_keystore" notin config:
       echo "Task 'keystore' is enabled but no 'task_keystore' section was found."
       quit(1)
   else:
-    config{"tasks", "keystore"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "keystore"} = %false
 
   if "clean" notin config["tasks"]:
-    config{"tasks", "clean"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "clean"} = %false
 
   if "notarize" in config["tasks"]:
     if config["tasks"]["notarize"].getBool() and "task_notarize" notin config:
       echo "Task 'notarize' is enabled but no 'task_notarize' section was found."
       quit(1)
   else:
-    config{"tasks", "notarize"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "notarize"} = %false
 
   if "manifest" in config["tasks"]:
     if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
       echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
       quit(1)
   else:
-    config{"tasks", "manifest"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "manifest"} = %false
 
   if "convert_images" in config["tasks"]:
     if config["tasks"]["convert_images"].getBool() and "task_convert_images" notin config:
       echo "Task 'convert_images' is enabled but no 'task_convert_images' section was found."
       quit(1)
   else:
-    config{"tasks", "convert_images"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"tasks", "convert_images"} = %false
 
   if "options" notin config:
-    config{"options", "clear_output_dir"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
+    config{"options", "clear_output_dir"} = %false
 
   if "clear_output_dir" notin config["options"]:
-    config{"options", "clear_output_dir"} = TomlValueRef(kind: TomlValueKind.Bool, boolVal: false)
-
-proc convert_to_json(value: TomlValueRef): JsonNode =
-  case value.kind:
-    of TomlValueKind.Int:
-      %value.intVal
-    of TomlValueKind.Float:
-      %value.floatVal
-    of TomlValueKind.Bool:
-      %value.boolVal
-    of TomlValueKind.Datetime:
-      %value.dateTimeVal
-    of TomlValueKind.Date:
-      %value.dateVal
-    of TomlValueKind.Time:
-      %value.timeVal
-    of TomlValueKind.String:
-      %value.stringVal
-    of TomlValueKind.Array:
-      if value.arrayVal.len == 0:
-        %[]
-      elif value.arrayVal[0].kind == TomlValueKind.Table:
-        %value.arrayVal.map(convert_to_json)
-      else:
-        %*value.arrayVal.map(convert_to_json)
-    of TomlValueKind.Table:
-      result = %*{}
-      for k, v in value.tableVal:
-        result[k] = v.convert_to_json
-      return result
-    of TomlValueKind.None:
-      %nil
-
-proc find_files(input_dir: string, paths: seq[TomlValueRef]): seq[string] =
-  for path_item in paths:
-    let path_string = path_item.getStr()
-    let full_path = joinPath(input_dir, joinPath(path_string.split("/")[0..^2]))
-
-    let path_split = path_string.split("/")
-    var exts = newSeq[string]()
-    if "|" in path_split[^1]:
-      exts = path_split[^1].split("|")
-    else:
-      exts = @[path_split[^1]]
-
-    for file in walkDirRec(full_path):
-      for ext in exts:
-        if file.endsWith(ext):
-          result.add(file)
-
+    config{"options", "clear_output_dir"} = %false
 
 proc build*(
   input_dir: string,
@@ -212,7 +176,7 @@ proc build*(
   ## Builds a Ren'Py project with the specified configuration.
   var registry_path: string
 
-  var config = parsetoml.parseFile(config)
+  var config = parsetoml.parseFile(config).convert_to_json()
 
   config.validate()
 
@@ -254,11 +218,7 @@ proc build*(
 
   if config["tasks"]["convert_images"].getBool():
     echo "Converting images"
-    task_pre_convert_images(
-      input_dir,
-      input_dir.find_files(config["task_convert_images"]["lossy_paths"].getElems()),
-      input_dir.find_files(config["task_convert_images"]["lossless_paths"].getElems()),
-    )
+    task_pre_convert_images(input_dir, config)
 
   let keystore_path = joinPath(
     registry_path,

@@ -1,5 +1,10 @@
+import std/os
+import std/json
 import std/strutils
+import std/sequtils
 import std/httpclient
+
+import parsetoml
 
 import suru
 
@@ -34,3 +39,55 @@ proc download*(url, path: string) =
     bar[0].progress = bar[0].total
     bar.update(10_000_000)
     bar.finish()
+
+proc convert_to_json*(value: TomlValueRef): JsonNode =
+  case value.kind:
+    of TomlValueKind.Int:
+      %value.intVal
+    of TomlValueKind.Float:
+      %value.floatVal
+    of TomlValueKind.Bool:
+      %value.boolVal
+    of TomlValueKind.Datetime:
+      %value.dateTimeVal
+    of TomlValueKind.Date:
+      %value.dateVal
+    of TomlValueKind.Time:
+      %value.timeVal
+    of TomlValueKind.String:
+      %value.stringVal
+    of TomlValueKind.Array:
+      if value.arrayVal.len == 0:
+        %[]
+      elif value.arrayVal[0].kind == TomlValueKind.Table:
+        %value.arrayVal.map(convert_to_json)
+      else:
+        %*value.arrayVal.map(convert_to_json)
+    of TomlValueKind.Table:
+      result = %*{}
+      for k, v in value.tableVal:
+        result[k] = v.convert_to_json
+      return result
+    of TomlValueKind.None:
+      %nil
+
+proc find_files*(
+  input_dir: string,
+  path: string,
+  extensions: seq[string],
+  recursive = true
+): seq[string] =
+  let full_path = joinPath(input_dir, path)
+
+  if recursive:
+    for file in walkDirRec(full_path):
+      for ext in extensions:
+        if file.endsWith(ext):
+          result.add(file)
+  else:
+    for file in walkDir(full_path):
+      if file.kind != pcFile:
+        continue
+      for ext in extensions:
+        if file.path.endsWith(ext):
+          result.add(file.path)
