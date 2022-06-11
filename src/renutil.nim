@@ -266,7 +266,7 @@ proc install*(
   echo "Extracting"
   let path_extracted = joinPath(registry_path, "extracted")
 
-  ### SDK
+  # SDK
 
   extractAll(sdk_file, path_extracted)
 
@@ -277,7 +277,7 @@ proc install*(
 
   removeDir(path_extracted)
 
-  ### Steam
+  # Steam
 
   if fileExists(steam_file):
     extractAll(steam_file, path_extracted)
@@ -287,7 +287,7 @@ proc install*(
 
     removeDir(path_extracted)
 
-  ### Web
+  # Web
 
   extractAll(web_file, path_extracted)
 
@@ -298,7 +298,7 @@ proc install*(
 
   removeDir(path_extracted)
 
-  ### RAPT
+  # RAPT
 
   extractAll(rapt_file, path_extracted)
 
