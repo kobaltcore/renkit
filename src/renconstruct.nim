@@ -16,8 +16,8 @@ import semver
 import cligen
 import parsetoml
 
-import common
 import renutil
+import lib/common
 
 type KeyboardInterrupt = object of CatchableError
 

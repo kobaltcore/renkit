@@ -13,8 +13,8 @@ import std/httpclient
 import cligen
 import zippy/ziparchives
 
-import common
-import natsort
+import lib/common
+import lib/natsort
 
 type KeyboardInterrupt = object of CatchableError
 
