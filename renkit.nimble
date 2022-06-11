@@ -36,26 +36,29 @@ task renconstruct, "Executes 'nimble run' with extra compiler options.":
   exec(&"nimble -d:ssl --gc:orc run renconstruct {args}")
 
 task build_macos_amd64, "Builds for macOS (amd64)":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc --os:macosx -d:strip -y")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip --os:macosx -y")
   exec("mkdir -p bin/amd64/macos && mv renutil bin/amd64/macos && mv renotize bin/amd64/macos && mv renconstruct bin/amd64/macos")
-  exec("upx --best bin/amd64/macos/*")
+
+task build_macos_arm64, "Builds for macOS (arm64)":
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip --os:macosx -y")
+  exec("mkdir -p bin/arm64/macos && mv renutil bin/arm64/macos && mv renotize bin/arm64/macos && mv renconstruct bin/arm64/macos")
 
 task build_linux_amd64, "Builds for linux (amd64)":
-  exec("nimble build -d:diadogGTK -d:ssl -d:release --opt:size --gc:orc --os:linux --cpu:amd64 -d:strip -y")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip --os:linux --cpu:amd64 -y")
   exec("mkdir -p bin/amd64/linux && mv renutil bin/amd64/linux && mv renotize bin/amd64/linux && mv renconstruct bin/amd64/linux")
   exec("upx --best bin/amd64/linux/*")
 
 task build_linux_i386, "Builds for linux (i386)":
-  exec("nimble build -d:diadogGTK -d:ssl -d:release --opt:size --gc:orc --os:linux --cpu:i386 -d:strip -y")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip --os:linux --cpu:i386 -y")
   exec("mkdir -p bin/i386/linux && mv renutil bin/i386/linux && mv renotize bin/i386/linux && mv renconstruct bin/i386/linux")
   exec("upx --best bin/i386/linux/*")
 
 task build_windows_amd64, "Builds for Windows (amd64)":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:mingw --cpu:amd64 -d:strip -y")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip -d:mingw --cpu:amd64 -y")
   exec("mkdir -p bin/amd64/windows && mv renutil.exe bin/amd64/windows && mv renotize.exe bin/amd64/windows && mv renconstruct.exe bin/amd64/windows")
   exec("upx --best bin/amd64/windows/*")
 
 task build_windows_i386, "Builds for Windows (i386)":
-  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:mingw --cpu:i386 -d:strip -y")
+  exec("nimble build -d:ssl -d:release --opt:size --gc:orc -d:strip -d:mingw --cpu:i386 -y")
   exec("mkdir -p bin/i386/windows && mv renutil.exe bin/i386/windows && mv renotize.exe bin/i386/windows && mv renconstruct.exe bin/i386/windows")
   exec("upx --best bin/i386/windows/*")
