@@ -10,9 +10,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install renkit tools
-RUN wget https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-linux.zip && \
-    unzip renkit-linux.zip -d /usr/local/bin && \
-    rm renkit-linux.zip
+RUN wget https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-linux-amd64.zip && \
+    unzip renkit-linux-amd64.zip -d /usr/local/bin && \
+    rm renkit-linux-amd64.zip
 
 # install the specified version of Ren'Py
 RUN renutil install -v $renpy_version
