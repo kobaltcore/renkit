@@ -17,6 +17,7 @@ import cligen
 import parsetoml
 
 import renutil
+import renotize
 import lib/common
 
 type KeyboardInterrupt = object of CatchableError
@@ -34,7 +35,10 @@ proc task_pre_convert_images(
   config: JsonNode,
   n = countProcessors(),
 ) =
-  for path, options in config["task_convert_images"]:
+  for path, options in config{"tasks", "convert_images"}:
+    if path == "enabled":
+      continue
+
     let
       lossless = options{"lossless"}.getBool(true)
       recursive = options{"recursive"}.getBool(true)
@@ -77,9 +81,8 @@ proc task_post_clean(
       if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
         removeFile(path)
 
-proc task_post_notarize() =
-  # run renotize
-  discard
+proc task_post_notarize(input_file: string, config: JsonNode) =
+  full_run(input_file, config{"tasks", "notarize"})
 
 proc validate*(config: JsonNode) =
   if "build" notin config:
@@ -124,42 +127,42 @@ proc validate*(config: JsonNode) =
     quit(1)
 
   if "tasks" notin config:
-    config{"tasks", "keystore"} = %false
-    config{"tasks", "clean"} = %false
-    config{"tasks", "notarize"} = %false
-    config{"tasks", "manifest"} = %false
-    config{"tasks", "convert_images"} = %false
+    config{"tasks", "keystore", "enabled"} = %false
+    config{"tasks", "clean", "enabled"} = %false
+    config{"tasks", "notarize", "enabled"} = %false
+    # config{"tasks", "manifest", "enabled"} = %false
+    config{"tasks", "convert_images", "enabled"} = %false
 
   if "keystore" in config["tasks"]:
     if config["tasks"]["keystore"].getBool() and "task_keystore" notin config:
       echo "Task 'keystore' is enabled but no 'task_keystore' section was found."
       quit(1)
   else:
-    config{"tasks", "keystore"} = %false
+    config{"tasks", "keystore", "enabled"} = %false
 
   if "clean" notin config["tasks"]:
-    config{"tasks", "clean"} = %false
+    config{"tasks", "clean", "enabled"} = %false
 
   if "notarize" in config["tasks"]:
     if config["tasks"]["notarize"].getBool() and "task_notarize" notin config:
       echo "Task 'notarize' is enabled but no 'task_notarize' section was found."
       quit(1)
   else:
-    config{"tasks", "notarize"} = %false
+    config{"tasks", "notarize", "enabled"} = %false
 
-  if "manifest" in config["tasks"]:
-    if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
-      echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
-      quit(1)
-  else:
-    config{"tasks", "manifest"} = %false
+  # if "manifest" in config["tasks"]:
+  #   if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
+  #     echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
+  #     quit(1)
+  # else:
+  #   config{"tasks", "manifest", "enabled"} = %false
 
   if "convert_images" in config["tasks"]:
     if config["tasks"]["convert_images"].getBool() and "task_convert_images" notin config:
       echo "Task 'convert_images' is enabled but no 'task_convert_images' section was found."
       quit(1)
   else:
-    config{"tasks", "convert_images"} = %false
+    config{"tasks", "convert_images", "enabled"} = %false
 
   if "options" notin config:
     config{"options", "clear_output_dir"} = %false
@@ -216,7 +219,7 @@ proc build*(
     echo(&"Installing Ren'Py {renutil_target_version}")
     install(renutil_target_version, registry_path)
 
-  if config["tasks"]["convert_images"].getBool():
+  if config{"tasks", "convert_images", "enabled"}.getBool():
     echo "Converting images"
     task_pre_convert_images(input_dir, config)
 
@@ -248,16 +251,16 @@ proc build*(
     "bundle.keystore.original"
   )
 
-  if config["tasks"]["keystore"].getBool():
+  if config{"tasks", "keystore", "enabled"}.getBool():
     var keystore = getEnv(
       "RC_KEYSTORE_APK",
       getEnv("RC_KEYSTORE"), # for backwards-compatibility
     )
 
-    if keystore == "" and "keystore_apk" in config["task_keystore"]:
-      keystore = config["task_keystore"]["keystore_apk"].getStr()
+    if keystore == "" and "keystore_apk" in config{"tasks", "keystore"}:
+      keystore = config{"task_keystore", "keystore_apk"}.getStr()
     if keystore == "":
-      keystore = config["task_keystore"]["keystore"].getStr()
+      keystore = config{"task_keystore", "keystore"}.getStr()
 
     if keystore == "":
       echo("Keystore override was requested, but no APK keystore could be found.")
@@ -273,7 +276,7 @@ proc build*(
     keystore = getEnv("RC_KEYSTORE_AAB")
 
     if keystore == "":
-      keystore = config["task_keystore"]["keystore_aab"].getStr()
+      keystore = config{"tasks", "keystore", "keystore_aab"}.getStr()
 
     if keystore == "":
       echo("Keystore override was requested, but no AAB keystore could be found.")
@@ -299,8 +302,8 @@ proc build*(
   let application_tag = data.findAll("application")[0]
 
   let dict: StringTableRef = application_tag.attrs
-  if config["tasks"]["manifest"].getBool() and
-    config["task_manifest"]["legacy_storage"].getBool():
+  if config{"tasks", "manifest", "enabled"}.getBool() and
+    config{"tasks", "manifest", "legacy_storage"}.getBool():
     dict["android:requestLegacyExternalStorage"] = "true"
   else:
     dict["android:requestLegacyExternalStorage"] = "false"
@@ -388,10 +391,14 @@ proc build*(
       registry_path
     )
 
-  if config["tasks"]["notarize"].getBool():
-    task_post_notarize()
+  if config{"tasks", "notarize", "enabled"}.getBool():
+    let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
+    if files.len != 1:
+      echo "Could not find Mac ZIP file."
+      quit(1)
+    task_post_notarize(files[0], config)
 
-  if config["tasks"]["clean"].getBool():
+  if config{"tasks", "clean", "enabled"}.getBool():
     task_post_clean(
       renutil_target_version,
       renutil_target_version_semver,
@@ -399,7 +406,7 @@ proc build*(
       output_dir
     )
 
-  if config["tasks"]["keystore"].getBool() and fileExists(keystore_path_backup):
+  if config{"tasks", "keystore", "enabled"}.getBool() and fileExists(keystore_path_backup):
     moveFile(keystore_path_backup, keystore_path)
     moveFile(keystore_bundle_path_backup, keystore_bundle_path)
 
