@@ -12,6 +12,8 @@ import parsetoml
 import zippy/internal
 import zippy/ziparchives
 
+import lib/common
+
 type KeyboardInterrupt = object of CatchableError
 
 proc handler() {.noconv.} =
@@ -100,7 +102,10 @@ proc pack_dmg*(
   output_file: string,
   volume_name = "",
 ) =
-  let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {volume_name} -srcfolder {input_file} {output_file}"
+  var v_name = volume_name
+  if volume_name == "":
+    v_name = splitFile(input_file).name
+  let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {v_name} -srcfolder {input_file} {output_file}"
   discard execShellCmd(cmd)
 
 proc sign_dmg*(input_file: string, identity: string) =
@@ -146,17 +151,17 @@ proc status*(
 
   return status
 
-proc full_run*(input_file: string, config: string) =
+proc full_run*(input_file: string, config: JsonNode) =
+  let
+    altool_extra = config["altool_extra"].getStr()
+    bundle_id = config["bundle_id"].getStr()
+    identity = config["identity"].getStr()
+    apple_id = config["apple_id"].getStr()
+    password = config["password"].getStr()
+
   var
     uuid: string
     status: string
-
-  let config = parsetoml.parseFile(config)
-  let altool_extra = config["altool_extra"].getStr()
-  let bundle_id = config["bundle_id"].getStr()
-  let identity = config["identity"].getStr()
-  let apple_id = config["apple_id"].getStr()
-  let password = config["password"].getStr()
 
   echo "Unpacking app"
   unpack_app(input_file)
@@ -186,7 +191,7 @@ proc full_run*(input_file: string, config: string) =
   let dmg_file = &"{joinPath(dir, name)}.dmg"
 
   echo "Packing DMG"
-  pack_dmg(app_file, dmg_file, input_file)
+  pack_dmg(app_file, dmg_file)
 
   echo "Signing DMG"
   sign_dmg(dmg_file, identity)
@@ -209,6 +214,10 @@ proc full_run*(input_file: string, config: string) =
   removeDir("extracted distro")
 
   echo "Done"
+
+proc full_run*(input_file: string, config: string) =
+  let config = parsetoml.parseFile(config).convert_to_json()
+  full_run(input_file, config)
 
 when isMainModule:
   dispatchMulti(
