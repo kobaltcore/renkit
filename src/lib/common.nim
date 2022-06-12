@@ -85,9 +85,7 @@ proc find_files*(
         if file.endsWith(ext):
           result.add(file)
   else:
-    for file in walkDir(full_path):
-      if file.kind != pcFile:
-        continue
+    for file in walkFiles(joinPath(full_path, "*")):
       for ext in extensions:
-        if file.path.endsWith(ext):
-          result.add(file.path)
+        if file.endsWith(ext):
+          result.add(file)
