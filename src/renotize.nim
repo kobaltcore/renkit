@@ -151,7 +151,7 @@ proc status*(
 
   return status
 
-proc full_run*(input_file: string, config: JsonNode) =
+proc full_run_prog*(input_file: string, config: JsonNode) =
   let
     altool_extra = config["altool_extra"].getStr()
     bundle_id = config["bundle_id"].getStr()
@@ -217,7 +217,7 @@ proc full_run*(input_file: string, config: JsonNode) =
 
 proc full_run*(input_file: string, config: string) =
   let config = parsetoml.parseFile(config).convert_to_json()
-  full_run(input_file, config)
+  full_run_prog(input_file, config)
 
 when isMainModule:
   dispatchMulti(

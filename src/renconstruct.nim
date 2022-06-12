@@ -82,7 +82,7 @@ proc task_post_clean(
         removeFile(path)
 
 proc task_post_notarize(input_file: string, config: JsonNode) =
-  full_run(input_file, config{"tasks", "notarize"})
+  full_run_prog(input_file, config{"tasks", "notarize"})
 
 proc validate*(config: JsonNode) =
   if "build" notin config:
