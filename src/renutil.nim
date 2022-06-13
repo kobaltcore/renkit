@@ -1,6 +1,7 @@
 import system
 import std/os
 import std/nre
+import std/sugar
 import std/osproc
 import std/streams
 import std/strtabs
@@ -10,11 +11,11 @@ import std/algorithm
 import std/htmlparser
 import std/httpclient
 
+import semver
 import cligen
 import zippy/ziparchives
 
 import lib/common
-import lib/natsort
 
 type KeyboardInterrupt = object of CatchableError
 
@@ -36,19 +37,19 @@ proc get_registry*(registry: string = ""): string =
 
   return absolutePath(registry_path)
 
-proc list_installed*(registry: string): seq[string] =
-  var versions: seq[string]
+proc list_installed*(registry: string): seq[Version] =
+  var versions: seq[Version]
   for kind, path in walkDir(registry):
     if kind != pcDir:
       continue
-    versions.add(lastPathPart(path))
+    versions.add(parseVersion(lastPathPart(path)))
   return sorted(versions, Descending)
 
-proc is_installed*(version: string, registry: string): bool =
+proc is_installed*(version: Version, registry: string): bool =
   return list_installed(registry).contains(version)
 
-proc list_available*(): seq[string] =
-  var versions: seq[string]
+proc list_available*(): seq[Version] =
+  var versions: seq[Version]
 
   let client = newHttpClient()
   let html = parseHtml(client.getContent("https://www.renpy.org/dl"))
@@ -64,9 +65,9 @@ proc list_available*(): seq[string] =
     if match.isNone:
       continue
 
-    versions.add(version)
+    versions.add(parseVersion(version))
 
-  return sorted(versions, naturalCmp).reversed
+  return sorted(versions, (x, y: Version) => compare(x, y)).reversed
 
 proc list*(n = 0, all = false, registry = "") =
   ## List all available versions of Ren'Py, either local or remote.
@@ -83,7 +84,7 @@ proc list*(n = 0, all = false, registry = "") =
   for version in versions[0..limit]:
     echo version
 
-proc get_exe*(version: string, registry: string): (string, string) =
+proc get_exe*(version: Version, registry: string): (string, string) =
   var
     arch: string
     exe = "python"
@@ -93,58 +94,59 @@ proc get_exe*(version: string, registry: string): (string, string) =
       exe = "python.exe"
       case hostCPU:
         of "amd64":
-          if version < "7.4": # Pre-v8 strain
+          if version < newVersion(7, 4, 0): # Pre-v8 strain
             arch = "windows-x86_64"
-          elif version < "8.0.0": # Python 2 strain
+          elif version < newVersion(8, 0, 0): # Python 2 strain
             arch = "py2-windows-x86_64"
           else: # Python 3 strain
             arch = "py3-windows-x86_64"
         else:
-          if version < "7.4": # Pre-v8 strain
+          if version < newVersion(7, 4, 0): # Pre-v8 strain
             arch = "windows-i686"
-          elif version < "8.0.0": # Python 2 strain
+          elif version < newVersion(8, 0, 0): # Python 2 strain
             arch = "py2-windows-i686"
           else: # Python 3 strain
             arch = "py3-windows-i686"
     of "linux":
       case hostCPU:
         of "amd64":
-          if version < "7.4": # Pre-v8 strain
+          if version < newVersion(7, 4, 0): # Pre-v8 strain
             arch = "linux-x86_64"
-          elif version < "8.0.0": # Python 2 strain
+          elif version < newVersion(8, 0, 0): # Python 2 strain
             arch = "py2-linux-x86_64"
           else: # Python 3 strain
             arch = "py3-linux-x86_64"
         else:
-          if version < "7.4": # Pre-v8 strain
+          if version < newVersion(7, 4, 0): # Pre-v8 strain
             arch = "linux-i686"
-          elif version < "8.0.0": # Python 2 strain
+          elif version < newVersion(8, 0, 0): # Python 2 strain
             arch = "py2-linux-i686"
           else: # Python 3 strain
             arch = "py3-linux-i686"
     of "macosx":
-      if version < "7.4": # Pre-v8 strain
+      if version < newVersion(7, 4, 0): # Pre-v8 strain
         arch = "darwin-x86_64"
-      elif version <= "7.4.8": # Weird naming scheme change just for this version
+      elif version <= newVersion(7, 4, 8): # Weird naming scheme change just for this version
         arch = "mac-x86_64"
-      elif version < "8.0.0": # Python 2 strain
+      elif version < newVersion(8, 0, 0): # Python 2 strain
         arch = "py2-mac-x86_64"
       else: # Python 3 strain
         arch = "py3-mac-x86_64"
 
-  let python = joinPath(registry, version, "lib", arch, exe)
-  let base_file = joinPath(registry, version, "renpy.py")
+  let python = joinPath(registry, $version, "lib", arch, exe)
+  let base_file = joinPath(registry, $version, "renpy.py")
   return (python, base_file)
 
 proc show*(version: string, registry = "") =
   ## Show information about a specific version of Ren'Py.
+  let version = parseVersion(version)
   let registry_path = get_registry(registry)
 
   echo &"Version: {version}"
   if is_installed(version, registry_path):
     let (python, base_file) = get_exe(version, registry_path)
     echo "Installed: Yes"
-    echo &"Location: {joinPath(registry_path, version)}"
+    echo &"Location: {joinPath(registry_path, $version)}"
     echo &"Architecture: {splitPath(splitPath(python)[0])[1]}"
   else:
     echo "Installed: No"
@@ -159,6 +161,7 @@ proc launch*(
   registry = ""
 ) =
   ## Launch the given version of Ren'Py.
+  let version = parseVersion(version)
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
@@ -172,7 +175,7 @@ proc launch*(
     of true:
       &"{base_cmd} {args}"
     of false:
-      &"{base_cmd} {quoteShell(joinPath(registry_path, version, \"launcher\"))} {args}"
+      &"{base_cmd} {quoteShell(joinPath(registry_path, $version, \"launcher\"))} {args}"
 
   if headless:
     putEnv("SDL_AUDIODRIVER", "dummy")
@@ -187,13 +190,14 @@ proc install*(
   force = false
 ) =
   ## Install the given version of Ren'Py.
+  let version = parseVersion(version)
   let registry_path = get_registry(registry)
 
   if is_installed(version, registry_path) and not force:
     echo &"{version} is already installed."
     quit(1)
 
-  let target_dir = joinPath(registry_path, version)
+  let target_dir = joinPath(registry_path, $version)
   if force and dirExists(target_dir):
     removeDir(target_dir)
 
@@ -272,7 +276,7 @@ proc install*(
 
   moveDir(
     joinPath(path_extracted, &"renpy-{version}-sdk"),
-    joinPath(registry_path, version)
+    joinPath(registry_path, $version)
   )
 
   removeDir(path_extracted)
@@ -283,7 +287,7 @@ proc install*(
     extractAll(steam_file, path_extracted)
 
     for path in walkDirRec(path_extracted):
-      copyFile(path, joinPath(registry_path, version, relativePath(path, path_extracted)))
+      copyFile(path, joinPath(registry_path, $version, relativePath(path, path_extracted)))
 
     removeDir(path_extracted)
 
@@ -293,7 +297,7 @@ proc install*(
 
   moveDir(
     joinPath(path_extracted, "web"),
-    joinPath(registry_path, version, "web")
+    joinPath(registry_path, $version, "web")
   )
 
   removeDir(path_extracted)
@@ -304,7 +308,7 @@ proc install*(
 
   moveDir(
     joinPath(path_extracted, "rapt"),
-    joinPath(registry_path, version, "rapt")
+    joinPath(registry_path, $version, "rapt")
   )
 
   removeDir(path_extracted)
@@ -328,8 +332,8 @@ proc install*(
           joinPath(splitPath(python)[0], "renpy.exe"),
           joinPath(splitPath(python)[0], "zsync.exe"),
           joinPath(splitPath(python)[0], "zsyncmake.exe"),
-          joinPath(registry_path, version, "rapt", "prototype", "gradlew.exe"),
-          joinPath(registry_path, version, "rapt", "project", "gradlew.exe"),
+          joinPath(registry_path, $version, "rapt", "prototype", "gradlew.exe"),
+          joinPath(registry_path, $version, "rapt", "project", "gradlew.exe"),
       ]
     else:
       [
@@ -338,8 +342,8 @@ proc install*(
           joinPath(splitPath(python)[0], "renpy"),
           joinPath(splitPath(python)[0], "zsync"),
           joinPath(splitPath(python)[0], "zsyncmake"),
-          joinPath(registry_path, version, "rapt", "prototype", "gradlew"),
-          joinPath(registry_path, version, "rapt", "project", "gradlew"),
+          joinPath(registry_path, $version, "rapt", "prototype", "gradlew"),
+          joinPath(registry_path, $version, "rapt", "project", "gradlew"),
       ]
 
   for path in paths:
@@ -347,7 +351,7 @@ proc install*(
       setFilePermissions(path, {fpUserRead, fpUserExec})
 
   let original_dir = getCurrentDir()
-  setCurrentDir(joinPath(registry_path, version, "rapt"))
+  setCurrentDir(joinPath(registry_path, $version, "rapt"))
 
   if not fileExists("android.keystore"):
     echo "Generating Application Keystore"
@@ -399,13 +403,13 @@ proc install*(
   # TODO: tweak gradle.properties RAM allocation
 
   echo "Installing RAPT"
-  if version >= "7.5.0":
+  if version >= newVersion(7, 5, 0):
     # in versions above 7.5.0, the RAPT installer tries to import renpy.compat
     # this is not in the path by default, and since PYTHONPATH is ignored, we
     # symlink it instead to make it visible during installation.
     createSymlink(
-      joinPath(registry_path, version, "renpy"),
-      joinPath(registry_path, version, "rapt", "renpy")
+      joinPath(registry_path, $version, "renpy"),
+      joinPath(registry_path, $version, "rapt", "renpy")
     )
 
   putEnv("RAPT_NO_TERMS", "1")
@@ -415,6 +419,7 @@ proc install*(
 
 proc cleanup*(version: string, registry = "") =
   ## Cleans up temporary directories for the given version of Ren'Py.
+  let version = parseVersion(version)
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
@@ -422,12 +427,12 @@ proc cleanup*(version: string, registry = "") =
     quit(1)
 
   let paths = [
-    joinPath(registry_path, version, "tmp"),
-    joinPath(registry_path, version, "rapt", "assets"),
-    joinPath(registry_path, version, "rapt", "bin"),
-    joinPath(registry_path, version, "rapt", "project", "app", "build"),
+    joinPath(registry_path, $version, "tmp"),
+    joinPath(registry_path, $version, "rapt", "assets"),
+    joinPath(registry_path, $version, "rapt", "bin"),
+    joinPath(registry_path, $version, "rapt", "project", "app", "build"),
     joinPath(
-      registry_path, version,
+      registry_path, $version,
       "rapt", "project", "app",
       "src", "main", "assets"
     ),
@@ -439,13 +444,14 @@ proc cleanup*(version: string, registry = "") =
 
 proc uninstall*(version: string, registry = "") =
   ## Uninstalls the given version of Ren'Py.
+  let version = parseVersion(version)
   let registry_path = get_registry(registry)
 
   if not is_installed(version, registry_path):
     echo &"{version} is not installed."
     quit(1)
 
-  removeDir(joinPath(registry_path, version))
+  removeDir(joinPath(registry_path, $version))
 
 when isMainModule:
   dispatchMulti(

@@ -68,13 +68,12 @@ proc task_pre_convert_images(
     discard execProcesses(cmds, n = n, options = {poUsePath})
 
 proc task_post_clean(
-  version: string,
-  version_semver: Version,
+  version: Version,
   registry: string,
   output_dir: string
 ) =
-  cleanup(version, registry)
-  if version_semver < newVersion(7, 4, 9):
+  cleanup($version, registry)
+  if version < newVersion(7, 4, 9):
     for kind, path in walkDir(output_dir):
       if kind != pcFile:
         continue
@@ -124,6 +123,15 @@ proc validate*(config: JsonNode) =
 
   if "version" notin config["renutil"]:
     echo "Please specify the Ren'Py version in the 'renutil' section."
+    quit(1)
+
+  if config{"renutil", "version"}.getStr() == "latest":
+    config{"renutil", "version"} = %list_available()[0]
+
+  let renpy_version = config{"renutil", "version"}.getStr()
+
+  if config{"build", "web"}.getBool() and renpy_version < "7.3.0":
+
     quit(1)
 
   if "tasks" notin config:
@@ -208,16 +216,11 @@ proc build*(
 
   createDir(output_dir)
 
-  var renutil_target_version = config["renutil"]["version"].getStr()
+  let renutil_target_version = parseVersion(config["renutil"]["version"].getStr())
 
-  if renutil_target_version == "latest":
-    renutil_target_version = list_available()[0]
-
-  let renutil_target_version_semver = parseVersion(renutil_target_version)
-
-  if not (renutil_target_version in list_installed(registry_path)):
+  if not is_installed(renutil_target_version, registry_path):
     echo(&"Installing Ren'Py {renutil_target_version}")
-    install(renutil_target_version, registry_path)
+    install($renutil_target_version, registry_path)
 
   if config{"tasks", "convert_images", "enabled"}.getBool():
     echo "Converting images"
@@ -225,28 +228,28 @@ proc build*(
 
   let keystore_path = joinPath(
     registry_path,
-    renutil_target_version,
+    $renutil_target_version,
     "rapt",
     "android.keystore"
   )
 
   let keystore_path_backup = joinPath(
     registry_path,
-    renutil_target_version,
+    $renutil_target_version,
     "rapt",
     "android.keystore.original"
   )
 
   let keystore_bundle_path = joinPath(
     registry_path,
-    renutil_target_version,
+    $renutil_target_version,
     "rapt",
     "bundle.keystore"
   )
 
   let keystore_bundle_path_backup = joinPath(
     registry_path,
-    renutil_target_version,
+    $renutil_target_version,
     "rapt",
     "bundle.keystore.original"
   )
@@ -259,6 +262,7 @@ proc build*(
 
     if keystore == "" and "keystore_apk" in config{"tasks", "keystore"}:
       keystore = config{"task_keystore", "keystore_apk"}.getStr()
+
     if keystore == "":
       keystore = config{"task_keystore", "keystore"}.getStr()
 
@@ -293,7 +297,7 @@ proc build*(
   discard """
   let manifest_path = joinPath(
     registry_path,
-    renutil_target_version,
+    $renutil_target_version,
     "rapt",
     "templates",
     "app-AndroidManifest.xml",
@@ -323,9 +327,9 @@ proc build*(
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
     echo("Building Android APK package.")
-    if renutil_target_version_semver >= newVersion(7, 4, 9):
+    if renutil_target_version >= newVersion(7, 4, 9):
       launch(
-        renutil_target_version,
+        $renutil_target_version,
         false,
         false,
         &"android_build {quoteShell(input_dir)} --dest {quoteShell(absolutePath(output_dir))}",
@@ -333,7 +337,7 @@ proc build*(
       )
     else:
       launch(
-        renutil_target_version,
+        $renutil_target_version,
         false,
         false,
         &"android_build {quoteShell(input_dir)} assembleRelease --dest {quoteShell(absolutePath(output_dir))}",
@@ -342,9 +346,9 @@ proc build*(
 
   if config["build"]["android_aab"].getBool():
     echo("Building Android AAB package.")
-    if renutil_target_version_semver >= newVersion(7, 4, 9):
+    if renutil_target_version >= newVersion(7, 4, 9):
       launch(
-        renutil_target_version,
+        $renutil_target_version,
         false,
         false,
         &"android_build {quoteShell(input_dir)} --bundle --dest {quoteShell(absolutePath(output_dir))}",
@@ -384,7 +388,7 @@ proc build*(
 
     echo(&"Building {joined_packages} packages.")
     launch(
-      renutil_target_version,
+      $renutil_target_version,
       false,
       false,
       cmd,
@@ -401,7 +405,6 @@ proc build*(
   if config{"tasks", "clean", "enabled"}.getBool():
     task_post_clean(
       renutil_target_version,
-      renutil_target_version_semver,
       registry_path,
       output_dir
     )
