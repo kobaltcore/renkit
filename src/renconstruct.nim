@@ -131,7 +131,7 @@ proc validate*(config: JsonNode) =
   let renpy_version = config{"renutil", "version"}.getStr()
 
   if config{"build", "web"}.getBool() and renpy_version < "7.3.0":
-
+    echo "The 'web' build is not supported on versions below 7.3.0."
     quit(1)
 
   if "tasks" notin config:
