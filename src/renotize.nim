@@ -9,7 +9,6 @@ import std/strformat
 
 import cligen
 import parsetoml
-import zippy/internal
 import zippy/ziparchives
 
 import lib/common
@@ -22,6 +21,7 @@ proc handler() {.noconv.} =
 setControlCHook(handler)
 
 proc unpack_app*(input_file: string, output_dir = "") =
+  ## Unpacks the given ZIP file to the target directory.
   var target_dir = output_dir
   if target_dir != "" and dirExists(target_dir):
     removeDir(target_dir)
@@ -37,6 +37,7 @@ proc unpack_app*(input_file: string, output_dir = "") =
   removeDir(target_dir)
 
 proc sign_app*(input_file: string, identity: string) =
+  ## Signs a .app bundle with the given Developer Identity.
   let entitlements = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"""
 
   writeFile("entitlements.plist", entitlements)
@@ -46,24 +47,6 @@ proc sign_app*(input_file: string, identity: string) =
 
   removeFile("entitlements.plist")
 
-proc addDir(archive: ZipArchive, base, relative: string) =
-  if relative.len > 0 and relative notin archive.contents:
-    archive.contents[(relative & os.DirSep).toUnixPath()] =
-      ArchiveEntry(kind: ekDirectory)
-
-  for kind, path in walkDir(base / relative, relative = true):
-    case kind:
-    of pcFile:
-      archive.contents[(relative / path).toUnixPath()] = ArchiveEntry(
-        kind: ekFile,
-        contents: readFile(base / relative / path),
-        lastModified: getLastModificationTime(base / relative / path),
-      )
-    of pcDir:
-      archive.addDir(base, relative / path)
-    else:
-      discard
-
 proc notarize_app*(
   input_file: string,
   bundle_id: string,
@@ -71,6 +54,7 @@ proc notarize_app*(
   password: string,
   altool_extra = "",
 ): string =
+  ## Notarizes a .app bundle with the given Developer Account and bundle ID.
   var app_zip = input_file
   removeSuffix(app_zip, ".app")
   app_zip = &"{app_zip}-app.zip"
@@ -94,6 +78,7 @@ proc notarize_app*(
   return uuid
 
 proc staple_app*(input_file: string) =
+  ## Staples a notarization certificate to a .app bundle.
   let cmd = &"xcrun stapler staple {input_file}"
   discard execShellCmd(cmd)
 
@@ -102,6 +87,7 @@ proc pack_dmg*(
   output_file: string,
   volume_name = "",
 ) =
+  ## Packages a .app bundle into a .dmg file.
   var v_name = volume_name
   if volume_name == "":
     v_name = splitFile(input_file).name
@@ -109,6 +95,7 @@ proc pack_dmg*(
   discard execShellCmd(cmd)
 
 proc sign_dmg*(input_file: string, identity: string) =
+  ## Signs a .dmg file with the given Developer Identity.
   let cmd = &"codesign --timestamp -s {identity} -f {input_file}"
   discard execShellCmd(cmd)
 
@@ -119,6 +106,7 @@ proc notarize_dmg*(
   password: string,
   altool_extra = "",
 ): string =
+  ## Notarizes a .dmg file with the given Developer Account and bundle ID.
   let cmd = &"xcrun altool {altool_extra} -u {apple_id} -p {password} --notarize-app --primary-bundle-id {bundle_id} -f {input_file}"
   let output = execProcess(cmd)
   echo output
@@ -133,6 +121,7 @@ proc notarize_dmg*(
   return uuid
 
 proc staple_dmg*(input_file: string) =
+  ## Staples a notarization certificate to a .dmg file.
   let cmd = &"xcrun stapler staple {input_file}"
   discard execShellCmd(cmd)
 
@@ -142,6 +131,7 @@ proc status*(
   password: string,
   altool_extra = "",
 ): string =
+  ## Checks the status of a notarization operation given its UUID.
   let cmd = &"xcrun altool {altool_extra} -u {apple_id} -p {password} --notarization-info {uuid} --output-format json"
   let data = parseJson(execProcess(cmd))
 
@@ -151,7 +141,9 @@ proc status*(
 
   return status
 
-proc full_run_prog*(input_file: string, config: JsonNode) =
+proc full_run*(input_file: string, config: JsonNode) =
+  # Programmatic interface for the full run operation to allow
+  # dynamically passing in configuration data from memory at runtime.
   let
     altool_extra = config["altool_extra"].getStr()
     bundle_id = config["bundle_id"].getStr()
@@ -215,20 +207,59 @@ proc full_run_prog*(input_file: string, config: JsonNode) =
 
   echo "Done"
 
-proc full_run*(input_file: string, config: string) =
+proc full_run_cli*(input_file: string, config: string) =
+  ## Fully notarize a given .app bundle, creating a signed
+  ## and notarized artifact for distribution.
   let config = parsetoml.parseFile(config).convert_to_json()
-  full_run_prog(input_file, config)
+  full_run(input_file, config)
 
 when isMainModule:
   dispatchMulti(
-    [unpack_app],
-    [sign_app],
-    [notarize_app],
-    [staple_app],
-    [pack_dmg],
-    [sign_dmg],
-    [notarize_dmg],
-    [staple_dmg],
-    [status],
-    [full_run],
+    [unpack_app, help = {
+        "input_file": "The path to the ZIP file containing the .app bundle.",
+        "output_dir": "The directory to extract the .app bundle to.",
+    }],
+    [sign_app, help = {
+        "input_file": "The path to the .app bundle.",
+        "identity": "The ID of your developer certificate.",
+    }],
+    [notarize_app, help = {
+        "input_file": "The path to the .app bundle.",
+        "bundle_id": "The name/ID to use for the notarized bundle.",
+        "apple_id": "Your Apple ID, generally your e-Mail.",
+        "password": "Your app-specific password.",
+        "altool_extra": "Extra arguments for altool.",
+    }],
+    [staple_app, help = {
+        "input_file": "The path to the .app bundle.",
+    }],
+    [pack_dmg, help = {
+        "input_file": "The path to the .app bundle.",
+        "output_file": "The name of the DMG file to write to.",
+        "volume_name": "The name to use for the DMG volume. By default the base name of the input file."
+    }],
+    [sign_dmg, help = {
+        "input_file": "The path to the .dmg file.",
+        "identity": "The ID of your developer certificate.",
+    }],
+    [notarize_dmg, help = {
+        "input_file": "The path to the .dmg file.",
+        "bundle_id": "The name/ID to use for the notarized bundle.",
+        "apple_id": "Your Apple ID, generally your e-Mail.",
+        "password": "Your app-specific password.",
+        "altool_extra": "Extra arguments for altool.",
+    }],
+    [staple_dmg, help = {
+        "input_file": "The path to the .dmg file.",
+    }],
+    [status, help = {
+        "uuid": "The UUID of the notarization operation.",
+        "apple_id": "Your Apple ID, generally your e-Mail.",
+        "password": "Your app-specific password.",
+        "altool_extra": "Extra arguments for altool.",
+    }],
+    [full_run_cli, cmdName = "full_run", help = {
+        "input_file": "The path to the the ZIP file containing the .app bundle.",
+        "config": "The path to the config.toml file to use for this process.",
+    }],
   )

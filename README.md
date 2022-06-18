@@ -64,42 +64,42 @@ where subcommand syntaxes are as follows:
   Options:
       -n=, --n=         int     0      The number of items to show. Shows all by default.
       -a, --all         bool    false  If given, shows remote versions.
-      -r=, --registry=  string  ""     The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""     The path to the registry directory to use. Defaults to ~/.renutil
 
-  show [required&optional-params]
+  show [REQUIRED,optional-params]
     Show information about a specific version of RenPy.
   Options:
       -v=, --version=   string  REQUIRED  The version to show.
-      -r=, --registry=  string  ""        The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
 
-  launch [required&optional-params]
+  launch [REQUIRED,optional-params]
     Launch the given version of RenPy.
   Options:
       -v=, --version=   string  REQUIRED  The version to launch.
       --headless        bool    false     If given, disables audio and video drivers for headless operation.
       -d, --direct      bool    false     If given, invokes RenPy directly without the launcher project.
       -a=, --args=      string  ""        The arguments to forward to RenPy.
-      -r=, --registry=  string  ""        The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
 
-  install [required&optional-params]
+  install [REQUIRED,optional-params]
     Install the given version of RenPy.
   Options:
       -v=, --version=   string  REQUIRED  The version to install.
-      -r=, --registry=  string  ""        The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
       -n, --no-cleanup  bool    false     If given, retains installation files.
       -f, --force       bool    false     set force
 
-  cleanup [required&optional-params]
+  cleanup [REQUIRED,optional-params]
     Cleans up temporary directories for the given version of RenPy.
   Options:
       -v=, --version=   string  REQUIRED  The version to clean up.
-      -r=, --registry=  string  ""        The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
 
-  uninstall [required&optional-params]
+  uninstall [REQUIRED,optional-params]
     Uninstalls the given version of RenPy.
   Options:
       -v=, --version=   string  REQUIRED  The version to uninstall.
-      -r=, --registry=  string  ""        The registry to use. Defaults to ~/.renutil
+      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
 ```
 
 ## renconstruct
@@ -159,13 +159,13 @@ Usage is like:
     renconstruct {SUBCMD} [subcommand-opts & args]
 where subcommand syntaxes are as follows:
 
-  build [required&optional-params]
-    Builds a RenPy project with the specified configuration.
+  build [REQUIRED,optional-params]
+    Builds a Ren'Py project with the specified configuration.
   Options:
-      -i=, --input_dir=   string  REQUIRED  The RenPy project to build.
+      -i=, --input_dir=   string  REQUIRED  The path to the Ren'Py project to build.
       -o=, --output_dir=  string  REQUIRED  The directory to output distributions to.
-      -c=, --config=      string  REQUIRED  The configuration file to use.
-      -r=, --registry=    string  ""        The registry to use. Defaults to ~/.renutil
+      -c=, --config=      string  REQUIRED  The path to the configuration file to use.
+      -r=, --registry=    string  ""        The path to the registry directory to use. Defaults to ~/.renutil
 ```
 
 ## renotize
@@ -186,62 +186,72 @@ Usage is like:
     renotize {SUBCMD} [subcommand-opts & args]
 where subcommand syntaxes are as follows:
 
-  unpack_app [required&optional-params]
+  unpack_app [REQUIRED,optional-params]
+    Unpacks the given ZIP file to the target directory.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      -o=, --output-dir=  string  ""        set output_dir
+      -i=, --input_file=  string  REQUIRED  The path to the ZIP file containing the .app bundle.
+      -o=, --output_dir=  string  ""        The directory to extract the .app bundle to.
 
-  sign_app [required&optional-params]
+  sign_app [REQUIRED,optional-params]
+    Signs a .app bundle with the given Developer Identity.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      --identity=         string  REQUIRED  set identity
+      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
+      --identity=         string  REQUIRED  The ID of your developer certificate.
 
-  notarize_app [required&optional-params]
+  notarize_app [REQUIRED,optional-params]
+    Notarizes a .app bundle with the given Developer Account and bundle ID.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      -b=, --bundle-id=   string  REQUIRED  set bundle_id
-      -a=, --apple-id=    string  REQUIRED  set apple_id
-      -p=, --password=    string  REQUIRED  set password
-      --altool-extra=     string  ""        set altool_extra
+      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
+      -b=, --bundle_id=   string  REQUIRED  The name/ID to use for the notarized bundle.
+      -a=, --apple_id=    string  REQUIRED  Your Apple ID, generally your e-Mail.
+      -p=, --password=    string  REQUIRED  Your app-specific password.
+      --altool_extra=     string  ""        Extra arguments for altool.
 
-  staple_app [required&optional-params]
+  staple_app [REQUIRED,optional-params]
+    Staples a notarization certificate to a .app bundle.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
+      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
 
-  pack_dmg [required&optional-params]
+  pack_dmg [REQUIRED,optional-params]
+    Packages a .app bundle into a .dmg file.
   Options:
-      -i=, --input-file=   string  REQUIRED  set input_file
-      -o=, --output-file=  string  REQUIRED  set output_file
-      -v=, --volume-name=  string  ""        set volume_name
+      -i=, --input_file=   string  REQUIRED  The path to the .app bundle.
+      -o=, --output_file=  string  REQUIRED  The name of the DMG file to write to.
+      -v=, --volume_name=  string  ""        The name to use for the DMG volume. By default the base name of the input file.
 
-  sign_dmg [required&optional-params]
+  sign_dmg [REQUIRED,optional-params]
+    Signs a .dmg file with the given Developer Identity.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      --identity=         string  REQUIRED  set identity
+      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
+      --identity=         string  REQUIRED  The ID of your developer certificate.
 
-  notarize_dmg [required&optional-params]
+  notarize_dmg [REQUIRED,optional-params]
+    Notarizes a .dmg file with the given Developer Account and bundle ID.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      -b=, --bundle-id=   string  REQUIRED  set bundle_id
-      -a=, --apple-id=    string  REQUIRED  set apple_id
-      -p=, --password=    string  REQUIRED  set password
-      --altool-extra=     string  ""        set altool_extra
+      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
+      -b=, --bundle_id=   string  REQUIRED  The name/ID to use for the notarized bundle.
+      -a=, --apple_id=    string  REQUIRED  Your Apple ID, generally your e-Mail.
+      -p=, --password=    string  REQUIRED  Your app-specific password.
+      --altool_extra=     string  ""        Extra arguments for altool.
 
-  staple_dmg [required&optional-params]
+  staple_dmg [REQUIRED,optional-params]
+    Staples a notarization certificate to a .dmg file.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
+      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
 
-  status [required&optional-params]
+  status [REQUIRED,optional-params]
+    Checks the status of a notarization operation given its UUID.
   Options:
-      -u=, --uuid=      string  REQUIRED  set uuid
-      -a=, --apple-id=  string  REQUIRED  set apple_id
-      -p=, --password=  string  REQUIRED  set password
-      --altool-extra=   string  ""        set altool_extra
+      -u=, --uuid=      string  REQUIRED  The UUID of the notarization operation.
+      -a=, --apple_id=  string  REQUIRED  Your Apple ID, generally your e-Mail.
+      -p=, --password=  string  REQUIRED  Your app-specific password.
+      --altool_extra=   string  ""        Extra arguments for altool.
 
-  full_run [required&optional-params]
+  full_run [REQUIRED,optional-params]
+    Fully notarize a given .app bundle, creating a signed and notarized artifact for distribution.
   Options:
-      -i=, --input-file=  string  REQUIRED  set input_file
-      -c=, --config=      string  REQUIRED  set config
+      -i=, --input_file=  string  REQUIRED  The path to the the ZIP file containing the .app bundle.
+      -c=, --config=      string  REQUIRED  The path to the config.toml file to use for this process.
 ```
 
 <a href="https://www.flaticon.com/free-icons/shipping-and-delivery" title="shipping and delivery icons">Shipping and delivery icons created by Ongicon - Flaticon</a>

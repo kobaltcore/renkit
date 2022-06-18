@@ -313,8 +313,6 @@ proc install*(
 
   removeDir(path_extracted)
 
-  ###
-
   if not no_cleanup:
     removeFile(steam_file)
     removeFile(web_file)
@@ -458,30 +456,30 @@ when isMainModule:
     [list, help = {
         "n": "The number of items to show. Shows all by default.",
         "all": "If given, shows remote versions.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
     }],
     [show, help = {
         "version": "The version to show.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
     }],
     [launch, help = {
         "version": "The version to launch.",
         "headless": "If given, disables audio and video drivers for headless operation.",
         "direct": "If given, invokes Ren'Py directly without the launcher project.",
         "args": "The arguments to forward to Ren'Py.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
     }],
     [install, help = {
         "version": "The version to install.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
         "no-cleanup": "If given, retains installation files.",
     }],
     [cleanup, help = {
         "version": "The version to clean up.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
     }],
     [uninstall, help = {
         "version": "The version to uninstall.",
-        "registry": "The registry to use. Defaults to ~/.renutil",
+        "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
     }],
   )

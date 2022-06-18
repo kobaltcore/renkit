@@ -81,7 +81,7 @@ proc task_post_clean(
         removeFile(path)
 
 proc task_post_notarize(input_file: string, config: JsonNode) =
-  full_run_prog(input_file, config{"tasks", "notarize"})
+  full_run(input_file, config{"tasks", "notarize"})
 
 proc validate*(config: JsonNode) =
   if "build" notin config:
@@ -417,10 +417,10 @@ when isMainModule:
   try:
     dispatchMulti(
       [build, help = {
-          "input_dir": "The Ren'Py project to build.",
+          "input_dir": "The path to the Ren'Py project to build.",
           "output_dir": "The directory to output distributions to.",
-          "config": "The configuration file to use.",
-          "registry": "The registry to use. Defaults to ~/.renutil",
+          "config": "The path to the configuration file to use.",
+          "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
       }],
     )
   except KeyboardInterrupt:

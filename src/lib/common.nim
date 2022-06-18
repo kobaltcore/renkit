@@ -7,6 +7,8 @@ import std/httpclient
 import suru
 import semver
 import parsetoml
+import zippy/internal
+import zippy/ziparchives
 
 import suru_utils
 
@@ -150,3 +152,21 @@ proc compare*(v1: Version, v2: Version, ignoreBuild: bool = false): int =
       return 1
 
   return 0
+
+proc addDir*(archive: ZipArchive, base, relative: string) =
+  if relative.len > 0 and relative notin archive.contents:
+    archive.contents[(relative & os.DirSep).toUnixPath()] =
+      ArchiveEntry(kind: ekDirectory)
+
+  for kind, path in walkDir(base / relative, relative = true):
+    case kind:
+    of pcFile:
+      archive.contents[(relative / path).toUnixPath()] = ArchiveEntry(
+        kind: ekFile,
+        contents: readFile(base / relative / path),
+        lastModified: getLastModificationTime(base / relative / path),
+      )
+    of pcDir:
+      archive.addDir(base, relative / path)
+    else:
+      discard
