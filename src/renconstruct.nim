@@ -1,6 +1,7 @@
 import system
 import std/os
 import std/json
+import std/sets
 import std/base64
 import std/osproc
 import std/tables
@@ -27,6 +28,7 @@ type
   Task = object
     name: string
     instance: PyObject
+    call: proc(input_dir: string, output_dir: string, config: JsonNode)
     builds: seq[string]
     priority: int
 
@@ -58,8 +60,8 @@ except:
 
 proc task_pre_convert_images(
   input_dir: string,
+  output_dir: string,
   config: JsonNode,
-  n = countProcessors(),
 ) =
   for path, options in config{"tasks", "convert_images"}:
     if path == "enabled":
@@ -91,13 +93,15 @@ proc task_pre_convert_images(
       for file in files:
         cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
 
-    discard execProcesses(cmds, n = n, options = {poUsePath})
+    discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
 proc task_post_clean(
-  version: Version,
-  registry: string,
-  output_dir: string
+  input_dir: string,
+  output_dir: string,
+  config: JsonNode,
 ) =
+  let version = config{"renutil", "version"}.getStr().parseVersion()
+  let registry = config{"renutil", "registry"}.getStr()
   cleanup($version, registry)
   if version < newVersion(7, 4, 9):
     for kind, path in walkDir(output_dir):
@@ -106,8 +110,80 @@ proc task_post_clean(
       if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
         removeFile(path)
 
-proc task_post_notarize(input_file: string, config: JsonNode) =
-  full_run(input_file, config{"tasks", "notarize"})
+proc task_post_notarize(
+  input_dir: string,
+  output_dir: string,
+  config: JsonNode,
+) =
+  let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
+  if files.len != 1:
+    echo "Could not find macOS ZIP file."
+    quit(1)
+  full_run(files[0], config{"tasks", "notarize"})
+
+proc task_pre_keystore(
+  input_dir: string,
+  output_dir: string,
+  config: JsonNode,
+) =
+  let
+    version = config{"renutil", "version"}.getStr()
+    registry = config{"renutil", "registry"}.getStr()
+    keystore_path = joinPath(registry, version, "rapt", "android.keystore")
+    keystore_path_backup = joinPath(registry, version, "rapt", "android.keystore.original")
+    keystore_bundle_path = joinPath(registry, version, "rapt", "bundle.keystore")
+    keystore_bundle_path_backup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+
+  var keystore = getEnv("RC_KEYSTORE_APK")
+
+  if keystore == "":
+    keystore = config{"tasks", "keystore", "keystore_apk"}.getStr()
+
+  if keystore == "":
+    echo("Keystore override was requested, but no APK keystore could be found.")
+    quit(1)
+
+  if not fileExists(keystore_path_backup):
+    moveFile(keystore_path, keystore_path_backup)
+
+  let stream_out_ks_apk = newFileStream(keystore_path, fmWrite)
+  stream_out_ks_apk.write(decode(keystore))
+  stream_out_ks_apk.close()
+
+  keystore = getEnv("RC_KEYSTORE_AAB")
+
+  if keystore == "":
+    keystore = config{"tasks", "keystore", "keystore_aab"}.getStr()
+
+  if keystore == "":
+    echo("Keystore override was requested, but no AAB keystore could be found.")
+    quit(1)
+
+  if not fileExists(keystore_bundle_path_backup):
+    moveFile(keystore_bundle_path, keystore_bundle_path_backup)
+
+  let stream_out_ks_bundle = newFileStream(keystore_bundle_path, fmWrite)
+  stream_out_ks_bundle.write(decode(keystore))
+  stream_out_ks_bundle.close()
+
+proc task_post_keystore(
+  input_dir: string,
+  output_dir: string,
+  config: JsonNode,
+) =
+  let
+    version = config{"renutil", "version"}.getStr()
+    registry = config{"renutil", "registry"}.getStr()
+    keystore_path = joinPath(registry, version, "rapt", "android.keystore")
+    keystore_path_backup = joinPath(registry, version, "rapt", "android.keystore.original")
+    keystore_bundle_path = joinPath(registry, version, "rapt", "bundle.keystore")
+    keystore_bundle_path_backup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+
+  if fileExists(keystore_path_backup):
+    moveFile(keystore_path_backup, keystore_path)
+
+  if fileExists(keystore_bundle_path_backup):
+    moveFile(keystore_bundle_path_backup, keystore_bundle_path)
 
 proc validate*(config: JsonNode) =
   if "build" notin config:
@@ -202,6 +278,7 @@ proc build*(
 ) =
   ## Builds a Ren'Py project with the specified configuration.
   var
+    task_count = 0
     registry_path: string
     tasks = initTable[string, seq[Task]]()
 
@@ -212,6 +289,14 @@ proc build*(
 
   config.validate()
 
+  let active_builds = block:
+    var builds: seq[string]
+    for k, v in config["build"]:
+      if v.getBool():
+        builds.add(k)
+    let result = toHashSet(builds)
+    result
+
   if HAS_PYTHON:
     let task_dir = config{"options", "task_dir"}.getStr()
     if task_dir != "":
@@ -220,8 +305,6 @@ proc build*(
       discard pyImport("sys").path.append(task_dir)
 
       echo &"Scanning tasks in directory '{task_dir}'..."
-
-      var task_count = 0
 
       for file in walkDirRec(task_dir):
         if not file.endsWith(".py"):
@@ -239,9 +322,8 @@ proc build*(
           if not name.endsWith("Task") or name == "Task":
             continue
 
-          let
-            config_name = name[0..^5].to_snake_case()
-            sub_config = config{"tasks", config_name}
+          let config_name = name[0..^5].to_snake_case()
+          var sub_config = config{"tasks", config_name}
 
           if py.hasattr(class, "validate_config").to(bool):
             try:
@@ -253,7 +335,9 @@ proc build*(
               echo &"Failed to validate config for task {name}: {getCurrentExceptionMsg()}"
               quit(1)
 
-          if not config{"tasks", config_name, "enabled"}.getBool():
+          sub_config = config{"tasks", config_name}
+
+          if not sub_config{"enabled"}.getBool():
             continue
 
           task_count += 1
@@ -269,53 +353,131 @@ proc build*(
               for k, v in config["build"]:
                 builds.add(k)
               builds
-            if py.hasattr(instance, "ON_BUILDS").to(bool):
-              results = instance.ON_BUILDS.to(seq[string])
+            let result = sub_config{"on_builds"}.getElems().mapIt(it.getStr())
+            if result.len > 0:
+              results = result
             results
 
           if py.hasattr(instance, "pre_build").to(bool):
-            let priority = block:
-              var result = 0
-              if py.hasattr(instance, "PRE_PRIORITY").to(bool):
-                result = instance.PRE_PRIORITY.to(int)
-              result
-
             tasks["pre"].add(
               Task(
-                name: name,
+                name: config_name,
                 instance: instance,
                 builds: builds,
-                priority: priority,
+                priority: sub_config{"priorities", "pre_build"}.getInt(0),
               )
             )
 
           if py.hasattr(instance, "post_build").to(bool):
-            let priority = block:
-              var result = 0
-              if py.hasattr(instance, "POST_PRIORITY").to(bool):
-                result = instance.PRE_PRIORITY.to(int)
-              result
-
             tasks["post"].add(
               Task(
-                name: name,
+                name: config_name,
                 instance: instance,
                 builds: builds,
-                priority: priority,
+                priority: sub_config{"priorities", "post_build"}.getInt(0),
               )
             )
 
           echo &"Loaded Task: {name}"
-
-      if task_count == 1:
-        echo "Loaded 1 task"
-      else:
-        echo &"Loaded {task_count} tasks"
-
-      tasks["pre"] = tasks["pre"].sortedByIt((it.priority, it.name)).reversed()
-      tasks["post"] = tasks["post"].sortedByIt((it.priority, it.name)).reversed()
   else:
     echo "Python Support: false"
+
+  if config{"tasks", "clean", "enabled"}.getBool():
+    tasks["post"].add(
+      Task(
+        name: "clean",
+        call: task_post_clean,
+        builds: block:
+          var results = block:
+            var builds: seq[string]
+            for k, v in config["build"]:
+              builds.add(k)
+            builds
+          let result = config{"tasks", "clean", "on_builds"}.getElems().mapIt(it.getStr())
+          if result.len > 0:
+            results = result
+          results,
+        priority: config{"tasks", "clean", "priorities", "post_build"}.getInt(0),
+      )
+    )
+    task_count += 1
+    echo &"Loaded Task: clean"
+
+  if config{"tasks", "notarize", "enabled"}.getBool():
+    tasks["post"].add(
+      Task(
+        name: "notarize",
+        call: task_post_notarize,
+        builds: block:
+          var results = @["mac"]
+          let result = config{"tasks", "notarize", "on_builds"}.getElems().mapIt(it.getStr())
+          if result.len > 0:
+            results = result
+          results,
+        priority: config{"tasks", "notarize", "priorities", "post_build"}.getInt(10),
+      )
+    )
+    task_count += 1
+    echo &"Loaded Task: notarize"
+
+  if config{"tasks", "convert_images", "enabled"}.getBool():
+    tasks["pre"].add(
+      Task(
+        name: "convert_images",
+        call: task_pre_convert_images,
+        builds: block:
+          var results = block:
+            var builds: seq[string]
+            for k, v in config["build"]:
+              builds.add(k)
+            builds
+          let result = config{"tasks", "convert_images", "on_builds"}.getElems().mapIt(it.getStr())
+          if result.len > 0:
+            results = result
+          results,
+        priority: config{"tasks", "convert_images", "priorities", "post_build"}.getInt(10),
+      )
+    )
+    task_count += 1
+    echo &"Loaded Task: convert_images"
+
+  if config{"tasks", "keystore", "enabled"}.getBool():
+    tasks["pre"].add(
+      Task(
+        name: "keystore",
+        call: task_pre_keystore,
+        builds: block:
+          var results = @["android_apk", "android_aab"]
+          let result = config{"tasks", "keystore", "on_builds"}.getElems().mapIt(it.getStr())
+          if result.len > 0:
+            results = result
+          results,
+        priority: config{"tasks", "keystore", "priorities", "pre_build"}.getInt(0),
+      )
+    )
+    tasks["post"].add(
+      Task(
+        name: "keystore",
+        call: task_pre_keystore,
+        builds: block:
+          var results = @["android_apk", "android_aab"]
+          let result = config{"tasks", "keystore", "on_builds"}.getElems().mapIt(it.getStr())
+          if result.len > 0:
+            results = result
+          results,
+        priority: config{"tasks", "keystore", "priorities", "post_build"}.getInt(0),
+      )
+    )
+    task_count += 1
+    echo &"Loaded Task: keystore"
+
+  tasks["pre"] = tasks["pre"].sortedByIt((it.priority, it.name)).reversed()
+  tasks["post"] = tasks["post"].sortedByIt((it.priority, it.name)).reversed()
+
+  if task_count == 1:
+    echo "Loaded 1 task"
+  else:
+    echo &"Loaded {task_count} tasks"
 
   if registry != "":
     registry_path = get_registry(registry)
@@ -339,73 +501,14 @@ proc build*(
     echo(&"Installing Ren'Py {renutil_target_version}")
     install($renutil_target_version, registry_path)
 
-  if config{"tasks", "convert_images", "enabled"}.getBool():
-    echo "Converting images"
-    task_pre_convert_images(input_dir, config)
-
-  let keystore_path = joinPath(
-    registry_path,
-    $renutil_target_version,
-    "rapt",
-    "android.keystore"
-  )
-
-  let keystore_path_backup = joinPath(
-    registry_path,
-    $renutil_target_version,
-    "rapt",
-    "android.keystore.original"
-  )
-
-  let keystore_bundle_path = joinPath(
-    registry_path,
-    $renutil_target_version,
-    "rapt",
-    "bundle.keystore"
-  )
-
-  let keystore_bundle_path_backup = joinPath(
-    registry_path,
-    $renutil_target_version,
-    "rapt",
-    "bundle.keystore.original"
-  )
-
-  if config{"tasks", "keystore", "enabled"}.getBool():
-    var keystore = getEnv("RC_KEYSTORE_APK")
-
-    if keystore == "":
-      keystore = config{"tasks", "keystore", "keystore_apk"}.getStr()
-
-    if keystore == "":
-      echo("Keystore override was requested, but no APK keystore could be found.")
-      quit(1)
-
-    if not fileExists(keystore_path_backup):
-      moveFile(keystore_path, keystore_path_backup)
-
-    let stream_out_ks_apk = newFileStream(keystore_path, fmWrite)
-    stream_out_ks_apk.write(decode(keystore))
-    stream_out_ks_apk.close()
-
-    keystore = getEnv("RC_KEYSTORE_AAB")
-
-    if keystore == "":
-      keystore = config{"tasks", "keystore", "keystore_aab"}.getStr()
-
-    if keystore == "":
-      echo("Keystore override was requested, but no AAB keystore could be found.")
-      quit(1)
-
-    if not fileExists(keystore_bundle_path_backup):
-      moveFile(keystore_bundle_path, keystore_bundle_path_backup)
-
-    let stream_out_ks_bundle = newFileStream(keystore_bundle_path, fmWrite)
-    stream_out_ks_bundle.write(decode(keystore))
-    stream_out_ks_bundle.close()
-
   for task in tasks["pre"]:
-    discard task.instance.pre_build()
+    if (active_builds * task.builds.to_hash_set).len == 0:
+      continue
+    echo &"Running pre-build task {task.name} with priority {task.priority}"
+    if task.call != nil:
+      task.call(input_dir, output_dir, config)
+    else:
+      discard task.instance.pre_build()
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
@@ -479,25 +582,13 @@ proc build*(
     )
 
   for task in tasks["post"]:
-    discard task.instance.post_build()
-
-  if config{"tasks", "notarize", "enabled"}.getBool():
-    let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
-    if files.len != 1:
-      echo "Could not find Mac ZIP file."
-      quit(1)
-    task_post_notarize(files[0], config)
-
-  if config{"tasks", "clean", "enabled"}.getBool():
-    task_post_clean(
-      renutil_target_version,
-      registry_path,
-      output_dir
-    )
-
-  if config{"tasks", "keystore", "enabled"}.getBool() and fileExists(keystore_path_backup):
-    moveFile(keystore_path_backup, keystore_path)
-    moveFile(keystore_bundle_path_backup, keystore_bundle_path)
+    if (active_builds * task.builds.to_hash_set).len == 0:
+      continue
+    echo &"Running post-build task {task.name} with priority {task.priority}"
+    if task.call != nil:
+      task.call(input_dir, output_dir, config)
+    else:
+      discard task.instance.post_build()
 
 when isMainModule:
   try:
