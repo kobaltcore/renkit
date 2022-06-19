@@ -110,17 +110,21 @@ where subcommand syntaxes are as follows:
 ### Writing a config file
 renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various supported platforms. An empty template is provided in this repository under [docs/renconstruct.toml](docs/renconstruct.toml).
 
-It consists of the following sections:
+It consists of the sections listed below, which govern the behavior of renconstruct itself as well as the built-in and custom tasks that may be optionally activated.
+
+All tasks have the following shared properties:
+- `enabled`: Whether the task should run or not. Defaults to `false`.
+- `priorities`: A table of two optional configuration options that governs the priority of a task relative to other tasks:
+  - `pre_build`: The priority of the pre-build stage of this task. Pre-build tasks run before any distributions are built. Defaults to `0`.
+  - `post_build`: The priority of the post-build stage of this task. Post-build tasks run afer every distribution has been built. Defaults to `0`.
+- `on_builds`: A list of build names that govern whether the task should run or not. For example, if `on_builds = ["mac"]` then the given task will only run if the `mac` build is enabled in this run of `renconstruct`.
 
 #### `tasks.clean`
 Runs the `clean` operation from `renutil` which removes temporary build artifacts from Ren'Py and additionally cleans out all APK files except for the universal one if building for Android platforms.
 
-- `enabled`: Whether the task should run or not. Defaults to `false`.
-
 #### `tasks.notarize`
 Notarizes the macOS artifact for distribution. Same as the configuration for `renotize` below.
 
-- `enabled`: Whether the task should run or not. Defaults to `false`.
 - `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
 - `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
 - `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
@@ -130,14 +134,11 @@ Notarizes the macOS artifact for distribution. Same as the configuration for `re
 #### `tasks.keystore`
 Overwrites the auto-generated keystore with the given one. This is useful for distributing releases via the Play Store, which requires the same keystore to be used for all builds, for example.
 
-- `enabled`: Whether the task should run or not. Defaults to `false`.
 - `keystore_apk`: The base-64 encoded binary keystore file for the APK bundles.
 - `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles.
 
 #### `tasks.convert_images`
 Converts the selected images in the given directories to WebP to save space on-disk. This task specifically replaces every selected file with its WebP version but does not change the file extension to ensure that all paths to assets and sprites remain the same.
-
-- `enabled`: Whether the task should run or not. Defaults to `false`.
 
 This task takes a dynamic set of properties where each key is the path to a directory containing image files to be converted and its value is a table of configuration options for that particular path. That way, various paths can be converted with different options for more flexibility.
 
