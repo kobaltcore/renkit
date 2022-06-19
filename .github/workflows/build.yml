@@ -57,6 +57,7 @@ jobs:
       - name: Zip Artifacts
         run: |
           zip -j renkit-macos-amd64.zip bin/amd64/macos/*
+          zip -j renkit-macos-amd64.zip bin/arm64/macos/*
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
