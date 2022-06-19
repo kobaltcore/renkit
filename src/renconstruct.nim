@@ -42,10 +42,18 @@ let find_libpython = "e=print\nT='.dylib'\nP='.so'\nK='lib'\nJ=len\nH=None\nfrom
 var python_path = getEnv("RC_LIBPYTHON")
 
 if python_path == "":
-  let p = execCmdEx(&"python -c \"{find_libpython}\"")
+  when hostOS == "windows":
+    var p = execCmdEx(&"python.exe -c \"{find_libpython}\"")
+  else:
+    var p = execCmdEx(&"python -c \"{find_libpython}\"")
   if p.exit_code != 0:
-    echo "error while trying to find libpython"
-    quit(1)
+    when hostOS == "windows":
+      p = execCmdEx(&"python3.exe -c \"{find_libpython}\"")
+    else:
+      p = execCmdEx(&"python3 -c \"{find_libpython}\"")
+    if p.exit_code != 0:
+      echo "error while trying to find libpython"
+      quit(1)
   python_path = p.output[0..^2]
 
 let HAS_PYTHON = try:
