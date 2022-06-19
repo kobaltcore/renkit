@@ -36,6 +36,7 @@
   android_aab = false # Android Play Store Bundle
 
 [options]
+  task_dir = "tasks" # optional path to a directory containing custom tasks
   clear_output_dir = false # whether to clear the output directory on startup
 
 [renutil]

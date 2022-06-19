@@ -12,6 +12,22 @@ import zippy/ziparchives
 
 import suru_utils
 
+proc to_string*(s: seq[char]): string =
+  result = newStringOfCap(len(s))
+  for ch in s:
+    add(result, ch)
+
+proc to_snake_case*(s: string): string =
+  var new_string: seq[char]
+  for i, c in s:
+    if c.is_upper_ascii():
+      if i != 0:
+        new_string.add("_")
+      new_string.add(c.to_lower_ascii())
+    else:
+      new_string.add(c)
+  return new_string.to_string
+
 proc download*(url, path: string) =
   var bar: SuruBar = initSuruBar()
 

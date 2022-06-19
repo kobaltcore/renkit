@@ -13,6 +13,7 @@ bin = @["renutil", "renotize", "renconstruct"]
 
 requires "nim >= 1.6.6"
 requires "suru >= 0.3.1"
+requires "nimpy >= 0.2.0"
 requires "zippy >= 0.9.12"
 requires "semver >= 1.1.1"
 requires "cligen >= 1.5.23"
