@@ -8,9 +8,6 @@ import std/streams
 import std/strutils
 import std/sequtils
 import std/strformat
-# import std/strtabs
-# import std/xmltree
-# import std/xmlparser
 
 import semver
 import cligen
@@ -26,9 +23,6 @@ proc handler() {.noconv.} =
   raise newException(KeyboardInterrupt, "Keyboard Interrupt")
 
 setControlCHook(handler)
-
-# type
-#   kv_tuple = tuple[key, val: string]
 
 proc task_pre_convert_images(
   input_dir: string,
@@ -129,47 +123,28 @@ proc validate*(config: JsonNode) =
     config{"renutil", "version"} = %list_available()[0]
 
   let renpy_version = config{"renutil", "version"}.getStr()
+  echo &"Using Ren'Py version {renpy_version}"
 
   if config{"build", "web"}.getBool() and renpy_version < "7.3.0":
     echo "The 'web' build is not supported on versions below 7.3.0."
     quit(1)
 
   if "tasks" notin config:
-    config{"tasks", "keystore", "enabled"} = %false
     config{"tasks", "clean", "enabled"} = %false
     config{"tasks", "notarize", "enabled"} = %false
-    # config{"tasks", "manifest", "enabled"} = %false
-    config{"tasks", "convert_images", "enabled"} = %false
-
-  if "keystore" in config["tasks"]:
-    if config["tasks"]["keystore"].getBool() and "task_keystore" notin config:
-      echo "Task 'keystore' is enabled but no 'task_keystore' section was found."
-      quit(1)
-  else:
     config{"tasks", "keystore", "enabled"} = %false
+    config{"tasks", "convert_images", "enabled"} = %false
 
   if "clean" notin config["tasks"]:
     config{"tasks", "clean", "enabled"} = %false
 
-  if "notarize" in config["tasks"]:
-    if config["tasks"]["notarize"].getBool() and "task_notarize" notin config:
-      echo "Task 'notarize' is enabled but no 'task_notarize' section was found."
-      quit(1)
-  else:
+  if "notarize" notin config["tasks"]:
     config{"tasks", "notarize", "enabled"} = %false
 
-  # if "manifest" in config["tasks"]:
-  #   if config["tasks"]["manifest"].getBool() and "task_manifest" notin config:
-  #     echo "Task 'meanifest' is enabled but no 'task_manifest' section was found."
-  #     quit(1)
-  # else:
-  #   config{"tasks", "manifest", "enabled"} = %false
+  if "keystore" notin config["tasks"]:
+    config{"tasks", "keystore", "enabled"} = %false
 
-  if "convert_images" in config["tasks"]:
-    if config["tasks"]["convert_images"].getBool() and "task_convert_images" notin config:
-      echo "Task 'convert_images' is enabled but no 'task_convert_images' section was found."
-      quit(1)
-  else:
+  if "convert_images" notin config["tasks"]:
     config{"tasks", "convert_images", "enabled"} = %false
 
   if "options" notin config:
@@ -255,16 +230,10 @@ proc build*(
   )
 
   if config{"tasks", "keystore", "enabled"}.getBool():
-    var keystore = getEnv(
-      "RC_KEYSTORE_APK",
-      getEnv("RC_KEYSTORE"), # for backwards-compatibility
-    )
-
-    if keystore == "" and "keystore_apk" in config{"tasks", "keystore"}:
-      keystore = config{"task_keystore", "keystore_apk"}.getStr()
+    var keystore = getEnv("RC_KEYSTORE_APK")
 
     if keystore == "":
-      keystore = config{"task_keystore", "keystore"}.getStr()
+      keystore = config{"tasks", "keystore", "keystore_apk"}.getStr()
 
     if keystore == "":
       echo("Keystore override was requested, but no APK keystore could be found.")
@@ -292,37 +261,6 @@ proc build*(
     let stream_out_ks_bundle = newFileStream(keystore_bundle_path, fmWrite)
     stream_out_ks_bundle.write(decode(keystore))
     stream_out_ks_bundle.close()
-
-  # update manifest file
-  discard """
-  let manifest_path = joinPath(
-    registry_path,
-    $renutil_target_version,
-    "rapt",
-    "templates",
-    "app-AndroidManifest.xml",
-  )
-  let data = loadXml(manifest_path)
-  let application_tag = data.findAll("application")[0]
-
-  let dict: StringTableRef = application_tag.attrs
-  if config{"tasks", "manifest", "enabled"}.getBool() and
-    config{"tasks", "manifest", "legacy_storage"}.getBool():
-    dict["android:requestLegacyExternalStorage"] = "true"
-  else:
-    dict["android:requestLegacyExternalStorage"] = "false"
-
-  var kv_list = newSeq[kv_tuple]()
-  for k, v in dict:
-    kv_list.add((k, v))
-
-  application_tag.attrs = kv_list.toXmlAttributes
-
-  let f = open(manifest_path, fmWrite)
-  f.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-  f.write($data)
-  f.close()
-  """
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
