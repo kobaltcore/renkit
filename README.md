@@ -195,7 +195,7 @@ where subcommand syntaxes are as follows:
 ## renotize
 
 ### Writing a config file
-renotize uses a TOML file for configuration to supply the information required to sign apps on macOS. An empty template is provided in this repository under the name `renotize.config.empty.toml`
+renotize uses a TOML file for configuration to supply the information required to sign apps on macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
 
 It consists of the following keys:
 - `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
