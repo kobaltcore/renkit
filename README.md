@@ -114,7 +114,7 @@ It consists of the sections listed below, which govern the behavior of renconstr
 
 All tasks have the following shared properties:
 - `enabled`: Whether the task should run or not. Defaults to `false`.
-- `priorities`: A table of two optional configuration options that governs the priority of a task relative to other tasks:
+- `priorities`: A table of two optional configuration options that governs the priority of a task relative to other tasks. Higher values equate to earlier execution respective to the build stage.
   - `pre_build`: The priority of the pre-build stage of this task. Pre-build tasks run before any distributions are built. Defaults to `0`.
   - `post_build`: The priority of the post-build stage of this task. Post-build tasks run afer every distribution has been built. Defaults to `0`.
 - `on_builds`: A list of build names that govern whether the task should run or not. For example, if `on_builds = ["mac"]` then the given task will only run if the `mac` build is enabled in this run of `renconstruct`.
@@ -166,12 +166,61 @@ Specifies which distributions to build. Each of these keys may have a value of `
 Various `renconstruct`-specific options.
 
 - `clear_output_dir`: Whether to clear the output directory on invocation or not. Useful for repeated runs where you want to persist previous results. Defaults to `false`.
+- `tasks`: The path to a directory containing custom Python task definitions. Only active if Python support is enabled. Defaults to `null`.
 
 #### `renutil`
 Options to pass to `renutil`.
 
 - `version`: The version of Ren'Py to use while building the distributions.
 - `registry`: The path where `renutil` data is stored. Mostly useful for CI environments.
+
+### Custom Tasks
+`renconstruct` supports the addition of custom tasks which can run at any point in the build process to tweak config settings, modify files, convert files between formats, rename files and folders on disk and many other things.
+
+To make itself extendable, `renconstruct` uses Python to allow users to create their own custom tasks. This is a fully optional feature as it relies on Python being installed on the system where it is invoked. Please note that `renconstruct` does not ship with its own Python interpreter!
+
+On startup, it will attempt to find the Python version available in the current shell. If it is successful, Python support will be enabled and custom tasks can be loaded. If it fails, Python support will be disabled and only built-in tasks will be available. If you want to override `renconstruct`'s Python selection, you may supply the path to your `libpython` shared library via the environment variable `RC_LIBPYTHON`, which will take precedence over its internal Python search locations.
+
+With enabled Python support, the `options.tasks` configuration option will be used to scan the directory given there for `.py` files. All tasks in all Python files within this directory and any of its subdirectories will be loaded into `renconstruct` and will be available to configure via the config file. Multiple tasks may be present in a single Python file.
+
+To create a custom task, create a class with the suffix `Task` (case sensitive):
+```python
+class ChangeFileTask:
+    def __init__(self, config, input_dir, output_dir):
+        self.config = config
+        self.input_dir = input_dir
+        self.output_dir = output_dir
+
+    @classmethod
+    def validate_config(cls, config):
+        return config
+
+    def pre_build(self):
+        print("pre-build")
+
+    def post_build(self):
+        print("post-build")
+```
+
+Tasks are duck-typed, meaning that they do not need to inherit from a base class, so long as they conform to `renconstruct`'s interface.
+
+This interface consists of three methods and the constructor. The `__init__` method *must* take these three arguments:
+- `config`: A dict of config values which represents the parsed and validated `renconstruct.toml` file.
+- `input_dir`: A string representing the path to the input directory of the build process.
+- `output_dir`: A string representing the path to the output directory of the build process.
+
+You may do any kind of additional setup work in the constructor that your task requires.
+
+#### `validate_config`
+A class method that is called before the task is instantiated to validate its own section of the config file. Every custom task will have its own configuration options which are of arbitrary nature and can thus only be validated by the task itself. The name of the custom config section is derived from the class name by removing the `Task` suffix and converting the rest of the name to snake case. In the example above, `ChangeFileTask` would turn into the config section `tasks.change_file`.
+
+Custom tasks share all of the common properties explained at the start of this section but may otherwise contain arbitrary keys and values.
+
+#### `pre_build`
+This is an optional method that, if given, will cause the custom task to execute it during the pre-build stage.
+
+#### `post_build`
+This is an optional method that, if given, will cause the custom task to execute it during the post-build stage.
 
 ### Build a set of distributions
 ```bash
