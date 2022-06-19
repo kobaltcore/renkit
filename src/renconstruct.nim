@@ -243,12 +243,12 @@ proc build*(
             config_name = name[0..^5].to_snake_case()
             sub_config = config{"tasks", config_name}
 
-          if py.hasattr(class, "validate").to(bool):
+          if py.hasattr(class, "validate_config").to(bool):
             try:
               if sub_config == nil:
-                config{"tasks", config_name} = class.validate(%*{}).to(JsonNode)
+                config{"tasks", config_name} = class.validate_config(%*{}).to(JsonNode)
               else:
-                config{"tasks", config_name} = class.validate(sub_config).to(JsonNode)
+                config{"tasks", config_name} = class.validate_config(sub_config).to(JsonNode)
             except:
               echo &"Failed to validate config for task {name}: {getCurrentExceptionMsg()}"
               quit(1)
@@ -273,7 +273,7 @@ proc build*(
               results = instance.ON_BUILDS.to(seq[string])
             results
 
-          if py.hasattr(instance, "pre").to(bool):
+          if py.hasattr(instance, "pre_build").to(bool):
             let priority = block:
               var result = 0
               if py.hasattr(instance, "PRE_PRIORITY").to(bool):
@@ -289,7 +289,7 @@ proc build*(
               )
             )
 
-          if py.hasattr(instance, "post").to(bool):
+          if py.hasattr(instance, "post_build").to(bool):
             let priority = block:
               var result = 0
               if py.hasattr(instance, "POST_PRIORITY").to(bool):
@@ -405,7 +405,7 @@ proc build*(
     stream_out_ks_bundle.close()
 
   for task in tasks["pre"]:
-    discard task.instance.pre()
+    discard task.instance.pre_build()
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
@@ -479,7 +479,7 @@ proc build*(
     )
 
   for task in tasks["post"]:
-    discard task.instance.post()
+    discard task.instance.post_build()
 
   if config{"tasks", "notarize", "enabled"}.getBool():
     let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
