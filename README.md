@@ -28,32 +28,32 @@ renutil list -a
 
 ### Show information about a specific version
 ```bash
-renutil show -v 7.4.11
+renutil show -v 7.5.0
 ```
 
 ### Launch the Ren'Py Launcher
 ```bash
-renutil launch -v 7.4.11
+renutil launch -v 7.5.0
 ```
 
 ### Launch a Ren'Py project directly
 ```bash
-renutil launch -v 7.4.11 -d -a ~/my-project
+renutil launch -v 7.5.0 -d -a ~/my-project
 ```
 
 ### Install a specific version
 ```bash
-renutil install -v 7.4.11
+renutil install -v 7.5.0
 ```
 
 ### Remove a specific version
 ```bash
-renutil uninstall -v 7.4.11
+renutil uninstall -v 7.5.0
 ```
 
 ### Clean up an instance after use
 ```bash
-renutil clean -v 7.4.11
+renutil clean -v 7.5.0
 ```
 
 ### Full Usage
