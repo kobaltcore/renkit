@@ -53,6 +53,7 @@ jobs:
       - name: Build Project
         run: |
           nimble build_macos_amd64
+          nimble build_macos_arm64
       - name: Zip Artifacts
         run: |
           zip -j renkit-macos-amd64.zip bin/amd64/macos/*
