@@ -28,7 +28,7 @@ type
   Task = object
     name: string
     instance: PyObject
-    call: proc(input_dir: string, output_dir: string, config: JsonNode)
+    call: proc(config: JsonNode, input_dir: string, output_dir: string)
     builds: seq[string]
     priority: int
 
@@ -67,9 +67,9 @@ except:
   false
 
 proc task_pre_convert_images(
+  config: JsonNode,
   input_dir: string,
   output_dir: string,
-  config: JsonNode,
 ) =
   for path, options in config{"tasks", "convert_images"}:
     if path == "enabled":
@@ -104,9 +104,9 @@ proc task_pre_convert_images(
     discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
 proc task_post_clean(
+  config: JsonNode,
   input_dir: string,
   output_dir: string,
-  config: JsonNode,
 ) =
   let version = config{"renutil", "version"}.getStr().parseVersion()
   let registry = config{"renutil", "registry"}.getStr()
@@ -119,9 +119,9 @@ proc task_post_clean(
         removeFile(path)
 
 proc task_post_notarize(
+  config: JsonNode,
   input_dir: string,
   output_dir: string,
-  config: JsonNode,
 ) =
   let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
   if files.len != 1:
@@ -130,9 +130,9 @@ proc task_post_notarize(
   full_run(files[0], config{"tasks", "notarize"})
 
 proc task_pre_keystore(
+  config: JsonNode,
   input_dir: string,
   output_dir: string,
-  config: JsonNode,
 ) =
   let
     version = config{"renutil", "version"}.getStr()
@@ -175,9 +175,9 @@ proc task_pre_keystore(
   stream_out_ks_bundle.close()
 
 proc task_post_keystore(
+  config: JsonNode,
   input_dir: string,
   output_dir: string,
-  config: JsonNode,
 ) =
   let
     version = config{"renutil", "version"}.getStr()
@@ -514,7 +514,7 @@ proc build*(
       continue
     echo &"Running pre-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(input_dir, output_dir, config)
+      task.call(config, input_dir, output_dir)
     else:
       discard task.instance.pre_build()
 
@@ -594,7 +594,7 @@ proc build*(
       continue
     echo &"Running post-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(input_dir, output_dir, config)
+      task.call(config, input_dir, output_dir)
     else:
       discard task.instance.post_build()
 
