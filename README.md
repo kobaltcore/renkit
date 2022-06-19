@@ -254,6 +254,11 @@ It consists of the following keys:
 - `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
 - `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
 
+### Fully notarize a freshly-generated .app bundle
+```bash
+renotize full_run -i ~/out/my-project.zip -c my-config.toml
+```
+
 ### Full Usage
 ```bash
 Usage is like:
