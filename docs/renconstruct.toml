@@ -2,6 +2,7 @@
   enabled = false
 
 [tasks.notarize] # required if matching task is enabled
+  enabled = false
   bundle_id = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
   sign_cert = "<base64-encoded certificate file>" # the base-64 encoded binary certificate file for the codesign process
   sign_cert_pwd = "<certificate password>" # the password used to protect the exported certificate
