@@ -108,48 +108,69 @@ where subcommand syntaxes are as follows:
 ## renconstruct
 
 ### Writing a config file
-renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various platforms. An empty template is provided in this repository under the name `renconstruct.config.empty.toml`
+renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various supported platforms. An empty template is provided in this repository under [docs/renconstruct.toml](docs/renconstruct.toml).
 
 It consists of the following sections:
 
-#### `tasks`
-Each of these keys may have a value of `true` or `false`.
+#### `tasks.clean`
+Runs the `clean` operation from `renutil` which removes temporary build artifacts from Ren'Py and additionally cleans out all APK files except for the universal one if building for Android platforms.
 
-- `clean`: Enables the cleanup task, which cleans up temporary files after the build has completed
-- `notarize`: Enables the notarization task
-- `keystore`: Enables the keystore override task
+- `enabled`: Whether the task should run or not. Defaults to `false`.
 
-#### `task_keystore`
-- `keystore_apk`: The base-64 encoded binary keystore file for the APK bundles
-- `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles
+#### `tasks.notarize`
+Notarizes the macOS artifact for distribution. Same as the configuration for `renotize` below.
 
-#### `task_notarize`
-Same as the configuration for `renotize` below.
-
+- `enabled`: Whether the task should run or not. Defaults to `false`.
 - `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
 - `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
 - `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
 - `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
 - `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
 
-#### `build`
-Each of these keys may have a value of `true` or `false`.
+#### `tasks.keystore`
+Overwrites the auto-generated keystore with the given one. This is useful for distributing releases via the Play Store, which requires the same keystore to be used for all builds, for example.
 
-_ `pc`: Build the Windows/Linux  distribution
+- `enabled`: Whether the task should run or not. Defaults to `false`.
+- `keystore_apk`: The base-64 encoded binary keystore file for the APK bundles.
+- `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles.
+
+#### `tasks.convert_images`
+Converts the selected images in the given directories to WebP to save space on-disk. This task specifically replaces every selected file with its WebP version but does not change the file extension to ensure that all paths to assets and sprites remain the same.
+
+- `enabled`: Whether the task should run or not. Defaults to `false`.
+
+This task takes a dynamic set of properties where each key is the path to a directory containing image files to be converted and its value is a table of configuration options for that particular path. That way, various paths can be converted with different options for more flexibility.
+
+Paths are evaluated relative to the base directory of the game, i.e. `game/images/bg`. Absolute paths should not be used.
+
+Each path may specify the following properties:
+- `extensions`: The list of file extensions to use. All files with an extension in this list will be converted. Defaults to `["png", "jpg"]`.
+- `recursive`: Whether to scan the given directory recursively or not. Defaults to `true`. If not recursive, will only take the images directly in the given directory.
+- `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites.
+
+#### `build`
+Specifies which distributions to build. Each of these keys may have a value of `true` or `false`.
+
+- `pc`: Build the Windows/Linux distribution
 - `win`: Build the Windows distribution
+- `linux`: Build the Linux distribution
 - `mac`: Build the macOS distribution
-_ `web`: Build the Web distribution
-_ `steam`: Build the Steam distribution
-_ `market`: Build the external marketplace distribution (i.e. Itch.io)
+- `web`: Build the Web distribution (only on Ren'Py `>=7.3.0`)
+- `steam`: Build the Steam distribution
+- `market`: Build the external marketplace distribution (i.e. Itch.io)
 - `android_apk`: Build the Android distribution as an APK
 - `android_aab`: Build the Android distribution as an AAB
 
 #### `options`
-- `clear_output_dir`: A value of `true` or `false` determining whether to clear the output directory on invocation or not. Useful for repeated runs where you want to persist previous results.
+Various `renconstruct`-specific options.
+
+- `clear_output_dir`: Whether to clear the output directory on invocation or not. Useful for repeated runs where you want to persist previous results. Defaults to `false`.
 
 #### `renutil`
-- `version`: The version of Ren'Py to use while building the distributions
-- `registry`: The path where `renutil` data is stored. Mostly useful for CI environments
+Options to pass to `renutil`.
+
+- `version`: The version of Ren'Py to use while building the distributions.
+- `registry`: The path where `renutil` data is stored. Mostly useful for CI environments.
 
 ### Build a set of distributions
 ```bash
@@ -163,9 +184,9 @@ Usage is like:
 where subcommand syntaxes are as follows:
 
   build [REQUIRED,optional-params]
-    Builds a Ren'Py project with the specified configuration.
+    Builds a RenPy project with the specified configuration.
   Options:
-      -i=, --input_dir=   string  REQUIRED  The path to the Ren'Py project to build.
+      -i=, --input_dir=   string  REQUIRED  The path to the RenPy project to build.
       -o=, --output_dir=  string  REQUIRED  The directory to output distributions to.
       -c=, --config=      string  REQUIRED  The path to the configuration file to use.
       -r=, --registry=    string  ""        The path to the registry directory to use. Defaults to ~/.renutil
