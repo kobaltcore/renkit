@@ -27,7 +27,7 @@ jobs:
           sudo apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64 zip upx
           curl https://nim-lang.org/choosenim/init.sh -sSf | bash -s -- -y
-          export PATH=/root/.nimble/bin:$PATH
+          export PATH=/home/runner/.nimble/bin:$PATH
       - name: Build Project
         run: |
           nimble build_linux_amd64
