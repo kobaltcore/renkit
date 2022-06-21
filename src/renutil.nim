@@ -79,9 +79,9 @@ proc list*(n = 0, all = false, registry = "") =
     of false:
       list_installed(registry_path)
 
-  let limit = if n < 1 or n > high(versions): high(versions) else: n
+  let limit = if n < 1 or n > high(versions): high(versions) + 1 else: n
 
-  for version in versions[0..limit]:
+  for version in versions[0..<limit]:
     echo version
 
 proc get_exe*(version: Version, registry: string): (string, string) =
