@@ -8,7 +8,7 @@ jobs:
     needs: [build-linux-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
@@ -21,7 +21,7 @@ jobs:
   build-linux-windows:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Nim and Dependencies
         run: |
           sudo apt-get update
@@ -47,7 +47,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Nim
         run: |
           brew install nim upx
