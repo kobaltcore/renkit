@@ -24,8 +24,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install Nim and Dependencies
         run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y curl xz-utils g++ git mingw-w64 zip upx
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64 zip upx
           curl https://nim-lang.org/choosenim/init.sh -sSf | bash -s -- -y
           export PATH=/root/.nimble/bin:$PATH
       - name: Build Project
