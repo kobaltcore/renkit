@@ -236,7 +236,7 @@ proc validate*(config: JsonNode) =
     quit(1)
 
   if config{"renutil", "version"}.getStr() == "latest":
-    config{"renutil", "version"} = %list_available()[0]
+    config{"renutil", "version"} = %($list_available()[0])
 
   let renpy_version = config{"renutil", "version"}.getStr()
   echo &"Using Ren'Py version {renpy_version}"
