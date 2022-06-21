@@ -20,13 +20,17 @@ jobs:
 
   build-linux-windows:
     runs-on: ubuntu-latest
-    container: nimlang/nim
+    # container: nimlang/nim
     steps:
       - uses: actions/checkout@v2
+      - name: Install Nim and Dependencies
+        run: |
+          - apt-get update
+          - DEBIAN_FRONTEND=noninteractive apt-get install -y curl xz-utils g++ git mingw-w64 zip upx
+          - curl https://nim-lang.org/choosenim/init.sh -sSf | bash -s -- -y
+          - export PATH=/root/.nimble/bin:$PATH
       - name: Build Project
         run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64 zip upx
           wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1l-1ubuntu1.3_amd64.deb
           dpkg -i libssl1.1_1.1.1l-1ubuntu1.3_amd64.deb
           nimble build_linux_amd64
