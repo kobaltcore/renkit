@@ -11,6 +11,21 @@ import std/sequtils
 import std/strformat
 import std/algorithm
 
+discard """
+- create github action for renkit
+- can not use docker container because docker is only available on linux
+- if we want to support notarization on macos, then the action must be a javascript action
+- this also has the benefit of faster cold starts
+- JDK8 and Python3 are already pre-installed on all runners,
+  so make sure we can auto-detect all the required software in thos environments easily
+- set up the action to allow caching renpy downloads etc to reduce build times and download size
+
+Idea: make multiple actions to compose things more easily
+- renkit-renutil: utility action that makes renutil available in the rest of the job
+- renkit-renconstruct: action that builds renpy games
+- renkit-renotize: action that notarizes already-built renpy games
+"""
+
 import nimpy
 import nimpy/py_lib
 
@@ -148,7 +163,7 @@ proc task_pre_keystore(
     keystore = config{"tasks", "keystore", "keystore_apk"}.getStr()
 
   if keystore == "":
-    echo("Keystore override was requested, but no APK keystore could be found.")
+    echo "Keystore override was requested, but no APK keystore could be found."
     quit(1)
 
   if not fileExists(keystore_path_backup):
@@ -164,7 +179,7 @@ proc task_pre_keystore(
     keystore = config{"tasks", "keystore", "keystore_aab"}.getStr()
 
   if keystore == "":
-    echo("Keystore override was requested, but no AAB keystore could be found.")
+    echo "Keystore override was requested, but no AAB keystore could be found."
     quit(1)
 
   if not fileExists(keystore_bundle_path_backup):
@@ -282,12 +297,14 @@ proc build*(
   input_dir: string,
   output_dir: string,
   config: string,
-  registry = ""
+  registry = "",
+  version = "",
 ) =
   ## Builds a Ren'Py project with the specified configuration.
   var
     task_count = 0
     registry_path: string
+    renutil_target_version: Version
     tasks = initTable[string, seq[Task]]()
 
   tasks["pre"] = @[]
@@ -495,7 +512,7 @@ proc build*(
     registry_path = get_registry(registry)
 
   if not dirExists(input_dir):
-    echo(&"Game directory '{input_dir}' does not exist.")
+    echo &"Game directory '{input_dir}' does not exist."
     quit(1)
 
   if config["options"]["clear_output_dir"].getBool() and dirExists(output_dir):
@@ -503,10 +520,17 @@ proc build*(
 
   createDir(output_dir)
 
-  let renutil_target_version = parseVersion(config["renutil"]["version"].getStr())
+  if version != "":
+    renutil_target_version = parseVersion(version)
+  else:
+    renutil_target_version = parseVersion(config["renutil"]["version"].getStr())
+
+  if renutil_target_version notin list_available():
+    echo &"Ren'Py version {renutil_target_version} does not exist"
+    quit(1)
 
   if not is_installed(renutil_target_version, registry_path):
-    echo(&"Installing Ren'Py {renutil_target_version}")
+    echo &"Installing Ren'Py {renutil_target_version}"
     install($renutil_target_version, registry_path)
 
   for task in tasks["pre"]:
@@ -520,7 +544,7 @@ proc build*(
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
-    echo("Building Android APK package.")
+    echo "Building Android APK package."
     if renutil_target_version >= newVersion(7, 4, 9):
       launch(
         $renutil_target_version,
@@ -539,7 +563,7 @@ proc build*(
       )
 
   if config["build"]["android_aab"].getBool():
-    echo("Building Android AAB package.")
+    echo "Building Android AAB package."
     if renutil_target_version >= newVersion(7, 4, 9):
       launch(
         $renutil_target_version,
@@ -580,7 +604,7 @@ proc build*(
       cmd = cmd & &" --package {package}"
     let joined_packages = join(platforms_to_build, ", ")
 
-    echo(&"Building {joined_packages} packages.")
+    echo &"Building {joined_packages} packages."
     launch(
       $renutil_target_version,
       false,
