@@ -208,7 +208,7 @@ proc task_post_keystore(
   if fileExists(keystore_bundle_path_backup):
     moveFile(keystore_bundle_path_backup, keystore_bundle_path)
 
-proc validate*(config: JsonNode) =
+proc validate*(config: JsonNode, registry = "", version = "") =
   if "build" notin config:
     echo "Section 'build' not found, please add it."
     quit(1)
@@ -242,18 +242,17 @@ proc validate*(config: JsonNode) =
     echo "No option is enabled in the 'build' section."
     quit(1)
 
-  if "renutil" notin config:
-    echo "Section 'renutil' not found, please add it."
-    quit(1)
-
-  if "version" notin config["renutil"]:
-    echo "Please specify the Ren'Py version in the 'renutil' section."
-    quit(1)
-
-  if config{"renutil", "version"}.getStr() == "latest":
+  if version != "":
+    config{"renutil", "version"} = %version
+  elif config{"renutil", "version"}.getStr() == "latest":
     config{"renutil", "version"} = %($list_available()[0])
 
   let renpy_version = config{"renutil", "version"}.getStr()
+
+  if parseVersion(renpy_version) notin list_available():
+    echo &"Ren'Py version {renpy_version} does not exist"
+    quit(1)
+
   echo &"Using Ren'Py version {renpy_version}"
 
   if config{"build", "web"}.getBool() and renpy_version < "7.3.0":
@@ -312,7 +311,7 @@ proc build*(
 
   var config = parsetoml.parseFile(config).convert_to_json()
 
-  config.validate()
+  config.validate(registry, version)
 
   let active_builds = block:
     var builds: seq[string]
@@ -524,10 +523,6 @@ proc build*(
     renutil_target_version = parseVersion(version)
   else:
     renutil_target_version = parseVersion(config["renutil"]["version"].getStr())
-
-  if renutil_target_version notin list_available():
-    echo &"Ren'Py version {renutil_target_version} does not exist"
-    quit(1)
 
   if not is_installed(renutil_target_version, registry_path):
     echo &"Installing Ren'Py {renutil_target_version}"
