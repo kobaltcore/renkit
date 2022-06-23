@@ -207,11 +207,33 @@ proc full_run*(input_file: string, config: JsonNode) =
 
   echo "Done"
 
-proc full_run_cli*(input_file: string, config: string) =
+proc full_run_cli*(input_file: string, config = "") =
   ## Fully notarize a given .app bundle, creating a signed
   ## and notarized artifact for distribution.
-  let config = parsetoml.parseFile(config).convert_to_json()
-  full_run(input_file, config)
+  let config_obj = if config == "":
+    %*{
+      "apple_id": getEnv("RN_APPLE_ID"),
+      "password": getEnv("RN_PASSWORD"),
+      "identity": getEnv("RN_IDENTITY"),
+      "bundle_id": getEnv("RN_BUNDLE_ID"),
+      "altool_extra": getEnv("RN_ALTOOL_EXTRA"),
+    }
+  else:
+    parsetoml.parseFile(config).convert_to_json()
+
+  let empty_key = block:
+    var result = false
+    for k, v in config_obj:
+      if v.getStr() == "":
+        result = true
+        break
+    result
+
+  if empty_key:
+    echo "No configuration data was found via config file or environment."
+    quit(1)
+
+  full_run(input_file, config_obj)
 
 when isMainModule:
   dispatchMulti(
