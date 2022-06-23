@@ -250,7 +250,7 @@ proc validate*(config: JsonNode, registry = "", version = "") =
   let renpy_version = config{"renutil", "version"}.getStr()
 
   if parseVersion(renpy_version) notin list_available():
-    echo &"Ren'Py version {renpy_version} does not exist"
+    echo &"Ren'Py version {renpy_version} does not exist."
     quit(1)
 
   echo &"Using Ren'Py version {renpy_version}"
