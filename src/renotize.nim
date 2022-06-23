@@ -224,6 +224,8 @@ proc full_run_cli*(input_file: string, config = "") =
   let empty_key = block:
     var result = false
     for k, v in config_obj:
+      if k == "altool_extra":
+        continue
       if v.getStr() == "":
         result = true
         break
