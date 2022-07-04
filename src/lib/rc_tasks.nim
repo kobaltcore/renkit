@@ -43,10 +43,10 @@ proc task_pre_convert_images*(
     var cmds: seq[string]
     if lossless:
       for file in files:
-        cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
+        cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
     else:
       for file in files:
-        cmds.add(&"cwebp -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
+        cmds.add(&"cwebp -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
 
     discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
