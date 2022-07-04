@@ -11,21 +11,6 @@ import std/sequtils
 import std/strformat
 import std/algorithm
 
-discard """
-- create github action for renkit
-- can not use docker container because docker is only available on linux
-- if we want to support notarization on macos, then the action must be a javascript action
-- this also has the benefit of faster cold starts
-- JDK8 and Python3 are already pre-installed on all runners,
-  so make sure we can auto-detect all the required software in thos environments easily
-- set up the action to allow caching renpy downloads etc to reduce build times and download size
-
-Idea: make multiple actions to compose things more easily
-- renkit-renutil: utility action that makes renutil available in the rest of the job
-- renkit-renconstruct: action that builds renpy games
-- renkit-renotize: action that notarizes already-built renpy games
-"""
-
 import nimpy
 import nimpy/py_lib
 
