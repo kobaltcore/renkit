@@ -73,12 +73,8 @@ if python_path == "":
 
 let HAS_PYTHON = try:
   pyInitLibPath(python_path)
-  let pysys = pyImport("sys")
-  echo &"Python Support: true"
-  echo &"Python Version: {pysys.version.to(string)}"
   true
 except:
-  echo &"Python Support: false"
   false
 
 proc task_pre_convert_images(
@@ -322,11 +318,16 @@ proc build*(
     result
 
   if HAS_PYTHON:
+    let pysys = pyImport("sys")
+    echo &"Python Support: true"
+    echo &"Python Version: {pysys.version.to(string)}"
+
     let task_dir = config{"options", "task_dir"}.getStr()
     if task_dir != "":
       let py = pyBuiltinsModule()
       let inspect = pyImport("inspect")
-      discard pyImport("sys").path.append(task_dir)
+
+      discard pysys.path.append(task_dir)
 
       echo &"Scanning tasks in directory '{task_dir}'..."
 
