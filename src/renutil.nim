@@ -126,7 +126,7 @@ proc get_exe*(version: Version, registry: string): (string, string) =
     of "macosx":
       if version < newVersion(7, 4, 0): # Pre-v8 strain
         arch = "darwin-x86_64"
-      elif version <= newVersion(7, 4, 8): # Weird naming scheme change just for this version
+      elif version <= newVersion(7, 4, 11): # Weird naming scheme change just for these versions
         arch = "mac-x86_64"
       elif version < newVersion(8, 0, 0): # Python 2 strain
         arch = "py2-mac-x86_64"
