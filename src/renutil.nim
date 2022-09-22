@@ -130,8 +130,10 @@ proc get_exe*(version: Version, registry: string): (string, string) =
         arch = "mac-x86_64"
       elif version < newVersion(8, 0, 0): # Python 2 strain
         arch = "py2-mac-x86_64"
-      else: # Python 3 strain
+      elif version <= newVersion(8, 0, 3): # Python 3 strain with weird naming scheme
         arch = "py3-mac-x86_64"
+      else: # Python 3 strain with universal naming scheme
+        arch = "py3-mac-universal"
 
   let python = joinPath(registry, $version, "lib", arch, exe)
   let base_file = joinPath(registry, $version, "renpy.py")
