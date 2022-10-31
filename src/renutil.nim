@@ -413,9 +413,56 @@ proc install*(
     )
 
   putEnv("RAPT_NO_TERMS", "1")
-  let err = execCmd(&"{python} -EO android.py installsdk")
+  discard execCmd(&"{python} -EO android.py installsdk")
 
   setCurrentDir(original_dir)
+
+  echo "Ensuring Android SDK is installed"
+  let sdkmanager_path = case hostOS:
+    of "windows":
+      joinPath(
+        registry_path,
+        $version,
+        "rapt",
+        "Sdk",
+        "cmdline-tools",
+        "latest",
+        "bin",
+        "sdkmanager.exe"
+      )
+    else:
+      joinPath(
+        registry_path,
+        $version,
+        "rapt",
+        "Sdk",
+        "cmdline-tools",
+        "latest",
+        "bin",
+        "sdkmanager"
+      )
+  discard execCmd(&"{sdkmanager_path} 'build-tools;29.0.2'")
+
+  if version >= newVersion(8, 0, 0):
+    echo "Increasing default pickle protocol from 2 to 5"
+    let pickle_file_source = joinPath(registry_path, $version, "renpy", "compat", "pickle.py")
+    let pickle_file_target = joinPath(registry_path, $version, "renpy", "compat", "pickle.py.new")
+
+    strm_in = newFileStream(pickle_file_source, fmRead)
+    strm_out = newFileStream(pickle_file_target, fmWrite)
+
+    line = ""
+    while strm_in.readLine(line):
+      if line == "PROTOCOL = 2":
+        strm_out.writeLine("PROTOCOL = 5")
+      else:
+        strm_out.writeLine(line)
+
+    strm_in.close()
+    strm_out.close()
+
+    removeFile(pickle_file_source)
+    moveFile(pickle_file_target, pickle_file_source)
 
 proc cleanup*(version: string, registry = "") =
   ## Cleans up temporary directories for the given version of Ren'Py.
