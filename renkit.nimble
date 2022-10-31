@@ -11,7 +11,7 @@ bin = @["renutil", "renotize", "renconstruct"]
 
 # Dependencies
 
-requires "nim >= 1.6.6"
+requires "nim >= 1.6.8"
 requires "suru >= 0.3.1"
 requires "nimpy >= 0.2.0"
 requires "zippy >= 0.9.12"
