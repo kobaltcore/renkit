@@ -14,6 +14,21 @@ renkit is written in Nim and compiled into standalone executables, so it's easy 
 - `macOS` amd64 / arm64
 - `Windows` amd64 / i386
 
+## Installation
+
+### Homebrew
+
+```bash
+brew tap kobaltcore/renkit
+brew install renkit --no-quarantine
+```
+
+### Manual
+
+Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting ZIP file.
+
+After this, either add the binaries to your PATH or use them from within the download directory.
+
 ## renutil
 
 ### List all installed versions
