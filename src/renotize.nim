@@ -6,12 +6,20 @@ import std/options
 import std/strutils
 import std/sequtils
 import std/strformat
+import std/tempfiles
 
 import parsetoml
 import zippy/ziparchives
 when isMainModule: import cligen
 
 import lib/common
+
+const rcodesignBin = staticRead("../rcodesign")
+
+let (cfile, rcodesignPath) = createTempFile("renkit", "rcodesign")
+cfile.write(rcodesignBin)
+cfile.close()
+setFilePermissions(rcodesignPath, {fpUserRead, fpUserWrite, fpUserExec})
 
 type KeyboardInterrupt = object of CatchableError
 
@@ -42,6 +50,7 @@ proc sign_app*(input_file: string, identity: string) =
 
   writeFile("entitlements.plist", entitlements)
 
+  discard execCmd(&"{rcodesignPath}")
   let cmd = &"codesign --entitlements=entitlements.plist --options=runtime --timestamp -s '{identity}' -f --deep --no-strict {input_file}"
   discard execShellCmd(cmd)
 
