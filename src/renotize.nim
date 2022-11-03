@@ -7,9 +7,9 @@ import std/strutils
 import std/sequtils
 import std/strformat
 
-import cligen
 import parsetoml
 import zippy/ziparchives
+when isMainModule: import cligen
 
 import lib/common
 
