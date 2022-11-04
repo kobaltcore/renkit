@@ -25,7 +25,7 @@ jobs:
       - name: Install Nim and Dependencies
         run: |
           sudo apt-get update
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64 zip upx
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64
           curl https://nim-lang.org/choosenim/init.sh -sSf | bash -s -- -y
       - name: Build Project
         run: |
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install Nim
         run: |
-          brew install nim upx
+          brew install nim
       - name: Build Project
         run: |
           nimble build_macos_amd64
