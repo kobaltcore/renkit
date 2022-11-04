@@ -6,10 +6,10 @@ A collection of tools to help you organise and use Ren'Py instances from the com
 
 renkit consists of three tools:
 1. `renutil` manages Ren'Py instances and takes care of installing, launching and removing them.
-2. `renotize` is a macOS-exclusive tool which notarizes built distributions of Ren'Py games for macOS.
+2. `renotize` notarizes built distributions of Ren'Py games for macOS, from any source OS.
 3. `renconstruct` automates the build process for Ren'Py games start to finish.
 
-renkit is written in Nim and compiled into standalone executables, so it's easy to use anywhere. Currently it supports the following platforms:
+renkit is written in Nim and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms:
 - `Linux` amd64
 - `macOS` amd64 / arm64
 - `Windows` amd64 / i386
@@ -23,9 +23,15 @@ brew tap kobaltcore/renkit
 brew install renkit --no-quarantine
 ```
 
+### wget
+
+```bash
+wget -qO- https://github.com/kobaltcore/renkit/releases/download/v2.4.0/renkit-linux-amd64.zip | tar xz
+```
+
 ### Manual
 
-Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting ZIP file.
+Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting tar file.
 
 After this, either add the binaries to your PATH or use them from within the download directory.
 
@@ -260,7 +266,7 @@ where subcommand syntaxes are as follows:
 ## renotize
 
 ### Writing a config file
-renotize uses a TOML file for configuration to supply the information required to sign apps on macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
+renotize uses a TOML file for configuration to supply the information required to sign apps for macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
 
 It consists of the following keys:
 - `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
