@@ -1,5 +1,4 @@
 import std/os
-import std/nre
 import std/json
 import std/osproc
 import std/options
@@ -51,6 +50,14 @@ proc provision*() =
   echo "6. Click the 'Download' button to download your certificate"
   echo "8. Save the certificate next to the private-key.pem and csr.pem files"
 
+  echo "Press 'Enter' when you have saved the certificate"
+  discard readLine(stdin)
+
+  let certFiles = walkFiles(getCurrentDir() / "*.cer").toSeq()
+  if certFiles.len == 0:
+    echo "No .cer file found in current directory"
+    quit(1)
+
   echo "This next step should be completed in the browser."
   echo "Press 'Enter' to open the browser and continue."
   discard readLine(stdin)
@@ -87,7 +94,11 @@ proc provision*() =
   discard execCmdEx(&"{rcodesignPath} encode-app-store-connect-api-key -o app-store-key.json {issuerId} {keyId} {p8Files[0]}")
 
   echo "Success!"
-  echo "You can now notarize your app using the signing certificate and the app store key."
+  echo "You can now sign your app using these two files:"
+  echo "  - private-key.pem"
+  echo &"  - {certFiles[0]}"
+  echo "You can also use this file to notarize your app:"
+  echo "  - app-store-key.json"
 
 proc unpackApp*(inputFile: string, outputDir = "") =
   ## Unpacks the given ZIP file to the target directory.
@@ -105,52 +116,19 @@ proc unpackApp*(inputFile: string, outputDir = "") =
   moveFile(extractedFile, newTargetDir)
   removeDir(targetDir)
 
-proc signApp*(inputFile: string, identity: string) =
+proc signApp*(inputFile: string, keyFile: string, certFile: string) =
   ## Signs a .app bundle with the given Developer Identity.
   let entitlements = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"""
 
   writeFile("entitlements.plist", entitlements)
 
-  discard execCmd(&"{rcodesignPath}")
-  let cmd = &"codesign --entitlements=entitlements.plist --options=runtime --timestamp -s '{identity}' -f --deep --no-strict {inputFile}"
-  discard execShellCmd(cmd)
+  discard execCmd(&"{rcodesignPath} sign -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
 
   removeFile("entitlements.plist")
 
-proc notarizeApp*(
-  inputFile: string,
-  bundleId: string,
-  appleId: string,
-  password: string,
-  altoolExtra = "",
-): string =
+proc notarizeApp*(inputFile: string, appStoreKeyFile: string): string =
   ## Notarizes a .app bundle with the given Developer Account and bundle ID.
-  var appZip = inputFile
-  removeSuffix(appZip, ".app")
-  appZip = &"{appZip}-app.zip"
-
-  let archive = ZipArchive()
-  let (head, tail) = splitPath(inputFile)
-  archive.addDir(head, tail)
-  archive.writeZipArchive(appZip)
-
-  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarize-app --primary-bundle-id {bundleId} -f {appZip}"
-  let output = execProcess(cmd)
-  echo output
-
-  let match = find(output, re"RequestUUID = ([A-z0-9-]+)")
-  if match.isNone:
-    echo "Could not retrieve UUID"
-    quit(1)
-
-  let uuid = match.get.captures[0]
-
-  return uuid
-
-proc stapleApp*(inputFile: string) =
-  ## Staples a notarization certificate to a .app bundle.
-  let cmd = &"xcrun stapler staple {inputFile}"
-  discard execShellCmd(cmd)
+  discard execCmd(&"{rcodesignPath} notary-submit --api-key-path {appStoreKeyFile} --staple {inputFile}")
 
 proc packDmg*(
   inputFile: string,
@@ -164,46 +142,17 @@ proc packDmg*(
   let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {vName} -srcfolder {inputFile} {outputFile}"
   discard execShellCmd(cmd)
 
-proc signDmg*(inputFile: string, identity: string) =
+proc signDmg*(inputFile: string, keyFile: string, certFile: string) =
   ## Signs a .dmg file with the given Developer Identity.
-  let cmd = &"codesign --timestamp -s {identity} -f {inputFile}"
-  discard execShellCmd(cmd)
+  discard execCmd(&"{rcodesignPath} sign -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
 
-proc notarizeDmg*(
-  inputFile: string,
-  bundleId: string,
-  appleId: string,
-  password: string,
-  altoolExtra = "",
-): string =
+proc notarizeDmg*(inputFile: string, appStoreKeyFile: string): string =
   ## Notarizes a .dmg file with the given Developer Account and bundle ID.
-  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarize-app --primary-bundle-id {bundleId} -f {inputFile}"
-  let output = execProcess(cmd)
-  echo output
+  discard execCmd(&"{rcodesignPath} notary-submit --api-key-path {appStoreKeyFile} --staple {inputFile}")
 
-  let match = find(output, re"RequestUUID = ([A-z0-9-]+)")
-  if match.isNone:
-    echo "Could not retrieve UUID"
-    quit(1)
-
-  let uuid = match.get.captures[0]
-
-  return uuid
-
-proc stapleDmg*(inputFile: string) =
-  ## Staples a notarization certificate to a .dmg file.
-  let cmd = &"xcrun stapler staple {inputFile}"
-  discard execShellCmd(cmd)
-
-proc status*(
-  uuid: string,
-  appleId: string,
-  password: string,
-  altoolExtra = "",
-): string =
+proc status*(uuid: string, appStoreKeyFile: string): string =
   ## Checks the status of a notarization operation given its UUID.
-  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarization-info {uuid} --output-format json"
-  let data = parseJson(execProcess(cmd))
+  let data = parseJson(execProcess(&"{rcodesignPath} notary-log --api-key-path {appStoreKeyFile} {uuid}"))
 
   var status = "not started"
   if "notarization-info" in data:
@@ -214,62 +163,35 @@ proc status*(
 proc fullRun*(inputFile: string, config: JsonNode) =
   # Programmatic interface for the full run operation to allow
   # dynamically passing in configuration data from memory at runtime.
-  let
-    altoolExtra = config["altool_extra"].getStr()
-    bundleId = config["bundle_id"].getStr()
-    identity = config["identity"].getStr()
-    appleId = config["apple_id"].getStr()
-    password = config["password"].getStr()
-
-  var
-    uuid: string
-    status: string
-
   echo "Unpacking app"
-  unpack_app(inputFile)
+  unpackApp(inputFile)
 
   let appFile = walkDirs(joinPath(splitPath(inputFile)[0], "*.app")).toSeq()[0]
 
+  let keyFile = "private-key.pem"
+  let certFile = "cert.pem"
+  let appStoreKeyFile = "app-store-key.json"
+
   echo "Signing app"
-  sign_app(appFile, identity)
+  signApp(appFile, keyFile, certFile)
 
   echo "Notarizing app"
-  uuid = notarize_app(appFile, bundleId, appleId, password, altoolExtra)
-
-  echo "Waiting for notarization"
-  status = status(uuid, appleId, password, altoolExtra)
-  while status != "success" and status != "invalid":
-    echo "."
-    status = status(uuid, appleId, password, altoolExtra)
-    sleep(10_000)
-
-  echo "Stapling app"
-  staple_app(appFile)
+  echo notarizeApp(appFile, appStoreKeyFile)
 
   echo "Signing stapled app"
-  sign_app(appFile, identity)
+  signApp(appFile, keyFile, certFile)
 
   let (dir, name, _) = splitFile(appFile)
   let dmgFile = &"{joinPath(dir, name)}.dmg"
 
   echo "Packing DMG"
-  pack_dmg(appFile, dmgFile)
+  packDmg(appFile, dmgFile)
 
   echo "Signing DMG"
-  sign_dmg(dmgFile, identity)
+  signDmg(dmgFile, keyFile, certFile)
 
   echo "Notarizing DMG"
-  uuid = notarize_dmg(dmgFile, bundleId, appleId, password, altoolExtra)
-
-  echo "Waiting for notarization"
-  status = status(uuid, appleId, password, altoolExtra)
-  while status != "success" and status != "invalid":
-    echo "."
-    status = status(uuid, appleId, password, altoolExtra)
-    sleep(10_000)
-
-  echo "Stapling DMG"
-  staple_dmg(dmgFile)
+  echo notarizeDmg(dmgFile, appStoreKeyFile)
 
   echo "Cleaning up"
   removeFile("*-app.zip")
@@ -316,17 +238,12 @@ when isMainModule:
     }],
     [sign_app, help = {
         "input_file": "The path to the .app bundle.",
-        "identity": "The ID of your developer certificate.",
+        "keyFile": "The private key generated via the 'provision' command.",
+        "certFile": "The certificate file obtained via the 'provision' command.",
     }],
     [notarize_app, help = {
         "input_file": "The path to the .app bundle.",
-        "bundle_id": "The name/ID to use for the notarized bundle.",
-        "apple_id": "Your Apple ID, generally your e-Mail.",
-        "password": "Your app-specific password.",
-        "altool_extra": "Extra arguments for altool.",
-    }],
-    [staple_app, help = {
-        "input_file": "The path to the .app bundle.",
+        "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [pack_dmg, help = {
         "input_file": "The path to the .app bundle.",
@@ -335,23 +252,16 @@ when isMainModule:
     }],
     [sign_dmg, help = {
         "input_file": "The path to the .dmg file.",
-        "identity": "The ID of your developer certificate.",
+        "keyFile": "The private key generated via the 'provision' command.",
+        "certFile": "The certificate file obtained via the 'provision' command.",
     }],
     [notarize_dmg, help = {
         "input_file": "The path to the .dmg file.",
-        "bundle_id": "The name/ID to use for the notarized bundle.",
-        "apple_id": "Your Apple ID, generally your e-Mail.",
-        "password": "Your app-specific password.",
-        "altool_extra": "Extra arguments for altool.",
-    }],
-    [staple_dmg, help = {
-        "input_file": "The path to the .dmg file.",
+        "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [status, help = {
         "uuid": "The UUID of the notarization operation.",
-        "apple_id": "Your Apple ID, generally your e-Mail.",
-        "password": "Your app-specific password.",
-        "altool_extra": "Extra arguments for altool.",
+        "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [full_run_cli, cmdName = "full_run", help = {
         "input_file": "The path to the the ZIP file containing the .app bundle.",
