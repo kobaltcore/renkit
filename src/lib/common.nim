@@ -12,21 +12,21 @@ import zippy/ziparchives
 
 import suru_utils
 
-proc to_string*(s: seq[char]): string =
+proc toString*(s: seq[char]): string =
   result = newStringOfCap(len(s))
   for ch in s:
     add(result, ch)
 
-proc to_snake_case*(s: string): string =
-  var new_string: seq[char]
+proc toSnakeCase*(s: string): string =
+  var newString: seq[char]
   for i, c in s:
-    if c.is_upper_ascii():
+    if c.isUpperAscii():
       if i != 0:
-        new_string.add("_")
-      new_string.add(c.to_lower_ascii())
+        newString.add("_")
+      newString.add(c.toLowerAscii())
     else:
-      new_string.add(c)
-  return new_string.to_string
+      newString.add(c)
+  return newString.to_string
 
 proc download*(url, path: string) =
   var bar: SuruBar = initSuruBar()
@@ -38,8 +38,8 @@ proc download*(url, path: string) =
   let client = newHttpClient()
 
   let r = client.head(url)
-  let content_lengths = seq[string](r.headers.getOrDefault("Content-Length"))
-  let content_length = case content_lengths.len:
+  let contentLengths = seq[string](r.headers.getOrDefault("Content-Length"))
+  let contentLength = case contentLengths.len:
     of 1:
       if content_lengths[0] == "": -1 else: content_lengths[0].parseint
     else:
@@ -58,7 +58,7 @@ proc download*(url, path: string) =
     bar.update(10_000_000)
     bar.finish()
 
-proc convert_to_json*(value: TomlValueRef): JsonNode =
+proc convertToJson*(value: TomlValueRef): JsonNode =
   case value.kind:
     of TomlValueKind.Int:
       %value.intVal
@@ -89,21 +89,21 @@ proc convert_to_json*(value: TomlValueRef): JsonNode =
     of TomlValueKind.None:
       %nil
 
-proc find_files*(
-  input_dir: string,
+proc findFiles*(
+  inputDir: string,
   path: string,
   extensions: seq[string],
   recursive = true
 ): seq[string] =
-  let full_path = joinPath(input_dir, path)
+  let fullPath = joinPath(inputDir, path)
 
   if recursive:
-    for file in walkDirRec(full_path):
+    for file in walkDirRec(fullPath):
       for ext in extensions:
         if file.endsWith(ext):
           result.add(file)
   else:
-    for file in walkFiles(joinPath(full_path, "*")):
+    for file in walkFiles(joinPath(fullPath, "*")):
       for ext in extensions:
         if file.endsWith(ext):
           result.add(file)

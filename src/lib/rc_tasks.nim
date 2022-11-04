@@ -13,10 +13,10 @@ import common
 import ../renutil
 import ../renotize
 
-proc task_pre_convert_images*(
+proc taskPreConvertImages*(
   config: JsonNode,
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
 ) =
   for path, options in config{"tasks", "convert_images"}:
     if path == "enabled":
@@ -27,7 +27,7 @@ proc task_pre_convert_images*(
       recursive = options{"recursive"}.getBool(true)
       extensions = options{"extensions"}.getElems(@[%"png", %"jpg"]).mapIt(it.getStr())
 
-    let files = input_dir.find_files(path, extensions, recursive)
+    let files = inputDir.findFiles(path, extensions, recursive)
 
     var attributes: seq[string]
     if recursive:
@@ -50,44 +50,49 @@ proc task_pre_convert_images*(
 
     discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
-proc task_post_clean*(
+proc taskPostClean*(
   config: JsonNode,
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
 ) =
   let version = config{"renutil", "version"}.getStr().parseVersion()
   let registry = config{"renutil", "registry"}.getStr()
   cleanup($version, registry)
   if version < newVersion(7, 4, 9):
-    for kind, path in walkDir(output_dir):
+    for kind, path in walkDir(outputDir):
       if kind != pcFile:
         continue
       if path.endswith(".apk") and not path.endswith("-universal-release.apk"):
         removeFile(path)
 
-proc task_post_notarize*(
+proc taskPostNotarize*(
   config: JsonNode,
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
 ) =
-  let files = walkFiles(joinPath(output_dir, "*-mac.zip")).to_seq
+  let files = walkFiles(joinPath(outputDir, "*-mac.zip")).toSeq
   if files.len != 1:
     echo "Could not find macOS ZIP file."
     quit(1)
-  full_run(files[0], config{"tasks", "notarize"})
+  fullRun(
+    files[0],
+    config{"tasks", "notarize", "key_file"}.getStr(),
+    config{"tasks", "notarize", "cert_file"}.getStr(),
+    config{"tasks", "notarize", "app_store_key_file"}.getStr()
+  )
 
-proc task_pre_keystore*(
+proc taskPreKeystore*(
   config: JsonNode,
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
 ) =
   let
     version = config{"renutil", "version"}.getStr()
     registry = config{"renutil", "registry"}.getStr()
-    keystore_path = joinPath(registry, version, "rapt", "android.keystore")
-    keystore_path_backup = joinPath(registry, version, "rapt", "android.keystore.original")
-    keystore_bundle_path = joinPath(registry, version, "rapt", "bundle.keystore")
-    keystore_bundle_path_backup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+    keystorePath = joinPath(registry, version, "rapt", "android.keystore")
+    keystorePathBackup = joinPath(registry, version, "rapt", "android.keystore.original")
+    keystoreBundlePath = joinPath(registry, version, "rapt", "bundle.keystore")
+    keystoreBundlePathBackup = joinPath(registry, version, "rapt", "bundle.keystore.original")
 
   var keystore = getEnv("RC_KEYSTORE_APK")
 
@@ -98,12 +103,12 @@ proc task_pre_keystore*(
     echo "Keystore override was requested, but no APK keystore could be found."
     quit(1)
 
-  if not fileExists(keystore_path_backup):
-    moveFile(keystore_path, keystore_path_backup)
+  if not fileExists(keystorePathBackup):
+    moveFile(keystorePath, keystorePathBackup)
 
-  let stream_out_ks_apk = newFileStream(keystore_path, fmWrite)
-  stream_out_ks_apk.write(decode(keystore))
-  stream_out_ks_apk.close()
+  let streamOutKsApk = newFileStream(keystorePath, fmWrite)
+  streamOutKsApk.write(decode(keystore))
+  streamOutKsApk.close()
 
   keystore = getEnv("RC_KEYSTORE_AAB")
 
@@ -114,28 +119,28 @@ proc task_pre_keystore*(
     echo "Keystore override was requested, but no AAB keystore could be found."
     quit(1)
 
-  if not fileExists(keystore_bundle_path_backup):
-    moveFile(keystore_bundle_path, keystore_bundle_path_backup)
+  if not fileExists(keystoreBundlePathBackup):
+    moveFile(keystoreBundlePath, keystoreBundlePathBackup)
 
-  let stream_out_ks_bundle = newFileStream(keystore_bundle_path, fmWrite)
-  stream_out_ks_bundle.write(decode(keystore))
-  stream_out_ks_bundle.close()
+  let streamOutKsBundle = newFileStream(keystoreBundlePath, fmWrite)
+  streamOutKsBundle.write(decode(keystore))
+  streamOutKsBundle.close()
 
-proc task_post_keystore*(
+proc taskPostKeystore*(
   config: JsonNode,
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
 ) =
   let
     version = config{"renutil", "version"}.getStr()
     registry = config{"renutil", "registry"}.getStr()
-    keystore_path = joinPath(registry, version, "rapt", "android.keystore")
-    keystore_path_backup = joinPath(registry, version, "rapt", "android.keystore.original")
-    keystore_bundle_path = joinPath(registry, version, "rapt", "bundle.keystore")
-    keystore_bundle_path_backup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+    keystorePath = joinPath(registry, version, "rapt", "android.keystore")
+    keystorePathBackup = joinPath(registry, version, "rapt", "android.keystore.original")
+    keystoreBundlePath = joinPath(registry, version, "rapt", "bundle.keystore")
+    keystoreBundlePathBackup = joinPath(registry, version, "rapt", "bundle.keystore.original")
 
-  if fileExists(keystore_path_backup):
-    moveFile(keystore_path_backup, keystore_path)
+  if fileExists(keystorePathBackup):
+    moveFile(keystorePathBackup, keystorePath)
 
-  if fileExists(keystore_bundle_path_backup):
-    moveFile(keystore_bundle_path_backup, keystore_bundle_path)
+  if fileExists(keystoreBundlePathBackup):
+    moveFile(keystoreBundlePathBackup, keystoreBundlePath)

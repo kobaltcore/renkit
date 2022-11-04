@@ -214,7 +214,7 @@ proc fullRunCli*(inputFile: string, keyFile = "", certFile = "", appStoreKeyFile
     echo "No configuration data was found via config file or environment."
     quit(1)
 
-  full_run(inputFile, keyFileInt, certFileInt, appStoreKeyFileInt)
+  fullRun(inputFile, keyFileInt, certFileInt, appStoreKeyFileInt)
 
 when isMainModule:
   dispatchMulti(
