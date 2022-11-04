@@ -42,7 +42,10 @@ const currentOS = block:
   result
 
 const rcodesign_url = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{currentArch}-{currentOS}.tar.gz"
-const rcodesign_cmd = &"[[ -f rcodesign ]] || wget {rcodesign_url} -qO- | tar xzv --include '*/rcodesign' --strip-components 1"
+when hostOS == "macosx":
+  const rcodesign_cmd = &"wget {rcodesign_url} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
+else:
+  const rcodesign_cmd = &"wget {rcodesign_url} -qO- | tar xz --no-anchored 'rcodesign' --strip-components 1"
 
 task gendoc, "Generates documentation for this project":
   exec("nimble doc --outdir:docs --project src/*.nim")
@@ -53,12 +56,14 @@ task renutil, "Executes 'nimble run' with extra compiler options.":
 
 task renotize, "Executes 'nimble run' with extra compiler options.":
   let args = join(commandLineParams[3..^1], " ")
-  exec(rcodesign_cmd)
+  if not fileExists("rcodesign"):
+    exec(rcodesign_cmd)
   exec(&"nimble -d:ssl --mm:orc run renotize {args}")
 
 task renconstruct, "Executes 'nimble run' with extra compiler options.":
   let args = join(commandLineParams[3..^1], " ")
-  exec(rcodesign_cmd)
+  if not fileExists("rcodesign"):
+    exec(rcodesign_cmd)
   exec(&"nimble -d:ssl --mm:orc run renconstruct {args}")
 
 task build_macos_amd64, "Builds for macOS (amd64)":
