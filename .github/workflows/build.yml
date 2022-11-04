@@ -16,7 +16,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v0.1.7
         with:
-          files: '*.zip'
+          files: '*.tar.gz'
 
   build-linux-windows:
     runs-on: ubuntu-latest
@@ -33,16 +33,16 @@ jobs:
           nimble build_linux_amd64
           nimble build_windows_amd64
           nimble build_windows_i386
-      - name: Zip Artifacts
+      - name: Archive Artifacts
         run: |
-          zip -j renkit-linux-amd64.zip bin/amd64/linux/*
-          zip -j renkit-windows-amd64.zip bin/amd64/windows/*
-          zip -j renkit-windows-i386.zip bin/i386/windows/*
+          tar czf renkit-linux-amd64.tar.gz -C bin/amd64/linux/ .
+          tar czf renkit-windows-amd64.tar.gz -C bin/amd64/windows/ .
+          tar czf renkit-windows-i386.tar.gz -C bin/i386/windows/ .
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
           name: renkit
-          path: '*.zip'
+          path: '*.tar.gz'
 
   build-macos:
     runs-on: macos-latest
@@ -55,12 +55,12 @@ jobs:
         run: |
           nimble build_macos_amd64
           nimble build_macos_arm64
-      - name: Zip Artifacts
+      - name: Archive Artifacts
         run: |
-          zip -j renkit-macos-amd64.zip bin/amd64/macos/*
-          zip -j renkit-macos-arm64.zip bin/arm64/macos/*
+          tar czf renkit-macos-amd64.tar.gz -C bin/amd64/macos/ .
+          tar czf renkit-macos-arm64.tar.gz -C bin/arm64/macos/ .
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
           name: renkit
-          path: '*.zip'
+          path: '*.tar.gz'
