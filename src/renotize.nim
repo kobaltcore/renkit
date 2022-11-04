@@ -27,52 +27,52 @@ proc handler() {.noconv.} =
 
 setControlCHook(handler)
 
-proc unpack_app*(input_file: string, output_dir = "") =
+proc unpackApp*(inputFile: string, outputDir = "") =
   ## Unpacks the given ZIP file to the target directory.
-  var target_dir = output_dir
-  if target_dir != "" and dirExists(target_dir):
-    removeDir(target_dir)
-  if target_dir == "":
-    target_dir = input_file
-    removeSuffix(target_dir, ".zip")
+  var targetDir = outputDir
+  if targetDir != "" and dirExists(targetDir):
+    removeDir(targetDir)
+  if targetDir == "":
+    targetDir = inputFile
+    removeSuffix(targetDir, ".zip")
 
-  extractAll(input_file, target_dir)
+  extractAll(inputFile, targetDir)
 
-  let extracted_file = walkDirs(joinPath(target_dir, "*.app")).toSeq()[0]
-  let new_target_dir = joinPath(splitPath(target_dir)[0], splitPath(extracted_file)[1])
-  moveFile(extracted_file, new_target_dir)
-  removeDir(target_dir)
+  let extractedFile = walkDirs(joinPath(targetDir, "*.app")).toSeq()[0]
+  let newTargetDir = joinPath(splitPath(targetDir)[0], splitPath(extractedFile)[1])
+  moveFile(extractedFile, newTargetDir)
+  removeDir(targetDir)
 
-proc sign_app*(input_file: string, identity: string) =
+proc signApp*(inputFile: string, identity: string) =
   ## Signs a .app bundle with the given Developer Identity.
   let entitlements = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"""
 
   writeFile("entitlements.plist", entitlements)
 
   discard execCmd(&"{rcodesignPath}")
-  let cmd = &"codesign --entitlements=entitlements.plist --options=runtime --timestamp -s '{identity}' -f --deep --no-strict {input_file}"
+  let cmd = &"codesign --entitlements=entitlements.plist --options=runtime --timestamp -s '{identity}' -f --deep --no-strict {inputFile}"
   discard execShellCmd(cmd)
 
   removeFile("entitlements.plist")
 
-proc notarize_app*(
-  input_file: string,
-  bundle_id: string,
-  apple_id: string,
+proc notarizeApp*(
+  inputFile: string,
+  bundleId: string,
+  appleId: string,
   password: string,
-  altool_extra = "",
+  altoolExtra = "",
 ): string =
   ## Notarizes a .app bundle with the given Developer Account and bundle ID.
-  var app_zip = input_file
-  removeSuffix(app_zip, ".app")
-  app_zip = &"{app_zip}-app.zip"
+  var appZip = inputFile
+  removeSuffix(appZip, ".app")
+  appZip = &"{appZip}-app.zip"
 
   let archive = ZipArchive()
-  let (head, tail) = splitPath(input_file)
+  let (head, tail) = splitPath(inputFile)
   archive.addDir(head, tail)
-  archive.writeZipArchive(app_zip)
+  archive.writeZipArchive(appZip)
 
-  let cmd = &"xcrun altool {altool_extra} -u {apple_id} -p {password} --notarize-app --primary-bundle-id {bundle_id} -f {app_zip}"
+  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarize-app --primary-bundle-id {bundleId} -f {appZip}"
   let output = execProcess(cmd)
   echo output
 
@@ -85,37 +85,37 @@ proc notarize_app*(
 
   return uuid
 
-proc staple_app*(input_file: string) =
+proc stapleApp*(inputFile: string) =
   ## Staples a notarization certificate to a .app bundle.
-  let cmd = &"xcrun stapler staple {input_file}"
+  let cmd = &"xcrun stapler staple {inputFile}"
   discard execShellCmd(cmd)
 
-proc pack_dmg*(
-  input_file: string,
-  output_file: string,
-  volume_name = "",
+proc packDmg*(
+  inputFile: string,
+  outputFile: string,
+  volumeName = "",
 ) =
   ## Packages a .app bundle into a .dmg file.
-  var v_name = volume_name
-  if volume_name == "":
-    v_name = splitFile(input_file).name
-  let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {v_name} -srcfolder {input_file} {output_file}"
+  var vName = volumeName
+  if volumeName == "":
+    vName = splitFile(inputFile).name
+  let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {vName} -srcfolder {inputFile} {outputFile}"
   discard execShellCmd(cmd)
 
-proc sign_dmg*(input_file: string, identity: string) =
+proc signDmg*(inputFile: string, identity: string) =
   ## Signs a .dmg file with the given Developer Identity.
-  let cmd = &"codesign --timestamp -s {identity} -f {input_file}"
+  let cmd = &"codesign --timestamp -s {identity} -f {inputFile}"
   discard execShellCmd(cmd)
 
-proc notarize_dmg*(
-  input_file: string,
-  bundle_id: string,
-  apple_id: string,
+proc notarizeDmg*(
+  inputFile: string,
+  bundleId: string,
+  appleId: string,
   password: string,
-  altool_extra = "",
+  altoolExtra = "",
 ): string =
   ## Notarizes a .dmg file with the given Developer Account and bundle ID.
-  let cmd = &"xcrun altool {altool_extra} -u {apple_id} -p {password} --notarize-app --primary-bundle-id {bundle_id} -f {input_file}"
+  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarize-app --primary-bundle-id {bundleId} -f {inputFile}"
   let output = execProcess(cmd)
   echo output
 
@@ -128,19 +128,19 @@ proc notarize_dmg*(
 
   return uuid
 
-proc staple_dmg*(input_file: string) =
+proc stapleDmg*(inputFile: string) =
   ## Staples a notarization certificate to a .dmg file.
-  let cmd = &"xcrun stapler staple {input_file}"
+  let cmd = &"xcrun stapler staple {inputFile}"
   discard execShellCmd(cmd)
 
 proc status*(
   uuid: string,
-  apple_id: string,
+  appleId: string,
   password: string,
-  altool_extra = "",
+  altoolExtra = "",
 ): string =
   ## Checks the status of a notarization operation given its UUID.
-  let cmd = &"xcrun altool {altool_extra} -u {apple_id} -p {password} --notarization-info {uuid} --output-format json"
+  let cmd = &"xcrun altool {altoolExtra} -u {appleId} -p {password} --notarization-info {uuid} --output-format json"
   let data = parseJson(execProcess(cmd))
 
   var status = "not started"
@@ -149,14 +149,14 @@ proc status*(
 
   return status
 
-proc full_run*(input_file: string, config: JsonNode) =
+proc fullRun*(inputFile: string, config: JsonNode) =
   # Programmatic interface for the full run operation to allow
   # dynamically passing in configuration data from memory at runtime.
   let
-    altool_extra = config["altool_extra"].getStr()
-    bundle_id = config["bundle_id"].getStr()
+    altoolExtra = config["altool_extra"].getStr()
+    bundleId = config["bundle_id"].getStr()
     identity = config["identity"].getStr()
-    apple_id = config["apple_id"].getStr()
+    appleId = config["apple_id"].getStr()
     password = config["password"].getStr()
 
   var
@@ -164,50 +164,50 @@ proc full_run*(input_file: string, config: JsonNode) =
     status: string
 
   echo "Unpacking app"
-  unpack_app(input_file)
+  unpack_app(inputFile)
 
-  let app_file = walkDirs(joinPath(splitPath(input_file)[0], "*.app")).toSeq()[0]
+  let appFile = walkDirs(joinPath(splitPath(inputFile)[0], "*.app")).toSeq()[0]
 
   echo "Signing app"
-  sign_app(app_file, identity)
+  sign_app(appFile, identity)
 
   echo "Notarizing app"
-  uuid = notarize_app(app_file, bundle_id, apple_id, password, altool_extra)
+  uuid = notarize_app(appFile, bundleId, appleId, password, altoolExtra)
 
   echo "Waiting for notarization"
-  status = status(uuid, apple_id, password, altool_extra)
+  status = status(uuid, appleId, password, altoolExtra)
   while status != "success" and status != "invalid":
     echo "."
-    status = status(uuid, apple_id, password, altool_extra)
+    status = status(uuid, appleId, password, altoolExtra)
     sleep(10_000)
 
   echo "Stapling app"
-  staple_app(app_file)
+  staple_app(appFile)
 
   echo "Signing stapled app"
-  sign_app(app_file, identity)
+  sign_app(appFile, identity)
 
-  let (dir, name, ext) = splitFile(app_file)
-  let dmg_file = &"{joinPath(dir, name)}.dmg"
+  let (dir, name, _) = splitFile(appFile)
+  let dmgFile = &"{joinPath(dir, name)}.dmg"
 
   echo "Packing DMG"
-  pack_dmg(app_file, dmg_file)
+  pack_dmg(appFile, dmgFile)
 
   echo "Signing DMG"
-  sign_dmg(dmg_file, identity)
+  sign_dmg(dmgFile, identity)
 
   echo "Notarizing DMG"
-  uuid = notarize_dmg(dmg_file, bundle_id, apple_id, password, altool_extra)
+  uuid = notarize_dmg(dmgFile, bundleId, appleId, password, altoolExtra)
 
   echo "Waiting for notarization"
-  status = status(uuid, apple_id, password, altool_extra)
+  status = status(uuid, appleId, password, altoolExtra)
   while status != "success" and status != "invalid":
     echo "."
-    status = status(uuid, apple_id, password, altool_extra)
+    status = status(uuid, appleId, password, altoolExtra)
     sleep(10_000)
 
   echo "Stapling DMG"
-  staple_dmg(dmg_file)
+  staple_dmg(dmgFile)
 
   echo "Cleaning up"
   removeFile("*-app.zip")
@@ -215,10 +215,10 @@ proc full_run*(input_file: string, config: JsonNode) =
 
   echo "Done"
 
-proc full_run_cli*(input_file: string, config = "") =
+proc fullRunCli*(inputFile: string, config = "") =
   ## Fully notarize a given .app bundle, creating a signed
   ## and notarized artifact for distribution.
-  let config_obj = if config == "":
+  let configObj = if config == "":
     %*{
       "apple_id": getEnv("RN_APPLE_ID"),
       "password": getEnv("RN_PASSWORD"),
@@ -229,9 +229,9 @@ proc full_run_cli*(input_file: string, config = "") =
   else:
     parsetoml.parseFile(config).convert_to_json()
 
-  let empty_key = block:
+  let emptyKey = block:
     var result = false
-    for k, v in config_obj:
+    for k, v in configObj:
       if k == "altool_extra":
         continue
       if v.getStr() == "":
@@ -239,11 +239,11 @@ proc full_run_cli*(input_file: string, config = "") =
         break
     result
 
-  if empty_key:
+  if emptyKey:
     echo "No configuration data was found via config file or environment."
     quit(1)
 
-  full_run(input_file, config_obj)
+  full_run(inputFile, config_obj)
 
 when isMainModule:
   dispatchMulti(
