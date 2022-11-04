@@ -1,17 +1,13 @@
 import std/os
 import std/json
 import std/osproc
-import std/options
 import std/strutils
 import std/sequtils
 import std/browsers
 import std/strformat
 
-import parsetoml
 import zippy/ziparchives
 when isMainModule: import cligen
-
-import lib/common
 
 const rcodesignBin = staticRead("../rcodesign")
 
@@ -160,7 +156,7 @@ proc status*(uuid: string, appStoreKeyFile: string): string =
 
   return status
 
-proc fullRun*(inputFile: string, config: JsonNode) =
+proc fullRun*(inputFile, keyFile, certFile, appStoreKeyFile: string) =
   # Programmatic interface for the full run operation to allow
   # dynamically passing in configuration data from memory at runtime.
   echo "Unpacking app"
@@ -199,63 +195,54 @@ proc fullRun*(inputFile: string, config: JsonNode) =
 
   echo "Done"
 
-proc fullRunCli*(inputFile: string, config = "") =
+proc fullRunCli*(inputFile: string, keyFile = "", certFile = "", appStoreKeyFile = "") =
   ## Fully notarize a given .app bundle, creating a signed
   ## and notarized artifact for distribution.
-  let configObj = if config == "":
-    %*{
-      "apple_id": getEnv("RN_APPLE_ID"),
-      "password": getEnv("RN_PASSWORD"),
-      "identity": getEnv("RN_IDENTITY"),
-      "bundle_id": getEnv("RN_BUNDLE_ID"),
-      "altool_extra": getEnv("RN_ALTOOL_EXTRA"),
-    }
-  else:
-    parsetoml.parseFile(config).convert_to_json()
+  var
+    keyFileInt: string
+    certFileInt: string
+    appStoreKeyFileInt: string
 
-  let emptyKey = block:
-    var result = false
-    for k, v in configObj:
-      if k == "altool_extra":
-        continue
-      if v.getStr() == "":
-        result = true
-        break
-    result
+  if keyFile == "":
+    keyFileInt = getEnv("RN_KEY_FILE")
+  if certFile == "":
+    certFileInt = getEnv("RN_CERT_FILE")
+  if appStoreKeyFile == "":
+    appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
 
-  if emptyKey:
+  if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "":
     echo "No configuration data was found via config file or environment."
     quit(1)
 
-  full_run(inputFile, config_obj)
+  full_run(inputFile, keyFileInt, certFileInt, appStoreKeyFileInt)
 
 when isMainModule:
   dispatchMulti(
     [provision],
-    [unpack_app, help = {
+    [unpackApp, cmdName="unpack-app", help = {
         "input_file": "The path to the ZIP file containing the .app bundle.",
         "output_dir": "The directory to extract the .app bundle to.",
     }],
-    [sign_app, help = {
+    [signApp, cmdName="sign-app", help = {
         "input_file": "The path to the .app bundle.",
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
     }],
-    [notarize_app, help = {
+    [notarizeApp, cmdName="notarize-app", help = {
         "input_file": "The path to the .app bundle.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
-    [pack_dmg, help = {
+    [packDmg, cmdName="pack-dmg", help = {
         "input_file": "The path to the .app bundle.",
         "output_file": "The name of the DMG file to write to.",
         "volume_name": "The name to use for the DMG volume. By default the base name of the input file."
     }],
-    [sign_dmg, help = {
+    [signDmg, cmdName="sign-dmg", help = {
         "input_file": "The path to the .dmg file.",
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
     }],
-    [notarize_dmg, help = {
+    [notarizeDmg, cmdName="notarize-dmg", help = {
         "input_file": "The path to the .dmg file.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
@@ -263,8 +250,10 @@ when isMainModule:
         "uuid": "The UUID of the notarization operation.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
-    [full_run_cli, cmdName = "full_run", help = {
+    [fullRunCli, cmdName = "full-run", help = {
         "input_file": "The path to the the ZIP file containing the .app bundle.",
-        "config": "The path to the config.toml file to use for this process.",
+        "keyFile": "The private key generated via the 'provision' command.",
+        "certFile": "The certificate file obtained via the 'provision' command.",
+        "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
   )
