@@ -41,10 +41,11 @@ const currentOS = block:
     result = "pc-windows-msvc"
   result
 
-const rcodesign_url = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{currentArch}-{currentOS}.tar.gz"
 when hostOS == "macosx":
+  const rcodesign_url = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-macos-universal.tar.gz"
   const rcodesign_cmd = &"wget {rcodesign_url} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
 else:
+  const rcodesign_url = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{currentArch}-{currentOS}.tar.gz"
   const rcodesign_cmd = &"wget {rcodesign_url} -qO- | tar xz --no-anchored 'rcodesign' --strip-components 1"
 
 task gendoc, "Generates documentation for this project":
