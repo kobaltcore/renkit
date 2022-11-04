@@ -5,6 +5,7 @@ import std/osproc
 import std/options
 import std/strutils
 import std/sequtils
+import std/browsers
 import std/strformat
 
 import parsetoml
@@ -26,6 +27,67 @@ proc handler() {.noconv.} =
   raise newException(KeyboardInterrupt, "Keyboard Interrupt")
 
 setControlCHook(handler)
+
+proc provision*() =
+  ## Utility method to provision required information for notarization using a step-by-step process.
+  # generate private key for code signing request
+  discard execCmd("openssl genrsa -out private-key.pem 2048")
+
+  # generate CSR
+  discard execCmd(&"{rcodesignPath} generate-certificate-signing-request --pem-source private-key.pem --csr-pem-path csr.pem")
+
+  # upload CSR to apple
+  echo "This next step should be completed in the browser."
+  echo "Press 'Enter' to open the browser and continue."
+  discard readLine(stdin)
+  openDefaultBrowser("https://developer.apple.com/account/resources/certificates/add")
+
+  # print step by step instructions
+  echo "1. Select 'Developer ID Application' as the certificate type"
+  echo "2. Click 'Continue'"
+  echo "3. Select the G2 Sub-CA (Xcode 11.4.1 or later) Profile Type"
+  echo "4. Select 'csr.pem' using the file picker"
+  echo "5. Click 'Continue'"
+  echo "6. Click the 'Download' button to download your certificate"
+  echo "8. Save the certificate next to the private-key.pem and csr.pem files"
+
+  echo "This next step should be completed in the browser."
+  echo "Press 'Enter' to open the browser and continue."
+  discard readLine(stdin)
+  openDefaultBrowser("https://appstoreconnect.apple.com/access/users")
+
+  echo "1. Click on 'Keys'"
+  echo "2. If this is your first time, click on 'Request Access' and wait until it is granted"
+  echo "3. Click on 'Generate API Key'"
+  echo "4. Enter a name for the key"
+  echo "5. For Access, select 'Developer'"
+  echo "6. Click on 'Generate'"
+  echo "7. Copy the Issuer ID and enter it here: ('Enter' to confirm)"
+  let issuerId = readLine(stdin).strip()
+  if issuerId.len == 0:
+    echo "Issuer ID cannot be empty"
+    quit(1)
+  echo "8. Copy the Key ID and enter it here: ('Enter' to confirm)"
+  let keyId = readLine(stdin).strip()
+  if keyId.len == 0:
+    echo "Key ID cannot be empty"
+    quit(1)
+  echo "7. Next to the entry of the newly-created key in the list, click on 'Download API Key'"
+  echo "8. In the following pop-up, Click on 'Download'"
+  echo "10. Save the downloaded .p8 file next to the private-key.pem and csr.pem files"
+
+  echo "Press 'Enter' when you have saved the certificate"
+  discard readLine(stdin)
+
+  # find the first file ending in .p8
+  let p8Files = walkFiles(getCurrentDir() / "*.p8").toSeq()
+  if p8Files.len == 0:
+    echo "No .p8 file found in current directory"
+    quit(1)
+  discard execCmdEx(&"{rcodesignPath} encode-app-store-connect-api-key -o app-store-key.json {issuerId} {keyId} {p8Files[0]}")
+
+  echo "Success!"
+  echo "You can now notarize your app using the signing certificate and the app store key."
 
 proc unpackApp*(inputFile: string, outputDir = "") =
   ## Unpacks the given ZIP file to the target directory.
@@ -247,6 +309,7 @@ proc fullRunCli*(inputFile: string, config = "") =
 
 when isMainModule:
   dispatchMulti(
+    [provision],
     [unpack_app, help = {
         "input_file": "The path to the ZIP file containing the .app bundle.",
         "output_dir": "The directory to extract the .app bundle to.",
