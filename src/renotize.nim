@@ -13,7 +13,7 @@ when isMainModule: import cligen
 
 import lib/common
 
-const rcodesignBin = staticRead(".." / "rcodesign")
+const rcodesignBin = staticRead("../rcodesign")
 
 let rcodesignPath = getTempDir() / "rcodesign"
 if execCmdEx(&"{rcodesignPath} -V").exitCode != 0:
