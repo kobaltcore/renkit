@@ -6,7 +6,6 @@ import std/options
 import std/strutils
 import std/sequtils
 import std/strformat
-import std/tempfiles
 
 import parsetoml
 import zippy/ziparchives
@@ -14,12 +13,12 @@ when isMainModule: import cligen
 
 import lib/common
 
-const rcodesignBin = staticRead("../rcodesign")
+const rcodesignBin = staticRead(".." / "rcodesign")
 
-let (cfile, rcodesignPath) = createTempFile("renkit", "rcodesign")
-cfile.write(rcodesignBin)
-cfile.close()
-setFilePermissions(rcodesignPath, {fpUserRead, fpUserWrite, fpUserExec})
+let rcodesignPath = getTempDir() / "rcodesign"
+if execCmdEx(&"{rcodesignPath} -V").exitCode != 0:
+  writeFile(rcodesignPath, rcodesignBin)
+  setFilePermissions(rcodesignPath, {fpUserRead, fpUserWrite, fpUserExec})
 
 type KeyboardInterrupt = object of CatchableError
 
