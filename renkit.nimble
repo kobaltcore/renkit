@@ -71,11 +71,14 @@ task build_macos_amd64, "Builds for macOS (amd64)":
   exec(rcodesign_cmd)
   exec("nimble build -d:ssl -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
   exec("mkdir -p bin/amd64/macos && mv renutil bin/amd64/macos && mv renotize bin/amd64/macos && mv renconstruct bin/amd64/macos")
+  exec("upx --best bin/amd64/macos/*")
 
 task build_macos_arm64, "Builds for macOS (arm64)":
   exec(rcodesign_cmd)
   exec("nimble build -d:ssl -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
   exec("mkdir -p bin/arm64/macos && mv renutil bin/arm64/macos && mv renotize bin/arm64/macos && mv renconstruct bin/arm64/macos")
+  when hostCPU != "arm64":
+    exec("upx --best bin/arm64/macos/*")
 
 task build_linux_amd64, "Builds for linux (amd64)":
   exec(rcodesign_cmd)
