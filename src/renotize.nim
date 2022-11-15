@@ -164,10 +164,6 @@ proc fullRun*(inputFile, keyFile, certFile, appStoreKeyFile: string) =
 
   let appFile = walkDirs(joinPath(splitPath(inputFile)[0], "*.app")).toSeq()[0]
 
-  let keyFile = "private-key.pem"
-  let certFile = "cert.pem"
-  let appStoreKeyFile = "app-store-key.json"
-
   echo "Signing app"
   signApp(appFile, keyFile, certFile)
 
