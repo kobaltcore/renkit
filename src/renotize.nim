@@ -205,10 +205,16 @@ proc fullRunCli*(inputFile: string, keyFile = "", certFile = "", appStoreKeyFile
 
   if keyFile == "":
     keyFileInt = getEnv("RN_KEY_FILE")
+  else:
+    keyFileInt = keyFile
   if certFile == "":
     certFileInt = getEnv("RN_CERT_FILE")
+  else:
+    certFileInt = certFile
   if appStoreKeyFile == "":
     appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
+  else:
+    appStoreKeyFileInt = appStoreKeyFile
 
   if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "":
     echo "No configuration data was found via config file or environment."
