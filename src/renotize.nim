@@ -222,30 +222,30 @@ when isMainModule:
   dispatchMulti(
     [provision],
     [unpackApp, cmdName="unpack-app", help = {
-        "input_file": "The path to the ZIP file containing the .app bundle.",
-        "output_dir": "The directory to extract the .app bundle to.",
+        "inputFile": "The path to the ZIP file containing the .app bundle.",
+        "outputDir": "The directory to extract the .app bundle to.",
     }],
     [signApp, cmdName="sign-app", help = {
-        "input_file": "The path to the .app bundle.",
+        "inputFile": "The path to the .app bundle.",
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
     }],
     [notarizeApp, cmdName="notarize-app", help = {
-        "input_file": "The path to the .app bundle.",
+        "inputFile": "The path to the .app bundle.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [packDmg, cmdName="pack-dmg", help = {
-        "input_file": "The path to the .app bundle.",
-        "output_file": "The name of the DMG file to write to.",
-        "volume_name": "The name to use for the DMG volume. By default the base name of the input file."
+        "inputFile": "The path to the .app bundle.",
+        "outputFile": "The name of the DMG file to write to.",
+        "volumeName": "The name to use for the DMG volume. By default the base name of the input file."
     }],
     [signDmg, cmdName="sign-dmg", help = {
-        "input_file": "The path to the .dmg file.",
+        "inputFile": "The path to the .dmg file.",
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
     }],
     [notarizeDmg, cmdName="notarize-dmg", help = {
-        "input_file": "The path to the .dmg file.",
+        "inputFile": "The path to the .dmg file.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [status, help = {
@@ -253,7 +253,8 @@ when isMainModule:
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
     }],
     [fullRunCli, cmdName = "full-run", help = {
-        "input_file": "The path to the the ZIP file containing the .app bundle.",
+        "inputFile": "The path to the the ZIP file containing the .app bundle.",
+        "bundleIdentifier": "The internal identifier of the .app bundle.",
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
