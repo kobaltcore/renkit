@@ -6,6 +6,7 @@ import std/sequtils
 import std/browsers
 import std/strformat
 
+import plists
 import zippy/ziparchives
 when isMainModule: import cligen
 
@@ -96,7 +97,10 @@ proc provision*() =
   echo "You can also use this file to notarize your app:"
   echo "  - app-store-key.json"
 
-proc unpackApp*(inputFile: string, outputDir = "") =
+  # TODO: compile all needed files into a single JSON file, encoded as base64
+  # renotize can then load this, i.e. from an environment variable, and work with a single input
+
+proc unpackApp*(inputFile, bundleIdentifier: string, outputDir = "") =
   ## Unpacks the given ZIP file to the target directory.
   var targetDir = outputDir
   if targetDir != "" and dirExists(targetDir):
@@ -112,13 +116,19 @@ proc unpackApp*(inputFile: string, outputDir = "") =
   moveFile(extractedFile, newTargetDir)
   removeDir(targetDir)
 
+  let plistPath = joinPath(newTargetDir, "Contents", "Info.plist")
+
+  let p = loadPlist(plistPath)
+  p["CFBundleIdentifier"] = %bundleIdentifier
+  writePlist(p, plistPath)
+
 proc signApp*(inputFile: string, keyFile: string, certFile: string) =
   ## Signs a .app bundle with the given Developer Identity.
   let entitlements = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"""
 
   writeFile("entitlements.plist", entitlements)
 
-  discard execCmd(&"{rcodesignPath} sign -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
+  discard execCmd(&"{rcodesignPath} sign --code-signature-flags runtime -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
 
   removeFile("entitlements.plist")
 
@@ -134,13 +144,13 @@ proc packDmg*(
   ## Packages a .app bundle into a .dmg file.
   var vName = volumeName
   if volumeName == "":
-    vName = splitFile(inputFile).name
+    vName = changeFileExt(lastPathPart(inputFile), "")
   let cmd = &"hdiutil create -fs HFS+ -format UDBZ -ov -volname {vName} -srcfolder {inputFile} {outputFile}"
   discard execShellCmd(cmd)
 
 proc signDmg*(inputFile: string, keyFile: string, certFile: string) =
   ## Signs a .dmg file with the given Developer Identity.
-  discard execCmd(&"{rcodesignPath} sign -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
+  discard execCmd(&"{rcodesignPath} sign --pem-source {keyFile} --der-source {certFile} {inputFile}")
 
 proc notarizeDmg*(inputFile: string, appStoreKeyFile: string): string =
   ## Notarizes a .dmg file with the given Developer Account and bundle ID.
@@ -156,11 +166,11 @@ proc status*(uuid: string, appStoreKeyFile: string): string =
 
   return status
 
-proc fullRun*(inputFile, keyFile, certFile, appStoreKeyFile: string) =
+proc fullRun*(inputFile, bundleIdentifier, keyFile, certFile, appStoreKeyFile: string) =
   # Programmatic interface for the full run operation to allow
   # dynamically passing in configuration data from memory at runtime.
   echo "Unpacking app"
-  unpackApp(inputFile)
+  unpackApp(inputFile, bundleIdentifier)
 
   let appFile = walkDirs(joinPath(splitPath(inputFile)[0], "*.app")).toSeq()[0]
 
@@ -169,9 +179,6 @@ proc fullRun*(inputFile, keyFile, certFile, appStoreKeyFile: string) =
 
   echo "Notarizing app"
   echo notarizeApp(appFile, appStoreKeyFile)
-
-  echo "Signing stapled app"
-  signApp(appFile, keyFile, certFile)
 
   let (dir, name, _) = splitFile(appFile)
   let dmgFile = &"{joinPath(dir, name)}.dmg"
@@ -185,19 +192,16 @@ proc fullRun*(inputFile, keyFile, certFile, appStoreKeyFile: string) =
   echo "Notarizing DMG"
   echo notarizeDmg(dmgFile, appStoreKeyFile)
 
-  echo "Cleaning up"
-  removeFile("*-app.zip")
-  removeDir("extracted distro")
-
   echo "Done"
 
-proc fullRunCli*(inputFile: string, keyFile = "", certFile = "", appStoreKeyFile = "") =
+proc fullRunCli*(inputFile: string, bundleIdentifier = "", keyFile = "", certFile = "", appStoreKeyFile = "") =
   ## Fully notarize a given .app bundle, creating a signed
   ## and notarized artifact for distribution.
   var
     keyFileInt: string
     certFileInt: string
     appStoreKeyFileInt: string
+    bundleIdentifierInt: string
 
   if keyFile == "":
     keyFileInt = getEnv("RN_KEY_FILE")
@@ -211,12 +215,16 @@ proc fullRunCli*(inputFile: string, keyFile = "", certFile = "", appStoreKeyFile
     appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
   else:
     appStoreKeyFileInt = appStoreKeyFile
+  if bundleIdentifier == "":
+    bundleIdentifierInt = getEnv("RN_BUNDLE_IDENTIFIER")
+  else:
+    bundleIdentifierInt = bundleIdentifier
 
-  if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "":
-    echo "No configuration data was found via config file or environment."
+  if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "" or bundleIdentifierInt == "":
+    echo "No configuration data was found via command line arguments or environment."
     quit(1)
 
-  fullRun(inputFile, keyFileInt, certFileInt, appStoreKeyFileInt)
+  fullRun(inputFile, bundleIdentifier, keyFileInt, certFileInt, appStoreKeyFileInt)
 
 when isMainModule:
   dispatchMulti(
