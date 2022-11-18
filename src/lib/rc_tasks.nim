@@ -76,6 +76,7 @@ proc taskPostNotarize*(
     quit(1)
   fullRun(
     files[0],
+    config{"tasks", "notarize", "bundle_identifier"}.getStr(),
     config{"tasks", "notarize", "key_file"}.getStr(),
     config{"tasks", "notarize", "cert_file"}.getStr(),
     config{"tasks", "notarize", "app_store_key_file"}.getStr()
