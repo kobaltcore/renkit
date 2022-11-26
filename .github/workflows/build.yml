@@ -32,12 +32,10 @@ jobs:
           export PATH=/home/runner/.nimble/bin:$PATH
           nimble build_linux_amd64
           nimble build_windows_amd64
-          nimble build_windows_i386
       - name: Archive Artifacts
         run: |
           tar czf renkit-linux-amd64.tar.gz -C bin/amd64/linux/ .
           tar czf renkit-windows-amd64.tar.gz -C bin/amd64/windows/ .
-          tar czf renkit-windows-i386.tar.gz -C bin/i386/windows/ .
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
