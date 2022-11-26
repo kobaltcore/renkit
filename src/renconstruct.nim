@@ -29,13 +29,6 @@ if execCmdEx(&"{webpPath} -version").exitCode != 0:
 type
   KeyboardInterrupt = object of CatchableError
 
-  Task = object
-    name: string
-    instance: PyObject
-    call: proc(config: JsonNode, inputDir: string, outputDir: string)
-    builds: seq[string]
-    priority: int
-
 proc handler() {.noconv.} =
   raise newException(KeyboardInterrupt, "Keyboard Interrupt")
 
@@ -391,15 +384,14 @@ proc build*(
     echo &"Installing Ren'Py {renutilTargetVersion}"
     install($renutilTargetVersion, registryPath)
 
+  let ctx = TaskContext(webpPath: webpPath)
+
   for task in tasks["pre"]:
     if (activeBuilds * task.builds.toHashSet).len == 0:
       continue
     echo &"Running pre-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      if task.name == "convert_images":
-        task.call(config, inputDir, outputDir, webpPath)
-      else:
-        task.call(config, inputDir, outputDir)
+      task.call(ctx, config, inputDir, outputDir)
     else:
       discard task.instance.preBuild()
 
@@ -479,7 +471,7 @@ proc build*(
       continue
     echo &"Running post-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(config, inputDir, outputDir)
+      task.call(ctx, config, inputDir, outputDir)
     else:
       discard task.instance.postBuild()
 

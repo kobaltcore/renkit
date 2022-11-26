@@ -7,17 +7,29 @@ import std/strutils
 import std/sequtils
 import std/strformat
 
+import nimpy
 import semver
 
 import common
 import ../renutil
 import ../renotize
 
+type
+  TaskContext* = object
+    webpPath*: string
+
+  Task* = object
+    name*: string
+    instance*: PyObject
+    call*: proc(ctx: TaskContext, config: JsonNode, inputDir: string, outputDir: string)
+    builds*: seq[string]
+    priority*: int
+
 proc taskPreConvertImages*(
+  ctx: TaskContext,
   config: JsonNode,
   inputDir: string,
   outputDir: string,
-  webpPath: string,
 ) =
   for path, options in config{"tasks", "convert_images"}:
     if path == "enabled":
@@ -44,14 +56,15 @@ proc taskPreConvertImages*(
     var cmds: seq[string]
     if lossless:
       for file in files:
-        cmds.add(&"{webpPath} -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
+        cmds.add(&"{ctx.webpPath} -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
     else:
       for file in files:
-        cmds.add(&"{webpPath} -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
+        cmds.add(&"{ctx.webpPath} -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
 
     discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
 proc taskPostClean*(
+  ctx: TaskContext,
   config: JsonNode,
   inputDir: string,
   outputDir: string,
@@ -67,6 +80,7 @@ proc taskPostClean*(
         removeFile(path)
 
 proc taskPostNotarize*(
+  ctx: TaskContext,
   config: JsonNode,
   inputDir: string,
   outputDir: string,
@@ -84,6 +98,7 @@ proc taskPostNotarize*(
   )
 
 proc taskPreKeystore*(
+  ctx: TaskContext,
   config: JsonNode,
   inputDir: string,
   outputDir: string,
@@ -129,6 +144,7 @@ proc taskPreKeystore*(
   streamOutKsBundle.close()
 
 proc taskPostKeystore*(
+  ctx: TaskContext,
   config: JsonNode,
   inputDir: string,
   outputDir: string,
