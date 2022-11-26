@@ -8,8 +8,8 @@ import std/xmltree
 import std/strformat
 import std/algorithm
 import std/htmlparser
-import std/httpclient
 
+import puppy
 import regex
 import semver
 import cligen
@@ -51,8 +51,8 @@ proc isInstalled*(version: Version, registry: string): bool =
 proc listAvailable*(): seq[Version] =
   var versions: seq[Version]
 
-  let client = newHttpClient()
-  let html = parseHtml(client.getContent("https://www.renpy.org/dl"))
+  let req = Request(url: parseUrl("https://www.renpy.org/dl"), verb: "get")
+  let html = parseHtml(fetch(req).body)
 
   for a in html.findAll("a"):
     if not a.attrs.hasKey("href"):
@@ -231,7 +231,7 @@ proc install*(
     try:
       echo "Downloading Steam support"
       download(steamUrl, steamFile)
-    except HttpRequestError:
+    except ValueError:
       if getCurrentExceptionMsg() == "404 Not Found":
         echo "Not supported on this version, skipping"
       else:
