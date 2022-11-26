@@ -1,6 +1,5 @@
 import system
 import std/os
-import std/re
 import std/sugar
 import std/osproc
 import std/streams
@@ -11,6 +10,7 @@ import std/algorithm
 import std/htmlparser
 import std/httpclient
 
+import regex
 import semver
 import cligen
 import zippy/ziparchives
