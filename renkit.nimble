@@ -58,7 +58,7 @@ proc getWebpUrl(osName="", archName=""): string =
     if hostCPU == "arm64":
       result = "arm64"
     elif hostCPU == "amd64":
-      result = "x64"
+      result = "x86-64"
     result
 
   let currentOS = block:
