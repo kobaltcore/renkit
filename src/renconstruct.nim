@@ -19,6 +19,13 @@ import renutil
 import lib/common
 import lib/rc_tasks
 
+const webpBin = staticRead("../cwebp")
+
+let webpPath = getTempDir() / "cwebp"
+if execCmdEx(&"{webpPath} -version").exitCode != 0:
+  writeFile(webpPath, webpBin)
+  setFilePermissions(webpPath, {fpUserRead, fpUserWrite, fpUserExec})
+
 type
   KeyboardInterrupt = object of CatchableError
 
@@ -389,7 +396,10 @@ proc build*(
       continue
     echo &"Running pre-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(config, inputDir, outputDir)
+      if task.name == "convert_images":
+        task.call(config, inputDir, outputDir, webpPath)
+      else:
+        task.call(config, inputDir, outputDir)
     else:
       discard task.instance.preBuild()
 
