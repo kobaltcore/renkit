@@ -45,12 +45,22 @@ proc getRcodesignUrl(osName="", archName=""): string =
   let finalOS = if osName == "": currentOS else: osName
   let finalArch = if archName == "": currentArch else: archName
 
-  let rcodesignUrl = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.tar.gz"
+  let rcodesignUrl = case finalOS:
+    of "pc-windows-msvc":
+      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.zip"
+    else:
+      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.tar.gz"
 
   if hostOS == "macosx":
-    result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
+    if finalOS == "pc-windows-msvc":
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign.exe' --strip-components 1"
+    else:
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
   else:
-    result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --no-anchored 'rcodesign' --strip-components 1"
+    if finalOS == "pc-windows-msvc":
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --no-anchored 'rcodesign.exe' --strip-components 1"
+    else:
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --no-anchored 'rcodesign' --strip-components 1"
 
 proc getWebpUrl(osName="", archName=""): string =
   let currentArch = block:
@@ -74,11 +84,22 @@ proc getWebpUrl(osName="", archName=""): string =
   let finalOS = if osName == "": currentOS else: osName
   let finalArch = if archName == "": currentArch else: archName
 
-  let webpUrl = &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.tar.gz"
+  let webpUrl = case finalOS:
+    of "windows":
+      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.zip"
+    else:
+      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.tar.gz"
+
   if hostOS == "macosx":
-    result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --include '*/cwebp' --strip-components 2"
+    if finalOS == "windows":
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --include '*/cwebp.exe' --strip-components 2"
+    else:
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --include '*/cwebp' --strip-components 2"
   else:
-    result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --no-anchored 'cwebp' --strip-components 2"
+    if finalOS == "windows":
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --no-anchored 'cwebp.exe' --strip-components 2"
+    else:
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --no-anchored 'cwebp' --strip-components 2"
 
 task gendoc, "Generates documentation for this project":
   exec("nimble doc --outdir:docs --project src/*.nim")
@@ -125,7 +146,7 @@ task build_linux_amd64, "Builds for linux (amd64)":
 
 task build_windows_amd64, "Builds for Windows (amd64)":
   exec(getWebpUrl("windows", "x64"))
-  exec(getRcodesignUrl("pc-windows-msvc"))
+  exec(getRcodesignUrl("pc-windows-msvc", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip -d:mingw --cpu:amd64 -y")
   exec("mkdir -p bin/amd64/windows && mv renutil.exe bin/amd64/windows && mv renotize.exe bin/amd64/windows && mv renconstruct.exe bin/amd64/windows")
   # exec("upx --best bin/amd64/windows/*")
