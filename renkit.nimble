@@ -45,7 +45,7 @@ proc getRcodesignUrl(osName="", archName=""): string =
   let finalOS = if osName == "": currentOS else: osName
   let finalArch = if archName == "": currentArch else: archName
 
-  let rcodesignUrl = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{currentArch}-{currentOS}.tar.gz"
+  let rcodesignUrl = &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.tar.gz"
 
   if hostOS == "macosx":
     result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
@@ -74,7 +74,7 @@ proc getWebpUrl(osName="", archName=""): string =
   let finalOS = if osName == "": currentOS else: osName
   let finalArch = if archName == "": currentArch else: archName
 
-  let webpUrl = &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{currentOS}-{currentArch}.tar.gz"
+  let webpUrl = &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.tar.gz"
   if hostOS == "macosx":
     result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --include '*/cwebp' --strip-components 2"
   else:
@@ -102,29 +102,29 @@ task renconstruct, "Executes 'nimble run' with extra compiler options.":
   exec(&"nimble --styleCheck:hint --mm:orc run renconstruct {args}")
 
 task build_macos_amd64, "Builds for macOS (amd64)":
-  exec(getWebpUrl("apple-darwin"))
-  exec(getRcodesignUrl("apple-darwin"))
+  exec(getWebpUrl("mac", "x86-64"))
+  exec(getRcodesignUrl("apple-darwin", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
   exec("mkdir -p bin/amd64/macos && mv renutil bin/amd64/macos && mv renotize bin/amd64/macos && mv renconstruct bin/amd64/macos")
   # exec("upx --best bin/amd64/macos/*")
 
 task build_macos_arm64, "Builds for macOS (arm64)":
-  exec(getWebpUrl("apple-darwin"))
-  exec(getRcodesignUrl("apple-darwin"))
+  exec(getWebpUrl("mac", "arm64"))
+  exec(getRcodesignUrl("apple-darwin", "aarch64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
   exec("mkdir -p bin/arm64/macos && mv renutil bin/arm64/macos && mv renotize bin/arm64/macos && mv renconstruct bin/arm64/macos")
   # when hostCPU != "arm64":
   #   exec("upx --best bin/arm64/macos/*")
 
 task build_linux_amd64, "Builds for linux (amd64)":
-  exec(getWebpUrl("unknown-linux-musl"))
-  exec(getRcodesignUrl("unknown-linux-musl"))
+  exec(getWebpUrl("linux", "x86-64"))
+  exec(getRcodesignUrl("unknown-linux-musl", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:linux --cpu:amd64 -y")
   exec("mkdir -p bin/amd64/linux && mv renutil bin/amd64/linux && mv renotize bin/amd64/linux && mv renconstruct bin/amd64/linux")
   # exec("upx --best bin/amd64/linux/*")
 
 task build_windows_amd64, "Builds for Windows (amd64)":
-  exec(getWebpUrl("pc-windows-msvc"))
+  exec(getWebpUrl("windows", "x64"))
   exec(getRcodesignUrl("pc-windows-msvc"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip -d:mingw --cpu:amd64 -y")
   exec("mkdir -p bin/amd64/windows && mv renutil.exe bin/amd64/windows && mv renotize.exe bin/amd64/windows && mv renconstruct.exe bin/amd64/windows")
