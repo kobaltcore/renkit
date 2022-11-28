@@ -58,9 +58,9 @@ proc getRcodesignUrl(osName="", archName=""): string =
       result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
   else:
     if finalOS == "pc-windows-msvc":
-      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- 'rcodesign.exe' > rcodesign.exe"
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- '*/rcodesign.exe' > rcodesign.exe"
     else:
-      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- 'rcodesign' > rcodesign"
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- '*/rcodesign' > rcodesign"
 
 proc getWebpUrl(osName="", archName=""): string =
   let currentArch = block:
