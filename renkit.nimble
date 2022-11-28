@@ -58,9 +58,9 @@ proc getRcodesignUrl(osName="", archName=""): string =
       result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --include '*/rcodesign' --strip-components 1"
   else:
     if finalOS == "pc-windows-msvc":
-      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --no-anchored 'rcodesign.exe' --strip-components 1"
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- 'rcodesign.exe' > rcodesign.exe"
     else:
-      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | tar xz --no-anchored 'rcodesign' --strip-components 1"
+      result = &"echo 'Downloading {rcodesignUrl}' && wget {rcodesignUrl} -qO- | bsdtar -xOf- 'rcodesign' > rcodesign"
 
 proc getWebpUrl(osName="", archName=""): string =
   let currentArch = block:
@@ -97,9 +97,9 @@ proc getWebpUrl(osName="", archName=""): string =
       result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --include '*/cwebp' --strip-components 2"
   else:
     if finalOS == "windows":
-      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --no-anchored 'cwebp.exe' --strip-components 2"
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | bsdtar -xOf- '*/cwebp.exe' > cwebp.exe"
     else:
-      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | tar xz --no-anchored 'cwebp' --strip-components 2"
+      result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | bsdtar -xOf- '*/cwebp' > cwebp"
 
 task gendoc, "Generates documentation for this project":
   exec("nimble doc --outdir:docs --project src/*.nim")
