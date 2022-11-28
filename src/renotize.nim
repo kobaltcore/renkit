@@ -1,5 +1,6 @@
 import std/os
 import std/json
+import std/base64
 import std/osproc
 import std/strutils
 import std/sequtils
@@ -97,8 +98,18 @@ proc provision*() =
   echo "You can also use this file to notarize your app:"
   echo "  - app-store-key.json"
 
-  # TODO: compile all needed files into a single JSON file, encoded as base64
-  # renotize can then load this, i.e. from an environment variable, and work with a single input
+  let jsonData = %*{
+    "privateKey": readFile("private-key.pem").encode(),
+    "certificate": readFile(certFiles[0]).encode(),
+    "appStoreKey": readFile("app-store-key.json").encode()
+  }
+  writeFile("renotize.json", jsonData.pretty())
+
+  echo "You can also use this file to notarize your app:"
+  echo "  - renotize.json"
+
+  echo "You can supply the contents of this file via the environment variable RENOTIZE_JSON"
+  echo "so that you don't have to supply the private key and certificate individually every time."
 
 proc unpackApp*(inputFile, bundleIdentifier: string, outputDir = "") =
   ## Unpacks the given ZIP file to the target directory.
@@ -194,31 +205,43 @@ proc fullRun*(inputFile, bundleIdentifier, keyFile, certFile, appStoreKeyFile: s
 
   echo "Done"
 
-proc fullRunCli*(inputFile: string, bundleIdentifier = "", keyFile = "", certFile = "", appStoreKeyFile = "") =
+proc fullRunCli*(inputFile: string, bundleIdentifier = "", keyFile = "", certFile = "", appStoreKeyFile = "", jsonBundleFile = "") =
   ## Fully notarize a given .app bundle, creating a signed
   ## and notarized artifact for distribution.
   var
     keyFileInt: string
     certFileInt: string
+    renotizeJsonRaw: string
     appStoreKeyFileInt: string
     bundleIdentifierInt: string
 
-  if keyFile == "":
-    keyFileInt = getEnv("RN_KEY_FILE")
+  if jsonBundleFile == "":
+    renotizeJsonRaw = getEnv("RENOTIZE_JSON")
   else:
-    keyFileInt = keyFile
-  if certFile == "":
-    certFileInt = getEnv("RN_CERT_FILE")
+    renotizeJsonRaw = readFile(jsonBundleFile)
+
+  if renotizeJsonRaw != "":
+    let renotizeJson = renotizeJsonRaw.parseJson()
+    keyFileInt = renotizeJson["privateKey"].getStr().decode()
+    certFileInt = renotizeJson["certificate"].getStr().decode()
+    appStoreKeyFileInt = renotizeJson["appStoreKey"].getStr().decode()
   else:
-    certFileInt = certFile
-  if appStoreKeyFile == "":
-    appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
-  else:
-    appStoreKeyFileInt = appStoreKeyFile
-  if bundleIdentifier == "":
-    bundleIdentifierInt = getEnv("RN_BUNDLE_IDENTIFIER")
-  else:
-    bundleIdentifierInt = bundleIdentifier
+    if keyFile == "":
+      keyFileInt = getEnv("RN_KEY_FILE")
+    else:
+      keyFileInt = keyFile
+    if certFile == "":
+      certFileInt = getEnv("RN_CERT_FILE")
+    else:
+      certFileInt = certFile
+    if appStoreKeyFile == "":
+      appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
+    else:
+      appStoreKeyFileInt = appStoreKeyFile
+    if bundleIdentifier == "":
+      bundleIdentifierInt = getEnv("RN_BUNDLE_IDENTIFIER")
+    else:
+      bundleIdentifierInt = bundleIdentifier
 
   if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "" or bundleIdentifierInt == "":
     echo "No configuration data was found via command line arguments or environment."
