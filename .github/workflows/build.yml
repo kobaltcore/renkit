@@ -25,7 +25,7 @@ jobs:
       - name: Install Nim and Dependencies
         run: |
           sudo apt-get update
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl xz-utils g++ git mingw-w64 libarchive-tools
           curl https://nim-lang.org/choosenim/init.sh -sSf | bash -s -- -y
       - name: Build Project
         run: |
