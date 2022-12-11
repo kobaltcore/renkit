@@ -522,6 +522,7 @@ when isMainModule:
         "version": "The version to install.",
         "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
         "no-cleanup": "If given, retains installation files.",
+        "force": "Overwrites any existing data for this version, if it's already installed.",
     }],
     [cleanup, help = {
         "version": "The version to clean up.",

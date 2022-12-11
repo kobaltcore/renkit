@@ -303,5 +303,6 @@ when isMainModule:
         "keyFile": "The private key generated via the 'provision' command.",
         "certFile": "The certificate file obtained via the 'provision' command.",
         "appStoreKeyFile": "The app-store-key.json file obtained via the 'provision' command.",
+        "jsonBundleFile": "The renotize.json file obtained via the 'provision' command. If this is set, the other arguments are ignored.",
     }],
   )

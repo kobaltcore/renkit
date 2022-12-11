@@ -491,6 +491,7 @@ when isMainModule:
           "output_dir": "The directory to output distributions to.",
           "config": "The path to the configuration file to use.",
           "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
+          "version": "The target version of RenPy for renutil. Defaults to the version specified in the config file.",
       }],
     )
   except KeyboardInterrupt:
