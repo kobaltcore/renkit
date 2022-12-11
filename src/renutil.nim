@@ -1,6 +1,5 @@
 import system
 import std/os
-import std/nre
 import std/sugar
 import std/osproc
 import std/streams
@@ -9,8 +8,9 @@ import std/xmltree
 import std/strformat
 import std/algorithm
 import std/htmlparser
-import std/httpclient
 
+import puppy
+import regex
 import semver
 import cligen
 import zippy/ziparchives
@@ -24,20 +24,20 @@ proc handler() {.noconv.} =
 
 setControlCHook(handler)
 
-proc get_registry*(registry: string = ""): string =
-  var registry_path: string
+proc getRegistry*(registry: string = ""): string =
+  var registryPath: string
 
   if registry == "":
-    registry_path = joinPath(getHomeDir(), ".renutil")
+    registryPath = joinPath(getHomeDir(), ".renutil")
   else:
-    registry_path = registry
+    registryPath = registry
 
-  if not dirExists(registry_path):
-    createDir(registry_path)
+  if not dirExists(registryPath):
+    createDir(registryPath)
 
-  return absolutePath(registry_path)
+  return absolutePath(registryPath)
 
-proc list_installed*(registry: string): seq[Version] =
+proc listInstalled*(registry: string): seq[Version] =
   var versions: seq[Version]
   for kind, path in walkDir(registry):
     if kind != pcDir:
@@ -45,14 +45,14 @@ proc list_installed*(registry: string): seq[Version] =
     versions.add(parseVersion(lastPathPart(path)))
   return sorted(versions, Descending)
 
-proc is_installed*(version: Version, registry: string): bool =
-  return list_installed(registry).contains(version)
+proc isInstalled*(version: Version, registry: string): bool =
+  return listInstalled(registry).contains(version)
 
-proc list_available*(): seq[Version] =
+proc listAvailable*(): seq[Version] =
   var versions: seq[Version]
 
-  let client = newHttpClient()
-  let html = parseHtml(client.getContent("https://www.renpy.org/dl"))
+  let req = Request(url: parseUrl("https://www.renpy.org/dl"), verb: "get")
+  let html = parseHtml(fetch(req).body)
 
   for a in html.findAll("a"):
     if not a.attrs.hasKey("href"):
@@ -60,9 +60,9 @@ proc list_available*(): seq[Version] =
 
     let url = a.attrs["href"]
     let version = normalizePathEnd(url)
-    let match = version.match(re"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$")
+    let didMatch = version.match(re"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$")
 
-    if match.isNone:
+    if not didMatch:
       continue
 
     versions.add(parseVersion(version))
@@ -71,20 +71,20 @@ proc list_available*(): seq[Version] =
 
 proc list*(n = 0, all = false, registry = "") =
   ## List all available versions of Ren'Py, either local or remote.
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
   let versions = case all:
     of true:
-      list_available()
+      listAvailable()
     of false:
-      list_installed(registry_path)
+      listInstalled(registryPath)
 
   let limit = if n < 1 or n > high(versions): high(versions) + 1 else: n
 
   for version in versions[0..<limit]:
     echo version
 
-proc get_exe*(version: Version, registry: string): (string, string) =
+proc getExe*(version: Version, registry: string): (string, string) =
   var
     arch: string
     exe = "python"
@@ -136,19 +136,19 @@ proc get_exe*(version: Version, registry: string): (string, string) =
         arch = "py3-mac-universal"
 
   let python = joinPath(registry, $version, "lib", arch, exe)
-  let base_file = joinPath(registry, $version, "renpy.py")
-  return (python, base_file)
+  let baseFile = joinPath(registry, $version, "renpy.py")
+  return (python, baseFile)
 
 proc show*(version: string, registry = "") =
   ## Show information about a specific version of Ren'Py.
   let version = parseVersion(version)
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
   echo &"Version: {version}"
-  if is_installed(version, registry_path):
-    let (python, base_file) = get_exe(version, registry_path)
+  if isInstalled(version, registryPath):
+    let (python, _) = getExe(version, registryPath)
     echo "Installed: Yes"
-    echo &"Location: {joinPath(registry_path, $version)}"
+    echo &"Location: {joinPath(registryPath, $version)}"
     echo &"Architecture: {splitPath(splitPath(python)[0])[1]}"
   else:
     echo "Installed: No"
@@ -164,20 +164,20 @@ proc launch*(
 ) =
   ## Launch the given version of Ren'Py.
   let version = parseVersion(version)
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
-  if not is_installed(version, registry_path):
+  if not isInstalled(version, registryPath):
     echo &"{version} is not installed."
     quit(1)
 
-  let (python, base_file) = get_exe(version, registry_path)
-  let base_cmd = &"{python} -EO {base_file}"
+  let (python, baseFile) = getExe(version, registryPath)
+  let baseCmd = &"{python} -EO {baseFile}"
 
   let cmd = case direct:
     of true:
-      &"{base_cmd} {args}"
+      &"{baseCmd} {args}"
     of false:
-      &"{base_cmd} {quoteShell(joinPath(registry_path, $version, \"launcher\"))} {args}"
+      &"{baseCmd} {quoteShell(joinPath(registryPath, $version, \"launcher\"))} {args}"
 
   if headless:
     putEnv("SDL_AUDIODRIVER", "dummy")
@@ -188,141 +188,141 @@ proc launch*(
 proc install*(
   version: string,
   registry = "",
-  no_cleanup = false,
+  noCleanup = false,
   force = false
 ) =
   ## Install the given version of Ren'Py.
   let version = parseVersion(version)
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
-  if is_installed(version, registry_path) and not force:
+  if isInstalled(version, registryPath) and not force:
     echo &"{version} is already installed."
     quit(1)
 
-  let target_dir = joinPath(registry_path, $version)
-  if force and dirExists(target_dir):
-    removeDir(target_dir)
+  let targetDir = joinPath(registryPath, $version)
+  if force and dirExists(targetDir):
+    removeDir(targetDir)
 
-  let steam_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-steam.zip"
-  let steam_file = joinPath(
-    registry_path,
+  let steamUrl = &"https://www.renpy.org/dl/{version}/renpy-{version}-steam.zip"
+  let steamFile = joinPath(
+    registryPath,
     &"renpy-{version}-steam.zip"
   )
 
-  let web_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-web.zip"
-  let web_file = joinPath(
-    registry_path,
+  let webUrl = &"https://www.renpy.org/dl/{version}/renpy-{version}-web.zip"
+  let webFile = joinPath(
+    registryPath,
     &"renpy-{version}-web.zip"
   )
 
-  let rapt_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip"
-  let rapt_file = joinPath(
-    registry_path,
+  let raptUrl = &"https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip"
+  let raptFile = joinPath(
+    registryPath,
     &"renpy-{version}-rapt.zip"
   )
 
-  let sdk_url = &"https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip"
-  let sdk_file = joinPath(
-    registry_path,
+  let sdkUrl = &"https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip"
+  let sdkFile = joinPath(
+    registryPath,
     &"renpy-{version}-sdk.zip"
   )
 
-  if not fileExists(steam_file):
+  if not fileExists(steamFile):
     try:
       echo "Downloading Steam support"
-      download(steam_url, steam_file)
-    except HttpRequestError:
+      download(steamUrl, steamFile)
+    except ValueError:
       if getCurrentExceptionMsg() == "404 Not Found":
         echo "Not supported on this version, skipping"
       else:
         raise getCurrentException()
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
-      removeFile(steam_file)
+      removeFile(steamFile)
       quit(1)
 
-  if not fileExists(web_file):
+  if not fileExists(webFile):
     try:
       echo "Downloading Web Support"
-      download(web_url, web_file)
+      download(webUrl, webFile)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
-      removeFile(web_file)
+      removeFile(webFile)
       quit(1)
 
-  if not fileExists(rapt_file):
+  if not fileExists(raptFile):
     try:
       echo "Downloading RAPT"
-      download(rapt_url, rapt_file)
+      download(raptUrl, raptFile)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
-      removeFile(rapt_file)
+      removeFile(raptFile)
       quit(1)
 
-  if not fileExists(sdk_file):
+  if not fileExists(sdkFile):
     try:
       echo "Downloading Ren'Py"
-      download(sdk_url, sdk_file)
+      download(sdkUrl, sdkFile)
     except KeyboardInterrupt:
       echo "Aborted, cleaning up."
-      removeFile(sdk_file)
-      removeFile(rapt_file)
+      removeFile(sdkFile)
+      removeFile(raptFile)
       quit(1)
 
   echo "Extracting"
-  let path_extracted = joinPath(registry_path, "extracted")
+  let pathExtracted = joinPath(registryPath, "extracted")
 
   # SDK
 
-  extractAll(sdk_file, path_extracted)
+  extractAll(sdkFile, pathExtracted)
 
   moveDir(
-    joinPath(path_extracted, &"renpy-{version}-sdk"),
-    joinPath(registry_path, $version)
+    joinPath(pathExtracted, &"renpy-{version}-sdk"),
+    joinPath(registryPath, $version)
   )
 
-  removeDir(path_extracted)
+  removeDir(pathExtracted)
 
   # Steam
 
-  if fileExists(steam_file):
-    extractAll(steam_file, path_extracted)
+  if fileExists(steamFile):
+    extractAll(steamFile, pathExtracted)
 
-    for path in walkDirRec(path_extracted):
-      copyFile(path, joinPath(registry_path, $version, relativePath(path, path_extracted)))
+    for path in walkDirRec(pathExtracted):
+      copyFile(path, joinPath(registryPath, $version, relativePath(path, pathExtracted)))
 
-    removeDir(path_extracted)
+    removeDir(pathExtracted)
 
   # Web
 
-  extractAll(web_file, path_extracted)
+  extractAll(webFile, pathExtracted)
 
   moveDir(
-    joinPath(path_extracted, "web"),
-    joinPath(registry_path, $version, "web")
+    joinPath(pathExtracted, "web"),
+    joinPath(registryPath, $version, "web")
   )
 
-  removeDir(path_extracted)
+  removeDir(pathExtracted)
 
   # RAPT
 
-  extractAll(rapt_file, path_extracted)
+  extractAll(raptFile, pathExtracted)
 
   moveDir(
-    joinPath(path_extracted, "rapt"),
-    joinPath(registry_path, $version, "rapt")
+    joinPath(pathExtracted, "rapt"),
+    joinPath(registryPath, $version, "rapt")
   )
 
-  removeDir(path_extracted)
+  removeDir(pathExtracted)
 
-  if not no_cleanup:
-    removeFile(steam_file)
-    removeFile(web_file)
-    removeFile(rapt_file)
-    removeFile(sdk_file)
+  if not noCleanup:
+    removeFile(steamFile)
+    removeFile(webFile)
+    removeFile(raptFile)
+    removeFile(sdkFile)
 
   echo "Setting up permissions"
-  let (python, base_file) = get_exe(version, registry_path)
+  let (python, _) = getExe(version, registryPath)
 
   let paths = case hostOS:
     of "windows":
@@ -332,8 +332,8 @@ proc install*(
           joinPath(splitPath(python)[0], "renpy.exe"),
           joinPath(splitPath(python)[0], "zsync.exe"),
           joinPath(splitPath(python)[0], "zsyncmake.exe"),
-          joinPath(registry_path, $version, "rapt", "prototype", "gradlew.exe"),
-          joinPath(registry_path, $version, "rapt", "project", "gradlew.exe"),
+          joinPath(registryPath, $version, "rapt", "prototype", "gradlew.exe"),
+          joinPath(registryPath, $version, "rapt", "project", "gradlew.exe"),
       ]
     else:
       [
@@ -342,63 +342,63 @@ proc install*(
           joinPath(splitPath(python)[0], "renpy"),
           joinPath(splitPath(python)[0], "zsync"),
           joinPath(splitPath(python)[0], "zsyncmake"),
-          joinPath(registry_path, $version, "rapt", "prototype", "gradlew"),
-          joinPath(registry_path, $version, "rapt", "project", "gradlew"),
+          joinPath(registryPath, $version, "rapt", "prototype", "gradlew"),
+          joinPath(registryPath, $version, "rapt", "project", "gradlew"),
       ]
 
   for path in paths:
     if fileExists(path):
       setFilePermissions(path, {fpUserRead, fpUserExec})
 
-  let original_dir = getCurrentDir()
-  setCurrentDir(joinPath(registry_path, $version, "rapt"))
+  let originalDir = getCurrentDir()
+  setCurrentDir(joinPath(registryPath, $version, "rapt"))
 
   if not fileExists("android.keystore"):
     echo "Generating Application Keystore"
-    let java_home = getEnv("JAVA_HOME")
-    if java_home == "":
+    let javaHome = getEnv("JAVA_HOME")
+    if javaHome == "":
       echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
       quit(1)
-    let keytool_path = quoteShell(joinPath(java_home, "bin", "keytool"))
+    let keytoolPath = quoteShell(joinPath(javaHome, "bin", "keytool"))
     let dname = "renutil"
-    discard execProcess(&"{keytool_path} -genkey -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
+    discard execProcess(&"{keytoolPath} -genkey -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
   if not fileExists("bundle.keystore"):
     echo "Generating Bundle Keystore"
-    let java_home = getEnv("JAVA_HOME")
-    if java_home == "":
+    let javaHome = getEnv("JAVA_HOME")
+    if javaHome == "":
       echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
       quit(1)
-    let keytool_path = quoteShell(joinPath(java_home, "bin", "keytool"))
+    let keytoolPath = quoteShell(joinPath(javaHome, "bin", "keytool"))
     let dname = "renutil"
-    discard execProcess(&"{keytool_path} -genkey -keystore bundle.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
+    discard execProcess(&"{keytoolPath} -genkey -keystore bundle.keystore -alias android -keyalg RSA -keysize 2048 -keypass android -storepass android -dname CN={dname} -validity 20000")
 
   echo "Preparing RAPT"
-  let interface_file_source = joinPath(target_dir, "rapt", "buildlib", "rapt", "interface.py")
-  let interface_file_target = joinPath(target_dir, "rapt", "buildlib", "rapt", "interface.py.new")
+  let interfaceFileSource = joinPath(targetDir, "rapt", "buildlib", "rapt", "interface.py")
+  let interfaceFileTarget = joinPath(targetDir, "rapt", "buildlib", "rapt", "interface.py.new")
 
-  var strm_in = newFileStream(interface_file_source, fmRead)
-  var strm_out = newFileStream(interface_file_target, fmWrite)
+  var streamIn = newFileStream(interfaceFileSource, fmRead)
+  var streamOut = newFileStream(interfaceFileTarget, fmWrite)
 
   var
     line = ""
-    is_patched = false
-  let ssl_patch = "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
+    isPatched = false
+  let sslPatch = "import ssl; ssl._create_default_https_context = ssl._create_unverified_context"
 
-  while strm_in.readLine(line):
-    if line == ssl_patch:
-      is_patched = true
-    if not is_patched and line == "":
-      strm_out.writeLine(ssl_patch)
-      is_patched = true
+  while streamIn.readLine(line):
+    if line == sslPatch:
+      isPatched = true
+    if not isPatched and line == "":
+      streamOut.writeLine(sslPatch)
+      isPatched = true
     else:
-      strm_out.writeLine(line)
+      streamOut.writeLine(line)
 
-  strm_in.close()
-  strm_out.close()
+  streamIn.close()
+  streamOut.close()
 
-  removeFile(interface_file_source)
-  moveFile(interface_file_target, interface_file_source)
+  removeFile(interfaceFileSource)
+  moveFile(interfaceFileTarget, interfaceFileSource)
 
   # TODO: tweak gradle.properties RAM allocation
 
@@ -408,20 +408,20 @@ proc install*(
     # this is not in the path by default, and since PYTHONPATH is ignored, we
     # symlink it instead to make it visible during installation.
     createSymlink(
-      joinPath(registry_path, $version, "renpy"),
-      joinPath(registry_path, $version, "rapt", "renpy")
+      joinPath(registryPath, $version, "renpy"),
+      joinPath(registryPath, $version, "rapt", "renpy")
     )
 
   putEnv("RAPT_NO_TERMS", "1")
   discard execCmd(&"{python} -EO android.py installsdk")
 
-  setCurrentDir(original_dir)
+  setCurrentDir(originalDir)
 
   echo "Ensuring Android SDK is installed"
-  let sdkmanager_path = case hostOS:
+  let sdkmanagerPath = case hostOS:
     of "windows":
       joinPath(
-        registry_path,
+        registryPath,
         $version,
         "rapt",
         "Sdk",
@@ -432,7 +432,7 @@ proc install*(
       )
     else:
       joinPath(
-        registry_path,
+        registryPath,
         $version,
         "rapt",
         "Sdk",
@@ -441,45 +441,45 @@ proc install*(
         "bin",
         "sdkmanager"
       )
-  discard execCmd(&"{sdkmanager_path} 'build-tools;29.0.2'")
+  discard execCmd(&"{sdkmanagerPath} 'build-tools;29.0.2'")
 
   if version >= newVersion(8, 0, 0):
     echo "Increasing default pickle protocol from 2 to 5"
-    let pickle_file_source = joinPath(registry_path, $version, "renpy", "compat", "pickle.py")
-    let pickle_file_target = joinPath(registry_path, $version, "renpy", "compat", "pickle.py.new")
+    let pickleFileSource = joinPath(registryPath, $version, "renpy", "compat", "pickle.py")
+    let pickleFileTarget = joinPath(registryPath, $version, "renpy", "compat", "pickle.py.new")
 
-    strm_in = newFileStream(pickle_file_source, fmRead)
-    strm_out = newFileStream(pickle_file_target, fmWrite)
+    streamIn = newFileStream(pickleFileSource, fmRead)
+    streamOut = newFileStream(pickleFileTarget, fmWrite)
 
     line = ""
-    while strm_in.readLine(line):
+    while streamIn.readLine(line):
       if line == "PROTOCOL = 2":
-        strm_out.writeLine("PROTOCOL = 5")
+        streamOut.writeLine("PROTOCOL = 5")
       else:
-        strm_out.writeLine(line)
+        streamOut.writeLine(line)
 
-    strm_in.close()
-    strm_out.close()
+    streamIn.close()
+    streamOut.close()
 
-    removeFile(pickle_file_source)
-    moveFile(pickle_file_target, pickle_file_source)
+    removeFile(pickleFileSource)
+    moveFile(pickleFileTarget, pickleFileSource)
 
 proc cleanup*(version: string, registry = "") =
   ## Cleans up temporary directories for the given version of Ren'Py.
   let version = parseVersion(version)
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
-  if not is_installed(version, registry_path):
+  if not isInstalled(version, registryPath):
     echo &"{version} is not installed."
     quit(1)
 
   let paths = [
-    joinPath(registry_path, $version, "tmp"),
-    joinPath(registry_path, $version, "rapt", "assets"),
-    joinPath(registry_path, $version, "rapt", "bin"),
-    joinPath(registry_path, $version, "rapt", "project", "app", "build"),
+    joinPath(registryPath, $version, "tmp"),
+    joinPath(registryPath, $version, "rapt", "assets"),
+    joinPath(registryPath, $version, "rapt", "bin"),
+    joinPath(registryPath, $version, "rapt", "project", "app", "build"),
     joinPath(
-      registry_path, $version,
+      registryPath, $version,
       "rapt", "project", "app",
       "src", "main", "assets"
     ),
@@ -492,13 +492,13 @@ proc cleanup*(version: string, registry = "") =
 proc uninstall*(version: string, registry = "") =
   ## Uninstalls the given version of Ren'Py.
   let version = parseVersion(version)
-  let registry_path = get_registry(registry)
+  let registryPath = getRegistry(registry)
 
-  if not is_installed(version, registry_path):
+  if not isInstalled(version, registryPath):
     echo &"{version} is not installed."
     quit(1)
 
-  removeDir(joinPath(registry_path, $version))
+  removeDir(joinPath(registryPath, $version))
 
 when isMainModule:
   dispatchMulti(
@@ -522,6 +522,7 @@ when isMainModule:
         "version": "The version to install.",
         "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
         "no-cleanup": "If given, retains installation files.",
+        "force": "Overwrites any existing data for this version, if it's already installed.",
     }],
     [cleanup, help = {
         "version": "The version to clean up.",

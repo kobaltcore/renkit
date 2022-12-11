@@ -1,5 +1,4 @@
-apple_id = "<apple-email>"
-password = "<app-specific-passport>"
-identity = "<developer-identity>"
-bundle_id = "com.example.mygame"
-altool_extra = "<extra-altool-arguments>"
+bundle_identifier = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
+key_file = "certificates/private-key.pem" # the path to the private key file generated during the provisioning process
+cert_file = "certificates/developerID_application.cer" # the path to the Apple-generated certificate file generated during the provisioning process
+app_store_key_file = "certificates/app-store-key.json" # the path to the combined App Store key file generated during the provisioning process

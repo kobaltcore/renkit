@@ -7,12 +7,10 @@
   enabled = false
   priorities = { post_build = 10 } # the priority that determines the orders tasks will run in, defaults to 10
   on_builds = ["mac"] # builds this task should run for, defaults to "mac"
-  bundle_id = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
-  sign_cert = "<base64-encoded certificate file>" # the base-64 encoded binary certificate file for the codesign process
-  sign_cert_pwd = "<certificate password>" # the password used to protect the exported certificate
-  apple_id = "<e-mail>"
-  identity = "<apple developer identity UUID>"
-  password = "<one-time password from Apple>"
+  bundle_identifier = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
+  key_file = "certificates/private-key.pem" # the path to the private key file generated during the provisioning process
+  cert_file = "certificates/developerID_application.cer" # the path to the Apple-generated certificate file generated during the provisioning process
+  app_store_key_file = "certificates/app-store-key.json" # the path to the combined App Store key file generated during the provisioning process
 
 [tasks.keystore] # required if matching task is enabled
   enabled = false
@@ -53,5 +51,5 @@
   clear_output_dir = false # whether to clear the output directory on startup
 
 [renutil]
-  version = "7.5.0" # the Ren'Py version to use (required)
+  version = "8.0.3" # the Ren'Py version to use (required)
   registry = "cache" # the directory to store installation files in

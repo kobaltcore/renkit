@@ -6,28 +6,36 @@ A collection of tools to help you organise and use Ren'Py instances from the com
 
 renkit consists of three tools:
 1. `renutil` manages Ren'Py instances and takes care of installing, launching and removing them.
-2. `renotize` is a macOS-exclusive tool which notarizes built distributions of Ren'Py games for macOS.
+2. `renotize` notarizes built distributions of Ren'Py games for macOS, from any source OS.
 3. `renconstruct` automates the build process for Ren'Py games start to finish.
 
-renkit is written in Nim and compiled into standalone executables, so it's easy to use anywhere. Currently it supports the following platforms:
+renkit is written in Nim and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms:
 - `Linux` amd64
 - `macOS` amd64 / arm64
 - `Windows` amd64 / i386
 
 ## Installation
 
-### Homebrew
+### Homebrew (macOS)
 
 ```bash
 brew tap kobaltcore/renkit
 brew install renkit --no-quarantine
 ```
 
-### Manual
+### wget (Linux / macOS)
 
-Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting ZIP file.
+```bash
+wget -qO- https://github.com/kobaltcore/renkit/releases/download/v2.4.0/renkit-linux-amd64.zip | tar xz
+```
+
+### Manual (Linux / Windows / macOS)
+
+Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting tar file.
 
 After this, either add the binaries to your PATH or use them from within the download directory.
+
+Please note that on Windows, `renotize` and `renconstruct` require the [Visual C++ 2015 Redistributable Update 3 RC](https://www.microsoft.com/en-us/download/details.aspx?id=52685) so please download and install it first.
 
 ## renutil
 
@@ -105,7 +113,7 @@ where subcommand syntaxes are as follows:
       -v=, --version=   string  REQUIRED  The version to install.
       -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
       -n, --no-cleanup  bool    false     If given, retains installation files.
-      -f, --force       bool    false     set force
+      -f, --force       bool    false     Overwrites any existing data for this version, if it\'s already installed.
 
   cleanup [REQUIRED,optional-params]
     Cleans up temporary directories for the given version of RenPy.
@@ -255,12 +263,13 @@ where subcommand syntaxes are as follows:
       -o=, --output_dir=  string  REQUIRED  The directory to output distributions to.
       -c=, --config=      string  REQUIRED  The path to the configuration file to use.
       -r=, --registry=    string  ""        The path to the registry directory to use. Defaults to ~/.renutil
+      -v=, --version=     string  ""        The target version of RenPy for renutil. Defaults to the version specified in the config file.
 ```
 
 ## renotize
 
 ### Writing a config file
-renotize uses a TOML file for configuration to supply the information required to sign apps on macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
+renotize uses a TOML file for configuration to supply the information required to sign apps for macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
 
 It consists of the following keys:
 - `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
@@ -280,72 +289,66 @@ Usage is like:
     renotize {SUBCMD} [subcommand-opts & args]
 where subcommand syntaxes are as follows:
 
-  unpack_app [REQUIRED,optional-params]
+  provision [optional-params]
+    Utility method to provision required information for notarization using a step-by-step process.
+  Options:
+
+  unpack-app [REQUIRED,optional-params]
     Unpacks the given ZIP file to the target directory.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the ZIP file containing the .app bundle.
-      -o=, --output_dir=  string  ""        The directory to extract the .app bundle to.
+      -i=, --inputFile=         string  REQUIRED  The path to the ZIP file containing the .app bundle.
+      -b=, --bundleIdentifier=  string  REQUIRED  set bundleIdentifier
+      -o=, --outputDir=         string  ""        The directory to extract the .app bundle to.
 
-  sign_app [REQUIRED,optional-params]
+  sign-app [REQUIRED,optional-params]
     Signs a .app bundle with the given Developer Identity.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
-      --identity=         string  REQUIRED  The ID of your developer certificate.
+      -i=, --inputFile=  string  REQUIRED  The path to the .app bundle.
+      -k=, --keyFile=    string  REQUIRED  The private key generated via the 'provision' command.
+      -c=, --certFile=   string  REQUIRED  The certificate file obtained via the 'provision' command.
 
-  notarize_app [REQUIRED,optional-params]
+  notarize-app [REQUIRED,optional-params]
     Notarizes a .app bundle with the given Developer Account and bundle ID.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
-      -b=, --bundle_id=   string  REQUIRED  The name/ID to use for the notarized bundle.
-      -a=, --apple_id=    string  REQUIRED  Your Apple ID, generally your e-Mail.
-      -p=, --password=    string  REQUIRED  Your app-specific password.
-      --altool_extra=     string  ""        Extra arguments for altool.
+      -i=, --inputFile=        string  REQUIRED  The path to the .app bundle.
+      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
 
-  staple_app [REQUIRED,optional-params]
-    Staples a notarization certificate to a .app bundle.
-  Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .app bundle.
-
-  pack_dmg [REQUIRED,optional-params]
+  pack-dmg [REQUIRED,optional-params]
     Packages a .app bundle into a .dmg file.
   Options:
-      -i=, --input_file=   string  REQUIRED  The path to the .app bundle.
-      -o=, --output_file=  string  REQUIRED  The name of the DMG file to write to.
-      -v=, --volume_name=  string  ""        The name to use for the DMG volume. By default the base name of the input file.
+      -i=, --inputFile=   string  REQUIRED  The path to the .app bundle.
+      -o=, --outputFile=  string  REQUIRED  The name of the DMG file to write to.
+      -v=, --volumeName=  string  ""        The name to use for the DMG volume. By default the base name of the input file.
 
-  sign_dmg [REQUIRED,optional-params]
+  sign-dmg [REQUIRED,optional-params]
     Signs a .dmg file with the given Developer Identity.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
-      --identity=         string  REQUIRED  The ID of your developer certificate.
+      -i=, --inputFile=  string  REQUIRED  The path to the .dmg file.
+      -k=, --keyFile=    string  REQUIRED  The private key generated via the 'provision' command.
+      -c=, --certFile=   string  REQUIRED  The certificate file obtained via the 'provision' command.
 
-  notarize_dmg [REQUIRED,optional-params]
+  notarize-dmg [REQUIRED,optional-params]
     Notarizes a .dmg file with the given Developer Account and bundle ID.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
-      -b=, --bundle_id=   string  REQUIRED  The name/ID to use for the notarized bundle.
-      -a=, --apple_id=    string  REQUIRED  Your Apple ID, generally your e-Mail.
-      -p=, --password=    string  REQUIRED  Your app-specific password.
-      --altool_extra=     string  ""        Extra arguments for altool.
-
-  staple_dmg [REQUIRED,optional-params]
-    Staples a notarization certificate to a .dmg file.
-  Options:
-      -i=, --input_file=  string  REQUIRED  The path to the .dmg file.
+      -i=, --inputFile=        string  REQUIRED  The path to the .dmg file.
+      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
 
   status [REQUIRED,optional-params]
     Checks the status of a notarization operation given its UUID.
   Options:
-      -u=, --uuid=      string  REQUIRED  The UUID of the notarization operation.
-      -a=, --apple_id=  string  REQUIRED  Your Apple ID, generally your e-Mail.
-      -p=, --password=  string  REQUIRED  Your app-specific password.
-      --altool_extra=   string  ""        Extra arguments for altool.
+      -u=, --uuid=             string  REQUIRED  The UUID of the notarization operation.
+      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
 
-  full_run [REQUIRED,optional-params]
+  full-run [REQUIRED,optional-params]
     Fully notarize a given .app bundle, creating a signed and notarized artifact for distribution.
   Options:
-      -i=, --input_file=  string  REQUIRED  The path to the the ZIP file containing the .app bundle.
-      -c=, --config=      string  REQUIRED  The path to the config.toml file to use for this process.
+      -i=, --inputFile=         string  REQUIRED  The path to the the ZIP file containing the .app bundle.
+      -b=, --bundleIdentifier=  string  ""        The internal identifier of the .app bundle.
+      -k=, --keyFile=           string  ""        The private key generated via the 'provision' command.
+      -c=, --certFile=          string  ""        The certificate file obtained via the 'provision' command.
+      -a=, --appStoreKeyFile=   string  ""        The app-store-key.json file obtained via the 'provision' command.
+      -j=, --jsonBundleFile=    string  ""        The renotize.json file obtained via the 'provision' command. If this is set, the
+                                                  other arguments are ignored.
 ```
 
 <a href="https://www.flaticon.com/free-icons/shipping-and-delivery" title="shipping and delivery icons">Shipping and delivery icons created by Ongicon - Flaticon</a>

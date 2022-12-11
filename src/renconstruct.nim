@@ -19,42 +19,50 @@ import renutil
 import lib/common
 import lib/rc_tasks
 
+when defined(mingw):
+  const webpBin = staticRead("../cwebp.exe")
+  let webpPath = getTempDir() / "cwebp.exe"
+else:
+  const webpBin = staticRead("../cwebp")
+  let webpPath = getTempDir() / "cwebp"
+
+var eCode = 0
+try:
+  eCode = execCmdEx(&"{webpPath} -version").exitCode
+except:
+  eCode = 1
+
+if eCode != 0:
+  writeFile(webpPath, webpBin)
+  setFilePermissions(webpPath, {fpUserRead, fpUserWrite, fpUserExec})
+
 type
   KeyboardInterrupt = object of CatchableError
-
-  Task = object
-    name: string
-    instance: PyObject
-    call: proc(config: JsonNode, input_dir: string, output_dir: string)
-    builds: seq[string]
-    priority: int
 
 proc handler() {.noconv.} =
   raise newException(KeyboardInterrupt, "Keyboard Interrupt")
 
 setControlCHook(handler)
 
-let find_libpython = "e=print\nT='.dylib'\nP='.so'\nK='lib'\nJ=len\nH=None\nfrom logging import getLogger as U\nfrom sysconfig import get_config_var as C\nfrom ctypes.util import find_library as Q\nimport ctypes as B,os as A,sys as D\nE=U('find_libpython')\nN=D.platform=='darwin'\nI=D.platform=='msys'\nL=D.platform=='mingw'\nG=A.name=='nt'and not L and not I\nR=A.name=='posix'\nF=C('_SHLIB_SUFFIX')\nif F is H:\n  if G:F='.dll'\n  else:F=P\nif N:F=T\ndef V(libpython):\n  D=libpython\n  if not hasattr(D,'Py_GetVersion'):return H\n  class E(B.Structure):_fields_=[('dli_fname',B.c_char_p),('dli_fbase',B.c_void_p),('dli_sname',B.c_char_p),('dli_saddr',B.c_void_p)]\n  C=B.CDLL(Q('dl'));C.dladdr.argtypes=[B.c_void_p,B.POINTER(E)];C.dladdr.restype=B.c_int;F=E();G=C.dladdr(B.cast(D.Py_GetVersion,B.c_void_p),B.pointer(F))\n  if G==0:return H\n  return A.path.realpath(F.dli_fname.decode())\ndef W(name,suffix=F,_is_windows=G):\n  B=suffix;A=name\n  if not _is_windows and A.startswith(K):A=A[J(K):]\n  if B and A.endswith(B):A=A[:-J(B)]\n  return A\ndef M(list,item):\n  if item:list.append(item)\ndef X(items):\n  B=set()\n  for A in items:\n    if A not in B:yield A\n    B.add(A)\ndef O(func):\n  from functools import wraps\n  @wraps(func)\n  def A(*A,**B):return X(func(*A,**B))\n  return A\n@O\ndef Y(suffix=F):\n  B=suffix;E=C('LDLIBRARY')\n  if E and A.path.splitext(E)[1]==B:yield E\n  F=C('LIBRARY')\n  if F and A.path.splitext(F)[1]==B:yield F\n  J=C('DLLLIBRARY')\n  if J:yield J\n  if L:H=K\n  elif G or I:H=''\n  else:H=K\n  M=dict(v=D.version_info,VERSION=C('VERSION')or '{v.major}.{v.minor}'.format(v=D.version_info),ABIFLAGS=C('ABIFLAGS')or C('abiflags')or'')\n  for N in ['python{VERSION}{ABIFLAGS}'.format(**M),'python{VERSION}'.format(**M)]:yield H+N+B\ndef Z():\n  C=B.cast(D.dllhandle,B.c_void_p);A=B.create_unicode_buffer(32768);E=B.windll.kernel32.GetModuleFileNameW(C,A,J(A))\n  if E==J(A):return H\n  return A.value\n@O\ndef a(suffix=F):\n  if G:yield Z()\n  E=[];M(E,C('LIBPL'));M(E,C('srcdir'));M(E,C('LIBDIR'))\n  if G or I or L:E.append(A.path.join(A.path.dirname(D.executable)))\n  else:E.append(A.path.join(A.path.dirname(A.path.dirname(D.executable)),K))\n  M(E,C('PYTHONFRAMEWORKPREFIX'));E.append(D.exec_prefix);E.append(A.path.join(D.exec_prefix,K));H=list(Y(suffix=suffix))\n  if R and not I:\n    for F in H:\n      try:J=B.CDLL(F)\n      except OSError:pass\n      else:yield V(J)\n  for N in E:\n    for F in H:yield A.path.join(N,F)\n  for F in H:yield Q(W(F))\ndef S(path,suffix=F,_is_apple=N):\n  C=suffix;B=path\n  if not B:return H\n  if not A.path.isabs(B):return H\n  if A.path.exists(B):return A.path.realpath(B)\n  if A.path.exists(B+C):return A.path.realpath(B+C)\n  if _is_apple:return S(b(B),suffix=P,_is_apple=False)\n  return H\ndef b(path):\n  A=path\n  if A.endswith(T):return A[:-J(T)]\n  if A.endswith(P):return A[:-J(P)]\n  return A\n@O\ndef c():\n  E.debug('_is_windows = %s',G);E.debug('_is_apple = %s',N);E.debug('_is_mingw = %s',L);E.debug('_is_msys = %s',I);E.debug('_is_posix = %s',R)\n  for B in a():\n    E.debug('Candidate: %s',B);A=S(B)\n    if A:E.debug('Found: %s',A);yield A\n    else:E.debug('Not found.')\ndef d():\n  for B in c():return A.path.realpath(B)\ndef f(items):\n  for A in items:e(A)\ne(d())"
+let findLibpython = "e=print\nT='.dylib'\nP='.so'\nK='lib'\nJ=len\nH=None\nfrom logging import getLogger as U\nfrom sysconfig import get_config_var as C\nfrom ctypes.util import find_library as Q\nimport ctypes as B,os as A,sys as D\nE=U('find_libpython')\nN=D.platform=='darwin'\nI=D.platform=='msys'\nL=D.platform=='mingw'\nG=A.name=='nt'and not L and not I\nR=A.name=='posix'\nF=C('_SHLIB_SUFFIX')\nif F is H:\n  if G:F='.dll'\n  else:F=P\nif N:F=T\ndef V(libpython):\n  D=libpython\n  if not hasattr(D,'Py_GetVersion'):return H\n  class E(B.Structure):_fields_=[('dli_fname',B.c_char_p),('dli_fbase',B.c_void_p),('dli_sname',B.c_char_p),('dli_saddr',B.c_void_p)]\n  C=B.CDLL(Q('dl'));C.dladdr.argtypes=[B.c_void_p,B.POINTER(E)];C.dladdr.restype=B.c_int;F=E();G=C.dladdr(B.cast(D.Py_GetVersion,B.c_void_p),B.pointer(F))\n  if G==0:return H\n  return A.path.realpath(F.dli_fname.decode())\ndef W(name,suffix=F,_is_windows=G):\n  B=suffix;A=name\n  if not _is_windows and A.startswith(K):A=A[J(K):]\n  if B and A.endswith(B):A=A[:-J(B)]\n  return A\ndef M(list,item):\n  if item:list.append(item)\ndef X(items):\n  B=set()\n  for A in items:\n    if A not in B:yield A\n    B.add(A)\ndef O(func):\n  from functools import wraps\n  @wraps(func)\n  def A(*A,**B):return X(func(*A,**B))\n  return A\n@O\ndef Y(suffix=F):\n  B=suffix;E=C('LDLIBRARY')\n  if E and A.path.splitext(E)[1]==B:yield E\n  F=C('LIBRARY')\n  if F and A.path.splitext(F)[1]==B:yield F\n  J=C('DLLLIBRARY')\n  if J:yield J\n  if L:H=K\n  elif G or I:H=''\n  else:H=K\n  M=dict(v=D.version_info,VERSION=C('VERSION')or '{v.major}.{v.minor}'.format(v=D.version_info),ABIFLAGS=C('ABIFLAGS')or C('abiflags')or'')\n  for N in ['python{VERSION}{ABIFLAGS}'.format(**M),'python{VERSION}'.format(**M)]:yield H+N+B\ndef Z():\n  C=B.cast(D.dllhandle,B.c_void_p);A=B.create_unicode_buffer(32768);E=B.windll.kernel32.GetModuleFileNameW(C,A,J(A))\n  if E==J(A):return H\n  return A.value\n@O\ndef a(suffix=F):\n  if G:yield Z()\n  E=[];M(E,C('LIBPL'));M(E,C('srcdir'));M(E,C('LIBDIR'))\n  if G or I or L:E.append(A.path.join(A.path.dirname(D.executable)))\n  else:E.append(A.path.join(A.path.dirname(A.path.dirname(D.executable)),K))\n  M(E,C('PYTHONFRAMEWORKPREFIX'));E.append(D.exec_prefix);E.append(A.path.join(D.exec_prefix,K));H=list(Y(suffix=suffix))\n  if R and not I:\n    for F in H:\n      try:J=B.CDLL(F)\n      except OSError:pass\n      else:yield V(J)\n  for N in E:\n    for F in H:yield A.path.join(N,F)\n  for F in H:yield Q(W(F))\ndef S(path,suffix=F,_is_apple=N):\n  C=suffix;B=path\n  if not B:return H\n  if not A.path.isabs(B):return H\n  if A.path.exists(B):return A.path.realpath(B)\n  if A.path.exists(B+C):return A.path.realpath(B+C)\n  if _is_apple:return S(b(B),suffix=P,_is_apple=False)\n  return H\ndef b(path):\n  A=path\n  if A.endswith(T):return A[:-J(T)]\n  if A.endswith(P):return A[:-J(P)]\n  return A\n@O\ndef c():\n  E.debug('_is_windows = %s',G);E.debug('_is_apple = %s',N);E.debug('_is_mingw = %s',L);E.debug('_is_msys = %s',I);E.debug('_is_posix = %s',R)\n  for B in a():\n    E.debug('Candidate: %s',B);A=S(B)\n    if A:E.debug('Found: %s',A);yield A\n    else:E.debug('Not found.')\ndef d():\n  for B in c():return A.path.realpath(B)\ndef f(items):\n  for A in items:e(A)\ne(d())"
 
-var python_path = getEnv("RC_LIBPYTHON")
+var pythonPath = getEnv("RC_LIBPYTHON")
 
-if python_path == "":
+if pythonPath == "":
   when hostOS == "windows":
-    var p = execCmdEx(&"python.exe -c \"{find_libpython}\"")
+    var p = execCmdEx(&"python.exe -c \"{findLibpython}\"")
   else:
-    var p = execCmdEx(&"python -c \"{find_libpython}\"")
-  if p.exit_code != 0:
+    var p = execCmdEx(&"python -c \"{findLibpython}\"")
+  if p.exitCode != 0:
     when hostOS == "windows":
-      p = execCmdEx(&"python3.exe -c \"{find_libpython}\"")
+      p = execCmdEx(&"python3.exe -c \"{findLibpython}\"")
     else:
-      p = execCmdEx(&"python3 -c \"{find_libpython}\"")
-    if p.exit_code != 0:
-      echo "error while trying to find libpython"
-      quit(1)
-  python_path = p.output[0..^2]
+      p = execCmdEx(&"python3 -c \"{findLibpython}\"")
+    if p.exitCode == 0:
+      pythonPath = p.output[0..^2]
 
-let HAS_PYTHON = try:
-  pyInitLibPath(python_path)
+let hasPython = try:
+  pyInitLibPath(pythonPath)
   true
 except:
   false
@@ -83,30 +91,30 @@ proc validate*(config: JsonNode, registry = "", version = "") =
   if "android_aab" notin config["build"]:
     config{"build", "android_aab"} = %false
 
-  var found_true = false
+  var foundTrue = false
   for k, v in config["build"]:
     if v.getBool():
-      found_true = true
+      foundTrue = true
       break
 
-  if not found_true:
+  if not foundTrue:
     echo "No option is enabled in the 'build' section."
     quit(1)
 
   if version != "":
     config{"renutil", "version"} = %version
   elif config{"renutil", "version"}.getStr() == "latest":
-    config{"renutil", "version"} = %($list_available()[0])
+    config{"renutil", "version"} = %($listAvailable()[0])
 
-  let renpy_version = config{"renutil", "version"}.getStr()
+  let renpyVersion = config{"renutil", "version"}.getStr()
 
-  if parseVersion(renpy_version) notin list_available():
-    echo &"Ren'Py version {renpy_version} does not exist."
+  if parseVersion(renpyVersion) notin listAvailable():
+    echo &"Ren'Py version {renpyVersion} does not exist."
     quit(1)
 
-  echo &"Using Ren'Py version {renpy_version}"
+  echo &"Using Ren'Py version {renpyVersion}"
 
-  if config{"build", "web"}.getBool() and renpy_version < "7.3.0":
+  if config{"build", "web"}.getBool() and renpyVersion < "7.3.0":
     echo "The 'web' build is not supported on versions below 7.3.0."
     quit(1)
 
@@ -138,33 +146,33 @@ proc validate*(config: JsonNode, registry = "", version = "") =
   if "clear_output_dir" notin config["options"]:
     config{"options", "clear_output_dir"} = %false
 
-  let task_dir = config["options"]["task_dir"].getStr()
-  if task_dir != "" and not dirExists(task_dir):
+  let taskDir = config["options"]["task_dir"].getStr()
+  if taskDir != "" and not dirExists(taskDir):
     echo &"Task directory '{task_dir}' does not exist."
     quit(1)
 
 proc build*(
-  input_dir: string,
-  output_dir: string,
+  inputDir: string,
+  outputDir: string,
   config: string,
   registry = "",
   version = "",
 ) =
   ## Builds a Ren'Py project with the specified configuration.
   var
-    task_count = 0
-    registry_path: string
-    renutil_target_version: Version
+    taskCount = 0
+    registryPath: string
+    renutilTargetVersion: Version
     tasks = initTable[string, seq[Task]]()
 
   tasks["pre"] = @[]
   tasks["post"] = @[]
 
-  var config = parsetoml.parseFile(config).convert_to_json()
+  var config = parsetoml.parseFile(config).convertToJson()
 
   config.validate(registry, version)
 
-  let active_builds = block:
+  let activeBuilds = block:
     var builds: seq[string]
     for k, v in config["build"]:
       if v.getBool():
@@ -172,27 +180,27 @@ proc build*(
     let result = toHashSet(builds)
     result
 
-  if HAS_PYTHON:
+  if hasPython:
     let pysys = pyImport("sys")
     echo &"Python Support: true"
     echo &"Python Version: {pysys.version.to(string)}"
 
-    let task_dir = config{"options", "task_dir"}.getStr()
-    if task_dir != "":
+    let taskDir = config{"options", "task_dir"}.getStr()
+    if taskDir != "":
       let py = pyBuiltinsModule()
       let inspect = pyImport("inspect")
 
-      discard pysys.path.append(task_dir)
+      discard pysys.path.append(taskDir)
 
-      echo &"Scanning tasks in directory '{task_dir}'..."
+      echo &"Scanning tasks in directory '{taskDir}'..."
 
-      for file in walkDirRec(task_dir):
+      for file in walkDirRec(taskDir):
         if not file.endsWith(".py"):
           continue
 
-        let (dir, name, ext) = splitFile(relativePath(file, task_dir))
-        let import_path = joinPath(dir, name).replace($DirSep, ".")
-        let module = pyImport(import_path.cstring)
+        let (dir, name, _) = splitFile(relativePath(file, taskDir))
+        let importPath = joinPath(dir, name).replace($DirSep, ".")
+        let module = pyImport(importPath.cstring)
 
         for info in inspect.getmembers(module, inspect.isclass):
           let
@@ -202,30 +210,30 @@ proc build*(
           if not name.endsWith("Task") or name == "Task":
             continue
 
-          let config_name = name[0..^5].to_snake_case()
-          var sub_config = config{"tasks", config_name}
+          let configName = name[0..^5].toSnakeCase()
+          var subConfig = config{"tasks", configName}
 
           if py.hasattr(class, "validate_config").to(bool):
             try:
-              if sub_config == nil:
-                config{"tasks", config_name} = class.validate_config(%*{}).to(JsonNode)
+              if subConfig == nil:
+                config{"tasks", configName} = class.validateConfig(%*{}).to(JsonNode)
               else:
-                config{"tasks", config_name} = class.validate_config(sub_config).to(JsonNode)
+                config{"tasks", configName} = class.validateConfig(subConfig).to(JsonNode)
             except:
               echo &"Failed to validate config for task {name}: {getCurrentExceptionMsg()}"
               quit(1)
 
-          sub_config = config{"tasks", config_name}
+          subConfig = config{"tasks", configName}
 
-          if not sub_config{"enabled"}.getBool():
+          if not subConfig{"enabled"}.getBool():
             continue
 
-          task_count += 1
+          taskCount += 1
 
           # create new instance
           let instance = class.callMethod("__new__", class, config)
           # init instance
-          discard class.callMethod("__init__", instance, config, input_dir, output_dir)
+          discard class.callMethod("__init__", instance, config, inputDir, outputDir)
 
           let builds = block:
             var results = block:
@@ -233,7 +241,7 @@ proc build*(
               for k, v in config["build"]:
                 builds.add(k)
               builds
-            let result = sub_config{"on_builds"}.getElems().mapIt(it.getStr())
+            let result = subConfig{"on_builds"}.getElems().mapIt(it.getStr())
             if result.len > 0:
               results = result
             results
@@ -241,20 +249,20 @@ proc build*(
           if py.hasattr(instance, "pre_build").to(bool):
             tasks["pre"].add(
               Task(
-                name: config_name,
+                name: configName,
                 instance: instance,
                 builds: builds,
-                priority: sub_config{"priorities", "pre_build"}.getInt(0),
+                priority: subConfig{"priorities", "pre_build"}.getInt(0),
               )
             )
 
           if py.hasattr(instance, "post_build").to(bool):
             tasks["post"].add(
               Task(
-                name: config_name,
+                name: configName,
                 instance: instance,
                 builds: builds,
-                priority: sub_config{"priorities", "post_build"}.getInt(0),
+                priority: subConfig{"priorities", "post_build"}.getInt(0),
               )
             )
 
@@ -266,7 +274,7 @@ proc build*(
     tasks["post"].add(
       Task(
         name: "clean",
-        call: task_post_clean,
+        call: taskPostClean,
         builds: block:
           var results = block:
             var builds: seq[string]
@@ -280,14 +288,14 @@ proc build*(
         priority: config{"tasks", "clean", "priorities", "post_build"}.getInt(0),
       )
     )
-    task_count += 1
+    taskCount += 1
     echo &"Loaded Task: clean"
 
   if config{"tasks", "notarize", "enabled"}.getBool():
     tasks["post"].add(
       Task(
         name: "notarize",
-        call: task_post_notarize,
+        call: taskPostNotarize,
         builds: block:
           var results = @["mac"]
           let result = config{"tasks", "notarize", "on_builds"}.getElems().mapIt(it.getStr())
@@ -297,14 +305,14 @@ proc build*(
         priority: config{"tasks", "notarize", "priorities", "post_build"}.getInt(10),
       )
     )
-    task_count += 1
+    taskCount += 1
     echo &"Loaded Task: notarize"
 
   if config{"tasks", "convert_images", "enabled"}.getBool():
     tasks["pre"].add(
       Task(
         name: "convert_images",
-        call: task_pre_convert_images,
+        call: taskPreConvertImages,
         builds: block:
           var results = block:
             var builds: seq[string]
@@ -318,14 +326,14 @@ proc build*(
         priority: config{"tasks", "convert_images", "priorities", "post_build"}.getInt(10),
       )
     )
-    task_count += 1
+    taskCount += 1
     echo &"Loaded Task: convert_images"
 
   if config{"tasks", "keystore", "enabled"}.getBool():
     tasks["pre"].add(
       Task(
         name: "keystore",
-        call: task_pre_keystore,
+        call: taskPreKeystore,
         builds: block:
           var results = @["android_apk", "android_aab"]
           let result = config{"tasks", "keystore", "on_builds"}.getElems().mapIt(it.getStr())
@@ -338,7 +346,7 @@ proc build*(
     tasks["post"].add(
       Task(
         name: "keystore",
-        call: task_pre_keystore,
+        call: taskPostKeystore,
         builds: block:
           var results = @["android_apk", "android_aab"]
           let result = config{"tasks", "keystore", "on_builds"}.getElems().mapIt(it.getStr())
@@ -348,98 +356,100 @@ proc build*(
         priority: config{"tasks", "keystore", "priorities", "post_build"}.getInt(0),
       )
     )
-    task_count += 1
+    taskCount += 1
     echo &"Loaded Task: keystore"
 
   tasks["pre"] = tasks["pre"].sortedByIt((it.priority, it.name)).reversed()
   tasks["post"] = tasks["post"].sortedByIt((it.priority, it.name)).reversed()
 
-  if task_count == 1:
+  if taskCount == 1:
     echo "Loaded 1 task"
   else:
-    echo &"Loaded {task_count} tasks"
+    echo &"Loaded {taskCount} tasks"
 
   if registry != "":
-    registry_path = get_registry(registry)
+    registryPath = getRegistry(registry)
   elif "registry" in config["renutil"]:
-    registry_path = get_registry(config["renutil"]["registry"].getStr())
+    registryPath = getRegistry(config["renutil"]["registry"].getStr())
   else:
-    registry_path = get_registry(registry)
+    registryPath = getRegistry(registry)
 
-  if not dirExists(input_dir):
-    echo &"Game directory '{input_dir}' does not exist."
+  if not dirExists(inputDir):
+    echo &"Game directory '{inputDir}' does not exist."
     quit(1)
 
-  if config["options"]["clear_output_dir"].getBool() and dirExists(output_dir):
-    removeDir(output_dir)
+  if config["options"]["clear_output_dir"].getBool() and dirExists(outputDir):
+    removeDir(outputDir)
 
-  createDir(output_dir)
+  createDir(outputDir)
 
   if version != "":
-    renutil_target_version = parseVersion(version)
+    renutilTargetVersion = parseVersion(version)
   else:
-    renutil_target_version = parseVersion(config["renutil"]["version"].getStr())
+    renutilTargetVersion = parseVersion(config["renutil"]["version"].getStr())
 
-  if not is_installed(renutil_target_version, registry_path):
-    echo &"Installing Ren'Py {renutil_target_version}"
-    install($renutil_target_version, registry_path)
+  if not isInstalled(renutilTargetVersion, registryPath):
+    echo &"Installing Ren'Py {renutilTargetVersion}"
+    install($renutilTargetVersion, registryPath)
+
+  let ctx = TaskContext(webpPath: webpPath)
 
   for task in tasks["pre"]:
-    if (active_builds * task.builds.to_hash_set).len == 0:
+    if (activeBuilds * task.builds.toHashSet).len == 0:
       continue
     echo &"Running pre-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(config, input_dir, output_dir)
+      task.call(ctx, config, inputDir, outputDir)
     else:
-      discard task.instance.pre_build()
+      discard task.instance.preBuild()
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
     echo "Building Android APK package."
-    if renutil_target_version >= newVersion(7, 4, 9):
+    if renutilTargetVersion >= newVersion(7, 4, 9):
       launch(
-        $renutil_target_version,
+        $renutilTargetVersion,
         false,
         false,
-        &"android_build {quoteShell(input_dir)} --dest {quoteShell(absolutePath(output_dir))}",
-        registry_path
+        &"android_build {quoteShell(inputDir)} --dest {quoteShell(absolutePath(outputDir))}",
+        registryPath
       )
     else:
       launch(
-        $renutil_target_version,
+        $renutilTargetVersion,
         false,
         false,
-        &"android_build {quoteShell(input_dir)} assembleRelease --dest {quoteShell(absolutePath(output_dir))}",
-        registry_path
+        &"android_build {quoteShell(inputDir)} assembleRelease --dest {quoteShell(absolutePath(outputDir))}",
+        registryPath
       )
 
   if config["build"]["android_aab"].getBool():
     echo "Building Android AAB package."
-    if renutil_target_version >= newVersion(7, 4, 9):
+    if renutilTargetVersion >= newVersion(7, 4, 9):
       launch(
-        $renutil_target_version,
+        $renutilTargetVersion,
         false,
         false,
-        &"android_build {quoteShell(input_dir)} --bundle --dest {quoteShell(absolutePath(output_dir))}",
-        registry_path
+        &"android_build {quoteShell(inputDir)} --bundle --dest {quoteShell(absolutePath(outputDir))}",
+        registryPath
       )
     else:
       echo "Not supported for Ren'Py versions <7.4.9"
       quit(1)
 
-  var platforms_to_build: seq[string]
+  var platformsToBuild: seq[string]
   if "pc" in config["build"] and config["build"]["pc"].getBool():
-    platforms_to_build.add("pc")
+    platformsToBuild.add("pc")
   if "mac" in config["build"] and config["build"]["mac"].getBool():
-    platforms_to_build.add("mac")
+    platformsToBuild.add("mac")
   if "win" in config["build"] and config["build"]["win"].getBool():
-    platforms_to_build.add("win")
+    platformsToBuild.add("win")
   if "linux" in config["build"] and config["build"]["linux"].getBool():
-    platforms_to_build.add("linux")
+    platformsToBuild.add("linux")
   if "market" in config["build"] and config["build"]["market"].getBool():
-    platforms_to_build.add("market")
+    platformsToBuild.add("market")
   if "steam" in config["build"] and config["build"]["steam"].getBool():
-    platforms_to_build.add("steam")
+    platformsToBuild.add("steam")
   if "web" in config["build"] and config["build"]["web"].getBool():
     # make out_dir = {project-name}-{version}-web directory in output directory
     # modify build command:
@@ -447,31 +457,31 @@ proc build*(
     # TODO: somehow trigger repack_for_progressive_download()
     # copy files from {version}/web except for hash.txt to the web output directory
     # modify index.html and replace %%TITLE%% with the game's display name
-    platforms_to_build.add("web")
+    platformsToBuild.add("web")
 
-  if len(platforms_to_build) > 0:
-    var cmd = &"distribute {quoteShell(input_dir)} --destination {quoteShell(absolutePath(output_dir))}"
-    for package in platforms_to_build:
+  if len(platformsToBuild) > 0:
+    var cmd = &"distribute {quoteShell(inputDir)} --destination {quoteShell(absolutePath(outputDir))}"
+    for package in platformsToBuild:
       cmd = cmd & &" --package {package}"
-    let joined_packages = join(platforms_to_build, ", ")
+    let joinedPackages = join(platformsToBuild, ", ")
 
-    echo &"Building {joined_packages} packages."
+    echo &"Building {joinedPackages} packages."
     launch(
-      $renutil_target_version,
+      $renutilTargetVersion,
       false,
       false,
       cmd,
-      registry_path
+      registryPath
     )
 
   for task in tasks["post"]:
-    if (active_builds * task.builds.to_hash_set).len == 0:
+    if (activeBuilds * task.builds.toHashSet).len == 0:
       continue
     echo &"Running post-build task {task.name} with priority {task.priority}"
     if task.call != nil:
-      task.call(config, input_dir, output_dir)
+      task.call(ctx, config, inputDir, outputDir)
     else:
-      discard task.instance.post_build()
+      discard task.instance.postBuild()
 
 when isMainModule:
   try:
@@ -481,6 +491,7 @@ when isMainModule:
           "output_dir": "The directory to output distributions to.",
           "config": "The path to the configuration file to use.",
           "registry": "The path to the registry directory to use. Defaults to ~/.renutil",
+          "version": "The target version of RenPy for renutil. Defaults to the version specified in the config file.",
       }],
     )
   except KeyboardInterrupt:

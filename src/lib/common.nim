@@ -2,63 +2,73 @@ import std/os
 import std/json
 import std/strutils
 import std/sequtils
-import std/httpclient
+import std/strformat
 
-import suru
+# import suru
+import puppy
 import semver
 import parsetoml
 import zippy/internal
 import zippy/ziparchives
 
-import suru_utils
+# import suru_utils
 
-proc to_string*(s: seq[char]): string =
+proc toString*(s: seq[char]): string =
   result = newStringOfCap(len(s))
   for ch in s:
     add(result, ch)
 
-proc to_snake_case*(s: string): string =
-  var new_string: seq[char]
+proc toSnakeCase*(s: string): string =
+  var newString: seq[char]
   for i, c in s:
-    if c.is_upper_ascii():
+    if c.isUpperAscii():
       if i != 0:
-        new_string.add("_")
-      new_string.add(c.to_lower_ascii())
+        newString.add("_")
+      newString.add(c.toLowerAscii())
     else:
-      new_string.add(c)
-  return new_string.to_string
+      newString.add(c)
+  return newString.to_string
 
 proc download*(url, path: string) =
-  var bar: SuruBar = initSuruBar()
+  let req = Request(url: parseUrl(url), verb: "get")
+  let res = fetch(req)
 
-  proc onProgressChanged(total, progress, speed: BiggestInt) =
-    bar[0].progress = progress.int
-    bar.update(500_000_000)
+  if res.code != 200:
+    raise newException(ValueError, &"Failed to download {url} with status code {res.code}: {res.body}")
 
-  let client = newHttpClient()
+  # write to file
+  writeFile(path, res.body)
 
-  let r = client.head(url)
-  let content_lengths = seq[string](r.headers.getOrDefault("Content-Length"))
-  let content_length = case content_lengths.len:
-    of 1:
-      if content_lengths[0] == "": -1 else: content_lengths[0].parseint
-    else:
-      -1
+  # var bar: SuruBar = initSuruBar()
 
-  bar.format = suru_format
-  bar[0].total = content_length
-  bar.setup()
+  # proc onProgressChanged(total, progress, speed: BiggestInt) =
+  #   bar[0].progress = progress.int
+  #   bar.update(500_000_000)
 
-  client.onProgressChanged = onProgressChanged
+  # let client = newHttpClient()
 
-  try:
-    client.downloadFile(url, path)
-  finally:
-    bar[0].progress = bar[0].total
-    bar.update(10_000_000)
-    bar.finish()
+  # let r = client.head(url)
+  # let contentLengths = seq[string](r.headers.getOrDefault("Content-Length"))
+  # let contentLength = case contentLengths.len:
+  #   of 1:
+  #     if content_lengths[0] == "": -1 else: content_lengths[0].parseint
+  #   else:
+  #     -1
 
-proc convert_to_json*(value: TomlValueRef): JsonNode =
+  # bar.format = suru_format
+  # bar[0].total = content_length
+  # bar.setup()
+
+  # client.onProgressChanged = onProgressChanged
+
+  # try:
+  #   client.downloadFile(url, path)
+  # finally:
+  #   bar[0].progress = bar[0].total
+  #   bar.update(10_000_000)
+  #   bar.finish()
+
+proc convertToJson*(value: TomlValueRef): JsonNode =
   case value.kind:
     of TomlValueKind.Int:
       %value.intVal
@@ -89,21 +99,21 @@ proc convert_to_json*(value: TomlValueRef): JsonNode =
     of TomlValueKind.None:
       %nil
 
-proc find_files*(
-  input_dir: string,
+proc findFiles*(
+  inputDir: string,
   path: string,
   extensions: seq[string],
   recursive = true
 ): seq[string] =
-  let full_path = joinPath(input_dir, path)
+  let fullPath = joinPath(inputDir, path)
 
   if recursive:
-    for file in walkDirRec(full_path):
+    for file in walkDirRec(fullPath):
       for ext in extensions:
         if file.endsWith(ext):
           result.add(file)
   else:
-    for file in walkFiles(joinPath(full_path, "*")):
+    for file in walkFiles(joinPath(fullPath, "*")):
       for ext in extensions:
         if file.endsWith(ext):
           result.add(file)
