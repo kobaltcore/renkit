@@ -16,24 +16,26 @@ renkit is written in Nim and compiled into standalone executables, batteries inc
 
 ## Installation
 
-### Homebrew
+### Homebrew (macOS)
 
 ```bash
 brew tap kobaltcore/renkit
 brew install renkit --no-quarantine
 ```
 
-### wget
+### wget (Linux / macOS)
 
 ```bash
 wget -qO- https://github.com/kobaltcore/renkit/releases/download/v2.4.0/renkit-linux-amd64.zip | tar xz
 ```
 
-### Manual
+### Manual (Linux / Windows / macOS)
 
 Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting tar file.
 
 After this, either add the binaries to your PATH or use them from within the download directory.
+
+Please note that on Windows, `renotize` and `renconstruct` require the [Visual C++ 2015 Redistributable Update 3 RC](https://www.microsoft.com/en-us/download/details.aspx?id=52685) so please download and install it first.
 
 ## renutil
 
