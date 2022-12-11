@@ -19,10 +19,20 @@ import renutil
 import lib/common
 import lib/rc_tasks
 
-const webpBin = staticRead("../cwebp")
+when defined(mingw):
+  const webpBin = staticRead("../cwebp.exe")
+  let webpPath = getTempDir() / "cwebp.exe"
+else:
+  const webpBin = staticRead("../cwebp")
+  let webpPath = getTempDir() / "cwebp"
 
-let webpPath = getTempDir() / "cwebp"
-if execCmdEx(&"{webpPath} -version").exitCode != 0:
+var eCode = 0
+try:
+  eCode = execCmdEx(&"{webpPath} -version").exitCode
+except:
+  eCode = 1
+
+if eCode != 0:
   writeFile(webpPath, webpBin)
   setFilePermissions(webpPath, {fpUserRead, fpUserWrite, fpUserExec})
 
@@ -48,10 +58,8 @@ if pythonPath == "":
       p = execCmdEx(&"python3.exe -c \"{findLibpython}\"")
     else:
       p = execCmdEx(&"python3 -c \"{findLibpython}\"")
-    if p.exitCode != 0:
-      echo "error while trying to find libpython"
-      quit(1)
-  pythonPath = p.output[0..^2]
+    if p.exitCode == 0:
+      pythonPath = p.output[0..^2]
 
 let hasPython = try:
   pyInitLibPath(pythonPath)

@@ -11,10 +11,24 @@ import plists
 import zippy/ziparchives
 when isMainModule: import cligen
 
-const rcodesignBin = staticRead("../rcodesign")
+# rcodesign requires Visual C++ 2015 Redistributable Update 3 RC on Windows:
+# https://www.microsoft.com/en-us/download/details.aspx?id=52685
 
-let rcodesignPath = getTempDir() / "rcodesign"
-if execCmdEx(&"{rcodesignPath} -V").exitCode != 0:
+when defined(mingw):
+  const rcodesignBin = staticRead("../rcodesign.exe")
+  let rcodesignPath = getTempDir() / "rcodesign.exe"
+else:
+  const rcodesignBin = staticRead("../rcodesign")
+  let rcodesignPath = getTempDir() / "rcodesign"
+
+var eCode = 0
+try:
+  eCode = execCmdEx(&"{rcodesignPath} -V").exitCode
+except:
+  eCode = 1
+
+if eCode != 0:
+  echo &"Writing rcodesign to {rcodesignPath}"
   writeFile(rcodesignPath, rcodesignBin)
   setFilePermissions(rcodesignPath, {fpUserRead, fpUserWrite, fpUserExec})
 
