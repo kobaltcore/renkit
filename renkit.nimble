@@ -47,9 +47,9 @@ proc getRcodesignUrl(osName="", archName=""): string =
 
   let rcodesignUrl = case finalOS:
     of "pc-windows-msvc":
-      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.zip"
+      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-{finalArch}-{finalOS}.zip"
     else:
-      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.20.0/apple-codesign-0.20.0-{finalArch}-{finalOS}.tar.gz"
+      &"https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-{finalArch}-{finalOS}.tar.gz"
 
   if hostOS == "macosx":
     if finalOS == "pc-windows-msvc":
@@ -86,9 +86,9 @@ proc getWebpUrl(osName="", archName=""): string =
 
   let webpUrl = case finalOS:
     of "windows":
-      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.zip"
+      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.3.0-{finalOS}-{finalArch}.zip"
     else:
-      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.2.4-{finalOS}-{finalArch}.tar.gz"
+      &"https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.3.0-{finalOS}-{finalArch}.tar.gz"
 
   if hostOS == "macosx":
     if finalOS == "windows":
@@ -100,6 +100,23 @@ proc getWebpUrl(osName="", archName=""): string =
       result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | bsdtar -xOf- '*/cwebp.exe' > cwebp.exe"
     else:
       result = &"echo 'Downloading {webpUrl}' && wget {webpUrl} -qO- | bsdtar -xOf- '*/cwebp' > cwebp"
+
+proc getCavifUrl(osName=""): string =
+  let currentOS = block:
+    var result = ""
+    if hostOS == "macosx":
+      result = "mac"
+    elif hostOS == "linux-generic":
+      result = "linux"
+    elif hostOS == "windows":
+      result = "win"
+    result
+
+  let finalOS = if osName == "": currentOS else: osName
+
+  let cavifUrl = &"https://github.com/kornelski/cavif-rs/releases/download/v1.5.1/cavif-1.5.1.zip"
+
+  result = &"echo 'Downloading {cavifUrl}' && wget {cavifUrl} -qO cavif.zip && unzip -j cavif.zip {finalOS}/cavif && rm cavif.zip"
 
 task gendoc, "Generates documentation for this project":
   exec("nimble doc --outdir:docs --project src/*.nim")
@@ -116,6 +133,8 @@ task renotize, "Executes 'nimble run' with extra compiler options.":
 
 task renconstruct, "Executes 'nimble run' with extra compiler options.":
   let args = join(commandLineParams[3..^1], " ")
+  if not fileExists("cavif"):
+    exec(getCavifUrl())
   if not fileExists("cwebp"):
     exec(getWebpUrl())
   if not fileExists("rcodesign"):

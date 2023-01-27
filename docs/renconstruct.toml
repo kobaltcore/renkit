@@ -21,6 +21,7 @@
 
 [tasks.convert_images]
   enabled = false
+  format = "webp" # webp or avif
   priorities = { pre_build = 10 } # the priority that determines the orders tasks will run in, defaults to 10
   on_builds = ["pc", "win", "linux", "mac", "web", "steam", "market", "android_apk", "android_aab"] # builds this task should run for, defaults to all available builds
   # extensions: a list of file extensions to convert

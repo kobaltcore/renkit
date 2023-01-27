@@ -17,6 +17,7 @@ import ../renotize
 type
   TaskContext* = object
     webpPath*: string
+    cavifPath*: string
 
   Task* = object
     name*: string
@@ -31,6 +32,7 @@ proc taskPreConvertImages*(
   inputDir: string,
   outputDir: string,
 ) =
+  let format = config{"tasks", "convert_images", "format"}.getStr()
   for path, options in config{"tasks", "convert_images"}:
     if path == "enabled":
       continue
@@ -56,10 +58,16 @@ proc taskPreConvertImages*(
     var cmds: seq[string]
     if lossless:
       for file in files:
-        cmds.add(&"{ctx.webpPath} -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
+        if format == "webp":
+          cmds.add(&"{ctx.webpPath} -lossless -z 9 -m 6 {quoteShell(file)} -o {quoteShell(file)}")
+        elif format == "avif":
+          cmds.add(&"{ctx.cavifPath} -Q88 -s3 {quoteShell(file)} -o {quoteShell(file)}")
     else:
       for file in files:
-        cmds.add(&"{ctx.webpPath} -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
+        if format == "webp":
+          cmds.add(&"{ctx.webpPath} -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
+        elif format == "avif":
+          cmds.add(&"{ctx.cavifPath} -Q88 -s3 {quoteShell(file)} -o {quoteShell(file)}")
 
     discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 

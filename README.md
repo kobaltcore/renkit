@@ -161,7 +161,7 @@ Overwrites the auto-generated keystore with the given one. This is useful for di
 - `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles.
 
 #### `tasks.convert_images`
-Converts the selected images in the given directories to WebP to save space on-disk. This task specifically replaces every selected file with its WebP version but does not change the file extension to ensure that all paths to assets and sprites remain the same.
+Converts the selected images in the given directories to WebP or AVIF to save space on-disk. This task specifically replaces every selected file with its converted version but does not change the file extension to ensure that all paths to assets and sprites remain the same.
 
 This task takes a dynamic set of properties where each key is the path to a directory containing image files to be converted and its value is a table of configuration options for that particular path. That way, various paths can be converted with different options for more flexibility.
 
@@ -171,6 +171,8 @@ Each path may specify the following properties:
 - `extensions`: The list of file extensions to use. All files with an extension in this list will be converted. Defaults to `["png", "jpg"]`.
 - `recursive`: Whether to scan the given directory recursively or not. Defaults to `true`. If not recursive, will only take the images directly in the given directory.
 - `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites.
+
+The image format to use may be specified at the task-level using the `format` key, which may be either `webp` (default) or `avif`.
 
 #### `build`
 Specifies which distributions to build. Each of these keys may have a value of `true` or `false`.

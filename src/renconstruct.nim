@@ -22,19 +22,33 @@ import lib/rc_tasks
 when defined(mingw):
   const webpBin = staticRead("../cwebp.exe")
   let webpPath = getTempDir() / "cwebp.exe"
+  const cavifBin = staticRead("../cavif.exe")
+  let cavifPath = getTempDir() / "cavif.exe"
 else:
   const webpBin = staticRead("../cwebp")
   let webpPath = getTempDir() / "cwebp"
+  const cavifBin = staticRead("../cavif")
+  let cavifPath = getTempDir() / "cavif"
 
-var eCode = 0
+var eCodeWebP = 0
 try:
-  eCode = execCmdEx(&"{webpPath} -version").exitCode
+  eCodeWebP = execCmdEx(&"{webpPath} -version").exitCode
 except:
-  eCode = 1
+  eCodeWebP = 1
 
-if eCode != 0:
+if eCodeWebP != 0:
   writeFile(webpPath, webpBin)
   setFilePermissions(webpPath, {fpUserRead, fpUserWrite, fpUserExec})
+
+var eCodeCavif = 0
+try:
+  eCodeCavif = execCmdEx(&"{cavifPath} -V").exitCode
+except:
+  eCodeCavif = 1
+
+if eCodeCavif != 0:
+  writeFile(cavifPath, cavifBin)
+  setFilePermissions(cavifPath, {fpUserRead, fpUserWrite, fpUserExec})
 
 type
   KeyboardInterrupt = object of CatchableError
@@ -135,6 +149,14 @@ proc validate*(config: JsonNode, registry = "", version = "") =
 
   if "convert_images" notin config["tasks"]:
     config{"tasks", "convert_images", "enabled"} = %false
+
+  if "format" in config["tasks"]["convert_images"]:
+    let format = config{"tasks", "convert_images", "format"}.getStr()
+    if format notin @["webp", "avif"]:
+      echo &"Invalid image format: '{format}'"
+      quit(1)
+  else:
+    config{"tasks", "convert_images", "format"} = %"webp"
 
   if "options" notin config:
     config{"options", "task_dir"} = %""
@@ -392,7 +414,7 @@ proc build*(
     echo &"Installing Ren'Py {renutilTargetVersion}"
     install($renutilTargetVersion, registryPath)
 
-  let ctx = TaskContext(webpPath: webpPath)
+  let ctx = TaskContext(webpPath: webpPath, cavifPath: cavifPath)
 
   for task in tasks["pre"]:
     if (activeBuilds * task.builds.toHashSet).len == 0:
