@@ -116,7 +116,7 @@ proc getCavifUrl(osName=""): string =
 
   let cavifUrl = &"https://github.com/kornelski/cavif-rs/releases/download/v1.5.1/cavif-1.5.1.zip"
 
-  if finalOS == "windows":
+  if finalOS == "win":
     result = &"echo 'Downloading {cavifUrl}' && wget {cavifUrl} -qO cavif.zip && unzip -oj cavif.zip {finalOS}/cavif.exe && rm cavif.zip"
   else:
     result = &"echo 'Downloading {cavifUrl}' && wget {cavifUrl} -qO cavif.zip && unzip -oj cavif.zip {finalOS}/cavif && rm cavif.zip"
