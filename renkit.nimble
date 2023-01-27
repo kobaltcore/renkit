@@ -159,7 +159,7 @@ task build_macos_arm64, "Builds for macOS (arm64)":
   #   exec("upx --best bin/arm64/macos/*")
 
 task build_linux_amd64, "Builds for linux (amd64)":
-  exec(getCavifUrl("linux"))
+  exec(getCavifUrl("linux-generic"))
   exec(getWebpUrl("linux", "x86-64"))
   exec(getRcodesignUrl("unknown-linux-musl", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:linux --cpu:amd64 -y")
@@ -167,7 +167,7 @@ task build_linux_amd64, "Builds for linux (amd64)":
   # exec("upx --best bin/amd64/linux/*")
 
 task build_windows_amd64, "Builds for Windows (amd64)":
-  exec(getCavifUrl("windows"))
+  exec(getCavifUrl("win"))
   exec(getWebpUrl("windows", "x64"))
   exec(getRcodesignUrl("pc-windows-msvc", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip -d:mingw --cpu:amd64 -y")
