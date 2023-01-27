@@ -14,13 +14,13 @@ bin = @["renutil", "renotize", "renconstruct"]
 requires "nim >= 1.6.8"
 requires "suru >= 0.3.1"
 requires "nimpy >= 0.2.0"
-requires "puppy >= 1.6.0"
-requires "regex >= 0.20.0"
-requires "zippy >= 0.9.12"
+requires "puppy >= 2.0.3"
+requires "regex >= 0.20.1"
+requires "zippy >= 0.10.4"
 requires "plists >= 0.2.0"
 requires "semver >= 1.1.1"
-requires "cligen >= 1.5.23"
-requires "parsetoml >= 0.6.0"
+requires "cligen >= 1.5.38"
+requires "parsetoml >= 0.7.0"
 
 # Tasks
 proc getRcodesignUrl(osName="", archName=""): string =
@@ -106,8 +106,8 @@ proc getCavifUrl(osName=""): string =
     var result = ""
     if hostOS == "macosx":
       result = "mac"
-    elif hostOS == "linux-generic":
-      result = "linux"
+    elif hostOS == "linux":
+      result = "linux-generic"
     elif hostOS == "windows":
       result = "win"
     result
@@ -116,7 +116,7 @@ proc getCavifUrl(osName=""): string =
 
   let cavifUrl = &"https://github.com/kornelski/cavif-rs/releases/download/v1.5.1/cavif-1.5.1.zip"
 
-  result = &"echo 'Downloading {cavifUrl}' && wget {cavifUrl} -qO cavif.zip && unzip -j cavif.zip {finalOS}/cavif && rm cavif.zip"
+  result = &"echo 'Downloading {cavifUrl}' && wget {cavifUrl} -qO cavif.zip && unzip -oj cavif.zip {finalOS}/cavif && rm cavif.zip"
 
 task gendoc, "Generates documentation for this project":
   exec("nimble doc --outdir:docs --project src/*.nim")
@@ -142,6 +142,7 @@ task renconstruct, "Executes 'nimble run' with extra compiler options.":
   exec(&"nimble --styleCheck:hint --mm:orc run renconstruct {args}")
 
 task build_macos_amd64, "Builds for macOS (amd64)":
+  exec(getCavifUrl("mac"))
   exec(getWebpUrl("mac", "x86-64"))
   exec(getRcodesignUrl("apple-darwin", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
@@ -149,6 +150,7 @@ task build_macos_amd64, "Builds for macOS (amd64)":
   # exec("upx --best bin/amd64/macos/*")
 
 task build_macos_arm64, "Builds for macOS (arm64)":
+  exec(getCavifUrl("mac"))
   exec(getWebpUrl("mac", "arm64"))
   exec(getRcodesignUrl("apple-darwin", "aarch64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:macosx -y")
@@ -157,6 +159,7 @@ task build_macos_arm64, "Builds for macOS (arm64)":
   #   exec("upx --best bin/arm64/macos/*")
 
 task build_linux_amd64, "Builds for linux (amd64)":
+  exec(getCavifUrl("linux"))
   exec(getWebpUrl("linux", "x86-64"))
   exec(getRcodesignUrl("unknown-linux-musl", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip --os:linux --cpu:amd64 -y")
@@ -164,6 +167,7 @@ task build_linux_amd64, "Builds for linux (amd64)":
   # exec("upx --best bin/amd64/linux/*")
 
 task build_windows_amd64, "Builds for Windows (amd64)":
+  exec(getCavifUrl("windows"))
   exec(getWebpUrl("windows", "x64"))
   exec(getRcodesignUrl("pc-windows-msvc", "x86_64"))
   exec("nimble build --styleCheck:hint -d:release --opt:size --mm:orc -d:strip -d:mingw --cpu:amd64 -y")
