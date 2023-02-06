@@ -69,7 +69,9 @@ proc taskPreConvertImages*(
         elif format == "avif":
           cmds.add(&"{ctx.cavifPath} -f -Q92 -s3 {quoteShell(file)} -o {quoteShell(file)}")
 
-    echo execProcesses(cmds, n = countProcessors(), options = {poUsePath})
+    if execProcesses(cmds, n = countProcessors(), options = {poUsePath}) != 0:
+      echo "Failed to convert images."
+      quit(1)
 
 proc taskPostClean*(
   ctx: TaskContext,
