@@ -34,7 +34,7 @@ proc taskPreConvertImages*(
 ) =
   let format = config{"tasks", "convert_images", "format"}.getStr()
   for path, options in config{"tasks", "convert_images"}:
-    if path == "enabled":
+    if path == "enabled" or path == "format":
       continue
 
     let
@@ -67,9 +67,9 @@ proc taskPreConvertImages*(
         if format == "webp":
           cmds.add(&"{ctx.webpPath} -q 90 -m 6 -sharp_yuv -pre 4 {quoteShell(file)} -o {quoteShell(file)}")
         elif format == "avif":
-          cmds.add(&"{ctx.cavifPath} -Q92 -s3 {quoteShell(file)} -o {quoteShell(file)}")
+          cmds.add(&"{ctx.cavifPath} -f -Q92 -s3 {quoteShell(file)} -o {quoteShell(file)}")
 
-    discard execProcesses(cmds, n = countProcessors(), options = {poUsePath})
+    echo execProcesses(cmds, n = countProcessors(), options = {poUsePath})
 
 proc taskPostClean*(
   ctx: TaskContext,
