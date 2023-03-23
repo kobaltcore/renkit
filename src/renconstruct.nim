@@ -33,7 +33,7 @@ else:
 var eCodeWebP = 0
 try:
   eCodeWebP = execCmdEx(&"{webpPath} -version").exitCode
-except:
+except CatchableError:
   eCodeWebP = 1
 
 if eCodeWebP != 0:
@@ -43,7 +43,7 @@ if eCodeWebP != 0:
 var eCodeCavif = 0
 try:
   eCodeCavif = execCmdEx(&"{cavifPath} -V").exitCode
-except:
+except CatchableError:
   eCodeCavif = 1
 
 if eCodeCavif != 0:
@@ -78,7 +78,7 @@ if pythonPath == "":
 let hasPython = try:
   pyInitLibPath(pythonPath)
   true
-except:
+except CatchableError:
   false
 
 proc validate*(config: JsonNode, registry = "", version = "") =
@@ -241,7 +241,7 @@ proc build*(
                 config{"tasks", configName} = class.validateConfig(%*{}).to(JsonNode)
               else:
                 config{"tasks", configName} = class.validateConfig(subConfig).to(JsonNode)
-            except:
+            except CatchableError:
               echo &"Failed to validate config for task {name}: {getCurrentExceptionMsg()}"
               quit(1)
 

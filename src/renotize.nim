@@ -24,7 +24,7 @@ else:
 var eCode = 0
 try:
   eCode = execCmdEx(&"{rcodesignPath} -V").exitCode
-except:
+except CatchableError:
   eCode = 1
 
 if eCode != 0:
