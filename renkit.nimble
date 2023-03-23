@@ -16,10 +16,10 @@ requires "suru >= 0.3.1"
 requires "nimpy >= 0.2.0"
 requires "puppy >= 2.0.3"
 requires "regex >= 0.20.1"
-requires "zippy >= 0.10.4"
+requires "zippy >= 0.10.7"
 requires "plists >= 0.2.0"
 requires "semver >= 1.1.1"
-requires "cligen >= 1.5.38"
+requires "cligen >= 1.6.0"
 requires "parsetoml >= 0.7.0"
 
 # Tasks
