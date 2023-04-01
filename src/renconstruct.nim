@@ -428,7 +428,7 @@ proc build*(
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
     echo "Building Android APK package."
-    if renutilTargetVersion >= newVersion(7, 4, 9):
+    if not renutilTargetVersion.isLessThan(newVersion(7, 4, 9)):
       launch(
         $renutilTargetVersion,
         false,
@@ -447,7 +447,7 @@ proc build*(
 
   if config["build"]["android_aab"].getBool():
     echo "Building Android AAB package."
-    if renutilTargetVersion >= newVersion(7, 4, 9):
+    if not renutilTargetVersion.isLessThan(newVersion(7, 4, 9)):
       launch(
         $renutilTargetVersion,
         false,
