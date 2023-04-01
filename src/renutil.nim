@@ -94,43 +94,43 @@ proc getExe*(version: Version, registry: string): (string, string) =
       exe = "python.exe"
       case hostCPU:
         of "amd64":
-          if version < newVersion(7, 4, 0): # Pre-v8 strain
+          if version.isLessThan(newVersion(7, 4, 0)): # Pre-v8 strain
             arch = "windows-x86_64"
-          elif version < newVersion(8, 0, 0): # Python 2 strain
+          elif version.isLessThan(newVersion(8, 0, 0)): # Python 2 strain
             arch = "py2-windows-x86_64"
           else: # Python 3 strain
             arch = "py3-windows-x86_64"
         else:
-          if version < newVersion(7, 4, 0): # Pre-v8 strain
+          if version.isLessThan(newVersion(7, 4, 0)): # Pre-v8 strain
             arch = "windows-i686"
-          elif version < newVersion(8, 0, 0): # Python 2 strain
+          elif version.isLessThan(newVersion(8, 0, 0)): # Python 2 strain
             arch = "py2-windows-i686"
           else: # Python 3 strain
             arch = "py3-windows-i686"
     of "linux":
       case hostCPU:
         of "amd64":
-          if version < newVersion(7, 4, 0): # Pre-v8 strain
+          if version.isLessThan(newVersion(7, 4, 0)): # Pre-v8 strain
             arch = "linux-x86_64"
-          elif version < newVersion(8, 0, 0): # Python 2 strain
+          elif version.isLessThan(newVersion(8, 0, 0)): # Python 2 strain
             arch = "py2-linux-x86_64"
           else: # Python 3 strain
             arch = "py3-linux-x86_64"
         else:
-          if version < newVersion(7, 4, 0): # Pre-v8 strain
+          if version.isLessThan(newVersion(7, 4, 0)): # Pre-v8 strain
             arch = "linux-i686"
-          elif version < newVersion(8, 0, 0): # Python 2 strain
+          elif version.isLessThan(newVersion(8, 0, 0)): # Python 2 strain
             arch = "py2-linux-i686"
           else: # Python 3 strain
             arch = "py3-linux-i686"
     of "macosx":
-      if version < newVersion(7, 4, 0): # Pre-v8 strain
+      if version.isLessThan(newVersion(7, 4, 0)): # Pre-v8 strain
         arch = "darwin-x86_64"
-      elif version <= newVersion(7, 4, 11): # Weird naming scheme change just for these versions
+      elif not version.isGreaterThan(newVersion(7, 4, 11)): # Weird naming scheme change just for these versions
         arch = "mac-x86_64"
-      elif version < newVersion(8, 0, 0): # Python 2 strain
+      elif version.isLessThan(newVersion(8, 0, 0)): # Python 2 strain
         arch = "py2-mac-x86_64"
-      elif version <= newVersion(8, 0, 3): # Python 3 strain with weird naming scheme
+      elif not version.isGreaterThan(newVersion(8, 0, 3)): # Python 3 strain with weird naming scheme
         arch = "py3-mac-x86_64"
       else: # Python 3 strain with universal naming scheme
         arch = "py3-mac-universal"
