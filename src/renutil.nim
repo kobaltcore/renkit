@@ -403,7 +403,7 @@ proc install*(
   # TODO: tweak gradle.properties RAM allocation
 
   echo "Installing RAPT"
-  if version >= newVersion(7, 5, 0):
+  if not version.isLessThan(newVersion(7, 5, 0)):
     # in versions above 7.5.0, the RAPT installer tries to import renpy.compat
     # this is not in the path by default, and since PYTHONPATH is ignored, we
     # symlink it instead to make it visible during installation.
@@ -443,7 +443,7 @@ proc install*(
       )
   discard execCmd(&"{sdkmanagerPath} 'build-tools;29.0.2'")
 
-  if version >= newVersion(8, 0, 0):
+  if not version.isLessThan(newVersion(8, 0, 0)):
     echo "Increasing default pickle protocol from 2 to 5"
     let pickleFileSource = joinPath(registryPath, $version, "renpy", "compat", "pickle.py")
     let pickleFileTarget = joinPath(registryPath, $version, "renpy", "compat", "pickle.py.new")
