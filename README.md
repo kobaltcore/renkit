@@ -26,7 +26,7 @@ brew install renkit --no-quarantine
 ### wget (Linux / macOS)
 
 ```bash
-wget -qO- https://github.com/kobaltcore/renkit/releases/download/v2.4.0/renkit-linux-amd64.zip | tar xz
+wget -qO- https://github.com/kobaltcore/renkit/releases/download/v3.2.0/renkit-linux-amd64.tar.gz | tar xz
 ```
 
 ### Manual (Linux / Windows / macOS)
