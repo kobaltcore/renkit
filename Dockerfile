@@ -1,5 +1,7 @@
 # build for a specific version of Ren'Py with:
-# docker build . --tag renpy:8.0.0 --build-arg renpy_version=8.0.0
+# docker build . --tag renpy:8.0.3 --build-arg renpy_version=8.0.3
+# to run commands:
+# docker run --rm -it --volume /local/project/path:/project renpy:8.0.3 'renutil launch -v 8.0.3 --headless -d -a "/project compile"'
 
 FROM --platform=linux/x86_64 openjdk:8-jdk-slim-bullseye
 ARG renpy_version=8.0.3
@@ -9,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # install dependencies
 RUN apt-get update && \
-    apt-get install -y curl wget && \
+    apt-get install -y curl wget libgl1 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install renkit tools
