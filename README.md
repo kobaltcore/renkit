@@ -172,7 +172,7 @@ Each path may specify the following properties:
 - `recursive`: Whether to scan the given directory recursively or not. Defaults to `true`. If not recursive, will only take the images directly in the given directory.
 - `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites.
 
-The image format to use may be specified at the task-level using the `format` key, which may be either `webp` (default) or `avif`.
+The image format to use may be specified at the task-level using the `format` key, which may be either `webp` (default) or `avif`. Do note that AVIF is only supported in Ren'Py `>=8.1.0`.
 
 #### `build`
 Specifies which distributions to build. Each of these keys may have a value of `true` or `false`.
@@ -270,19 +270,30 @@ where subcommand syntaxes are as follows:
 
 ## renotize
 
-### Writing a config file
-renotize uses a TOML file for configuration to supply the information required to sign apps for macOS. An empty template is provided in this repository under [docs/renotize.toml](docs/renotize.toml).
+### Acquiring notarization certificates
+renotize requires a few pieces of information to be able to notarize your application. These are:
+- `bundle_identifier`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
+- `key_file`: The path to the private key file for your Developer Certificate. This is typically a `.pem` file.
+- `cert_file`: The path to the public certificate file for your Developer Certificate. This is typically a `.cer` file.
+- `app_store_key_file`: The path to the combined key file for your App Store connection. This is typically a `.json` file.
+- `json_bundle_file`: `renotize`'s custom certificate format which bundles the above three certificates into one file for easier consumption by the program.
 
-It consists of the following keys:
-- `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
-- `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
-- `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
-- `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
-- `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
+It is required to either supply `key_file`, `cert_file` and `app_store_key_file` **or** `json_bundle_file`. If you supply the latter, the former will be ignored.
+
+`renotize` provides a `provision` command which will guide you through the process of acquiring the required certificates step by step. It will also generate a `renotize.json` file which you can then pass to `renotize` as the `json_bundle_file` parameter.
+
+> <picture>
+>   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/info.svg">
+>   <img alt="Info" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/info.svg">
+> </picture><br>
+>
+> Note that for the provisioning process to work, your shell must have access to the `openssl` command.
 
 ### Fully notarize a freshly-generated .app bundle
 ```bash
-renotize full_run -i ~/out/my-project.zip -c my-config.toml
+renotize full-run -i ~/out/my-project.zip -b com.example.mygame -k certificates/private-key.pem -c certificates/developerID_application.cer -a certificates/app-store-key.json
+# alternatively, using the combined json bundle
+renotize full-run -i ~/out/my-project.zip -b com.example.mygame -j certificates/renotize.json
 ```
 
 ### Full Usage
