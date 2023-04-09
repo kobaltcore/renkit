@@ -99,7 +99,7 @@ proc taskPostNotarize*(
   if files.len != 1:
     echo "Could not find macOS ZIP file."
     quit(1)
-  fullRun(
+  fullRunCli(
     files[0],
     config{"tasks", "notarize", "bundle_identifier"}.getStr(),
     config{"tasks", "notarize", "key_file"}.getStr(),
