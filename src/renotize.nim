@@ -60,7 +60,7 @@ proc provision*() =
   echo "4. Select 'csr.pem' using the file picker"
   echo "5. Click 'Continue'"
   echo "6. Click the 'Download' button to download your certificate"
-  echo "8. Save the certificate next to the private-key.pem and csr.pem files"
+  echo "7. Save the certificate next to the private-key.pem and csr.pem files"
 
   echo "Press 'Enter' when you have saved the certificate"
   discard readLine(stdin)
@@ -91,9 +91,9 @@ proc provision*() =
   if keyId.len == 0:
     echo "Key ID cannot be empty"
     quit(1)
-  echo "7. Next to the entry of the newly-created key in the list, click on 'Download API Key'"
-  echo "8. In the following pop-up, Click on 'Download'"
-  echo "10. Save the downloaded .p8 file next to the private-key.pem and csr.pem files"
+  echo "9. Next to the entry of the newly-created key in the list, click on 'Download API Key'"
+  echo "10. In the following pop-up, Click on 'Download'"
+  echo "11. Save the downloaded .p8 file next to the private-key.pem and csr.pem files"
 
   echo "Press 'Enter' when you have saved the certificate"
   discard readLine(stdin)
@@ -119,7 +119,7 @@ proc provision*() =
   }
   writeFile("renotize.json", jsonData.pretty())
 
-  echo "You can also use this file to notarize your app:"
+  echo "You can also use this single file to notarize your app:"
   echo "  - renotize.json"
 
   echo "You can supply the contents of this file via the environment variable RENOTIZE_JSON"
