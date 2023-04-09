@@ -2,3 +2,4 @@ bundle_identifier = "com.my-game" # the bundle ID of your came, typically in rev
 key_file = "certificates/private-key.pem" # the path to the private key file generated during the provisioning process
 cert_file = "certificates/developerID_application.cer" # the path to the Apple-generated certificate file generated during the provisioning process
 app_store_key_file = "certificates/app-store-key.json" # the path to the combined App Store key file generated during the provisioning process
+json_bundle_file = "certificates/renotize.json" # the path to the combined certificate file. replaces the key, cert and app store files above
