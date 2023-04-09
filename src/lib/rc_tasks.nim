@@ -104,7 +104,8 @@ proc taskPostNotarize*(
     config{"tasks", "notarize", "bundle_identifier"}.getStr(),
     config{"tasks", "notarize", "key_file"}.getStr(),
     config{"tasks", "notarize", "cert_file"}.getStr(),
-    config{"tasks", "notarize", "app_store_key_file"}.getStr()
+    config{"tasks", "notarize", "app_store_key_file"}.getStr(),
+    config{"tasks", "notarize", "json_bundle_file"}.getStr(),
   )
 
 proc taskPreKeystore*(
