@@ -18,6 +18,8 @@ type
   TaskContext* = object
     webpPath*: string
     cavifPath*: string
+    gamePath*: string
+    outputPath*: string
 
   Task* = object
     name*: string
@@ -116,11 +118,25 @@ proc taskPreKeystore*(
 ) =
   let
     version = config{"renutil", "version"}.getStr()
+    version_parsed = parseVersion(config{"renutil", "version"}.getStr())
     registry = config{"renutil", "registry"}.getStr()
+
+  var
+    keystorePath: string
+    keystorePathBackup: string
+    keystoreBundlePath: string
+    keystoreBundlePathBackup: string
+
+  if not version_parsed.isLessThan(newVersion(7, 6, 0)) or not version_parsed.isLessThan(newVersion(8, 1, 0)):
     keystorePath = joinPath(registry, version, "rapt", "android.keystore")
     keystorePathBackup = joinPath(registry, version, "rapt", "android.keystore.original")
     keystoreBundlePath = joinPath(registry, version, "rapt", "bundle.keystore")
     keystoreBundlePathBackup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+  else:
+    keystorePath = joinPath(ctx.gamePath, "android.keystore")
+    keystorePathBackup = joinPath(ctx.gamePath, "android.keystore.original")
+    keystoreBundlePath = joinPath(ctx.gamePath, "bundle.keystore")
+    keystoreBundlePathBackup = joinPath(ctx.gamePath, "bundle.keystore.original")
 
   var keystore = getEnv("RC_KEYSTORE_APK")
 
@@ -162,11 +178,25 @@ proc taskPostKeystore*(
 ) =
   let
     version = config{"renutil", "version"}.getStr()
+    version_parsed = parseVersion(config{"renutil", "version"}.getStr())
     registry = config{"renutil", "registry"}.getStr()
+
+  var
+    keystorePath: string
+    keystorePathBackup: string
+    keystoreBundlePath: string
+    keystoreBundlePathBackup: string
+
+  if not version_parsed.isLessThan(newVersion(7, 6, 0)) or not version_parsed.isLessThan(newVersion(8, 1, 0)):
     keystorePath = joinPath(registry, version, "rapt", "android.keystore")
     keystorePathBackup = joinPath(registry, version, "rapt", "android.keystore.original")
     keystoreBundlePath = joinPath(registry, version, "rapt", "bundle.keystore")
     keystoreBundlePathBackup = joinPath(registry, version, "rapt", "bundle.keystore.original")
+  else:
+    keystorePath = joinPath(ctx.gamePath, "android.keystore")
+    keystorePathBackup = joinPath(ctx.gamePath, "android.keystore.original")
+    keystoreBundlePath = joinPath(ctx.gamePath, "bundle.keystore")
+    keystoreBundlePathBackup = joinPath(ctx.gamePath, "bundle.keystore.original")
 
   if fileExists(keystorePathBackup):
     moveFile(keystorePathBackup, keystorePath)

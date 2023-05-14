@@ -414,7 +414,7 @@ proc build*(
     echo &"Installing Ren'Py {renutilTargetVersion}"
     install($renutilTargetVersion, registryPath)
 
-  let ctx = TaskContext(webpPath: webpPath, cavifPath: cavifPath)
+  let ctx = TaskContext(webpPath: webpPath, cavifPath: cavifPath, gamePath: inputDir, outputPath: outputDir)
 
   for task in tasks["pre"]:
     if (activeBuilds * task.builds.toHashSet).len == 0:
