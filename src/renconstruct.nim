@@ -72,8 +72,8 @@ if pythonPath == "":
       p = execCmdEx(&"python3.exe -c \"{findLibpython}\"")
     else:
       p = execCmdEx(&"python3 -c \"{findLibpython}\"")
-    if p.exitCode == 0:
-      pythonPath = p.output[0..^2]
+  if p.exitCode == 0:
+    pythonPath = p.output[0..^2]
 
 let hasPython = try:
   pyInitLibPath(pythonPath)
