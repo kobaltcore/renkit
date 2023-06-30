@@ -238,9 +238,9 @@ proc build*(
           if py.hasattr(class, "validate_config").to(bool):
             try:
               if subConfig == nil:
-                config{"tasks", configName} = class.validateConfig(%*{}).to(JsonNode)
+                config{"tasks", configName} = class.validate_config(%*{}).to(JsonNode)
               else:
-                config{"tasks", configName} = class.validateConfig(subConfig).to(JsonNode)
+                config{"tasks", configName} = class.validate_config(subConfig).to(JsonNode)
             except CatchableError:
               echo &"Failed to validate config for task {name}: {getCurrentExceptionMsg()}"
               quit(1)
@@ -423,7 +423,7 @@ proc build*(
     if task.call != nil:
       task.call(ctx, config, inputDir, outputDir)
     else:
-      discard task.instance.preBuild()
+      discard task.instance.pre_build()
 
   if config["build"]["android_apk"].getBool() or
     config{"build", "android"}.getBool(): # for backwards-compatibility with older config files
@@ -503,7 +503,7 @@ proc build*(
     if task.call != nil:
       task.call(ctx, config, inputDir, outputDir)
     else:
-      discard task.instance.postBuild()
+      discard task.instance.post_build()
 
 when isMainModule:
   try:
