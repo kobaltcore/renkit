@@ -357,7 +357,10 @@ proc install*(
     echo "Generating Application Keystore"
     let javaHome = getEnv("JAVA_HOME")
     if javaHome == "":
-      echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
+      if version.isLessThan(newVersion(8, 2, 0)):
+        echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
+      else:
+        echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 21."
       quit(1)
     let keytoolPath = quoteShell(joinPath(javaHome, "bin", "keytool"))
     let dname = "renutil"
@@ -367,7 +370,10 @@ proc install*(
     echo "Generating Bundle Keystore"
     let javaHome = getEnv("JAVA_HOME")
     if javaHome == "":
-      echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
+      if version.isLessThan(newVersion(8, 2, 0)):
+        echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 8."
+      else:
+        echo "JAVA_HOME is empty. Please check if you need to install OpenJDK 21."
       quit(1)
     let keytoolPath = quoteShell(joinPath(javaHome, "bin", "keytool"))
     let dname = "renutil"
