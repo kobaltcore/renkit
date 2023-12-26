@@ -30,8 +30,8 @@ jobs:
       - name: Build Project
         run: |
           export PATH=/home/runner/.nimble/bin:$PATH
-          nimble build_linux_amd64
-          nimble build_windows_amd64
+          nimble -y build_linux_amd64
+          nimble -y build_windows_amd64
       - name: Archive Artifacts
         run: |
           tar czf renkit-linux-amd64.tar.gz -C bin/amd64/linux/ .
@@ -51,8 +51,8 @@ jobs:
           brew install nim
       - name: Build Project
         run: |
-          nimble build_macos_amd64
-          nimble build_macos_arm64
+          nimble -y build_macos_amd64
+          nimble -y build_macos_arm64
       - name: Archive Artifacts
         run: |
           tar czf renkit-macos-amd64.tar.gz -C bin/amd64/macos/ .
