@@ -1,0 +1,1 @@
+--passC:"-Wno-error=incompatible-function-pointer-types"
