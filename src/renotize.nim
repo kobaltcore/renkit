@@ -252,10 +252,11 @@ proc fullRunCli*(inputFile: string, bundleIdentifier = "", keyFile = "", certFil
       appStoreKeyFileInt = getEnv("RN_APP_STORE_KEY_FILE")
     else:
       appStoreKeyFileInt = appStoreKeyFile
-    if bundleIdentifier == "":
-      bundleIdentifierInt = getEnv("RN_BUNDLE_IDENTIFIER")
-    else:
-      bundleIdentifierInt = bundleIdentifier
+
+  if bundleIdentifier == "":
+    bundleIdentifierInt = getEnv("RN_BUNDLE_IDENTIFIER")
+  else:
+    bundleIdentifierInt = bundleIdentifier
 
   if keyFileInt == "" or certFileInt == "" or appStoreKeyFileInt == "" or bundleIdentifierInt == "":
     echo "No configuration data was found via command line arguments or environment."
