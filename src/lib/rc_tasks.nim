@@ -127,7 +127,7 @@ proc taskPreKeystore*(
     keystoreBundlePath: string
     keystoreBundlePathBackup: string
 
-  if not version_parsed.isLessThan(newVersion(7, 6, 0)) or not version_parsed.isLessThan(newVersion(8, 1, 0)):
+  if version_parsed.isLessThan(newVersion(7, 6, 0)) or version_parsed.isLessThan(newVersion(8, 1, 0)):
     keystorePath = joinPath(registry, version, "rapt", "android.keystore")
     keystorePathBackup = joinPath(registry, version, "rapt", "android.keystore.original")
     keystoreBundlePath = joinPath(registry, version, "rapt", "bundle.keystore")
@@ -147,7 +147,8 @@ proc taskPreKeystore*(
     echo "Keystore override was requested, but no APK keystore could be found."
     quit(1)
 
-  if not fileExists(keystorePathBackup):
+  if fileExists(keystorePath) and not fileExists(keystorePathBackup):
+    echo &"Backing up keystore {keystorePath} to {keystorePathBackup}"
     moveFile(keystorePath, keystorePathBackup)
 
   let streamOutKsApk = newFileStream(keystorePath, fmWrite)
@@ -163,9 +164,11 @@ proc taskPreKeystore*(
     echo "Keystore override was requested, but no AAB keystore could be found."
     quit(1)
 
-  if not fileExists(keystoreBundlePathBackup):
+  if fileExists(keystoreBundlePath) and not fileExists(keystoreBundlePathBackup):
+    echo &"Backing up keystore bundle {keystoreBundlePath} to {keystoreBundlePathBackup}"
     moveFile(keystoreBundlePath, keystoreBundlePathBackup)
 
+  echo &"Writing keystore bundle to {keystoreBundlePath}"
   let streamOutKsBundle = newFileStream(keystoreBundlePath, fmWrite)
   streamOutKsBundle.write(decode(keystore))
   streamOutKsBundle.close()
