@@ -237,8 +237,22 @@ proc fullRunCli*(inputFile: string, bundleIdentifier = "", keyFile = "", certFil
   if renotizeJsonRaw != "":
     let renotizeJson = renotizeJsonRaw.parseJson()
     keyFileInt = renotizeJson["privateKey"].getStr().decode()
+
+    let tmpKeyFile = getTempDir() / "private-key.pem"
+    writeFile(tmpKeyFile, keyFileInt)
+    keyFileInt = tmpKeyFile
+
     certFileInt = renotizeJson["certificate"].getStr().decode()
+
+    let tmpCertFile = getTempDir() / "certificate.cer"
+    writeFile(tmpCertFile, certFileInt)
+    certFileInt = tmpCertFile
+
     appStoreKeyFileInt = renotizeJson["appStoreKey"].getStr().decode()
+
+    let tmpAppStoreKeyFile = getTempDir() / "app-store-key.json"
+    writeFile(tmpAppStoreKeyFile, appStoreKeyFileInt)
+    appStoreKeyFileInt = tmpAppStoreKeyFile
   else:
     if keyFile == "":
       keyFileInt = getEnv("RN_KEY_FILE")
