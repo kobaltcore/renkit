@@ -70,6 +70,15 @@ proc provision*() =
     echo "No .cer file found in current directory"
     quit(1)
 
+  var certFile = ""
+  for f in certFiles:
+    if lastPathPart(f) == "developerID_application.cer":
+      certFile = f
+      break
+  if certFile == "":
+    echo "No developerID_application.cer file found in current directory"
+    quit(1)
+
   echo "This next step should be completed in the browser."
   echo "Press 'Enter' to open the browser and continue."
   discard readLine(stdin)
@@ -108,13 +117,13 @@ proc provision*() =
   echo "Success!"
   echo "You can now sign your app using these two files:"
   echo "  - private-key.pem"
-  echo &"  - {certFiles[0]}"
+  echo &"  - {certFile}"
   echo "You can also use this file to notarize your app:"
   echo "  - app-store-key.json"
 
   let jsonData = %*{
     "privateKey": readFile("private-key.pem").encode(),
-    "certificate": readFile(certFiles[0]).encode(),
+    "certificate": readFile(certFile).encode(),
     "appStoreKey": readFile("app-store-key.json").encode()
   }
   writeFile("renotize.json", jsonData.pretty())
