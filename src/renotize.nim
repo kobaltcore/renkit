@@ -162,7 +162,7 @@ proc signApp*(inputFile: string, keyFile: string, certFile: string) =
 
   writeFile("entitlements.plist", entitlements)
 
-  discard execCmd(&"{rcodesignPath} sign --code-signature-flags runtime -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
+  discard execCmd(&"{rcodesignPath} sign --code-signature-flags runtime --code-signature-flags Contents/MacOS/zsync:runtime --code-signature-flags Contents/MacOS/zsyncmake:runtime --code-signature-flags Contents/MacOS/python:runtime --code-signature-flags Contents/MacOS/pythonw:runtime -e entitlements.plist --pem-source {keyFile} --der-source {certFile} {inputFile}")
 
   removeFile("entitlements.plist")
 
