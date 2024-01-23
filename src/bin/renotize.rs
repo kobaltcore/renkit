@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use renkit::renotize::unpack_app;
+use renkit::renotize::{notarize_app, pack_dmg, sign_app, unpack_app};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -24,50 +24,39 @@ enum Commands {
     /// Signs a .app bundle with the given Developer Identity.
     SignApp {
         input_file: PathBuf,
-        #[arg(short = 'k', long)]
         key_file: PathBuf,
-        #[arg(short = 'c', long)]
         cert_file: PathBuf,
     },
     /// Notarizes a .app bundle with the given Developer Account and bundle ID.
     NotarizeApp {
         input_file: PathBuf,
-        #[arg(short = 'k', long)]
         app_store_key_file: PathBuf,
     },
     /// Packages a .app bundle into a .dmg file.
     PackDmg {
         input_file: PathBuf,
-        #[arg(short = 'o', long)]
         output_file: PathBuf,
-        #[arg(short = 'v', long)]
         volume_name: Option<String>,
     },
     /// Signs a .dmg file with the given Developer Identity.
     SignDmg {
         input_file: PathBuf,
-        #[arg(short = 'k', long)]
         key_file: PathBuf,
-        #[arg(short = 'c', long)]
         cert_file: PathBuf,
     },
     /// Notarizes a .dmg file with the given Developer Account and bundle ID.
     NotarizeDmg {
         input_file: PathBuf,
-        #[arg(short = 'k', long)]
         app_store_key_file: PathBuf,
     },
     /// Checks the status of a notarization operation given its UUID.
     Status {
-        #[arg(short = 'u', long)]
         uuid: String,
-        #[arg(short = 'k', long)]
         app_store_key_file: PathBuf,
     },
     /// Fully notarize a given .app bundle, creating a signed and notarized artifact for distribution.
     FullRun {
         input_file: PathBuf,
-        #[arg(short = 'b', long)]
         bundle_id: String,
         #[arg(short = 'k', long)]
         key_file: PathBuf,
@@ -80,8 +69,7 @@ enum Commands {
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -90,21 +78,21 @@ async fn main() -> Result<()> {
             input_file,
             output_dir,
             bundle_id,
-        } => unpack_app(input_file, output_dir, bundle_id).await?,
+        } => unpack_app(input_file, output_dir, bundle_id)?,
         Commands::SignApp {
             input_file,
             key_file,
             cert_file,
-        } => {}
+        } => sign_app(input_file, key_file, cert_file)?,
         Commands::NotarizeApp {
             input_file,
             app_store_key_file,
-        } => {}
+        } => notarize_app(input_file, app_store_key_file)?,
         Commands::PackDmg {
             input_file,
             output_file,
             volume_name,
-        } => {}
+        } => pack_dmg(input_file, output_file, volume_name)?,
         Commands::SignDmg {
             input_file,
             key_file,

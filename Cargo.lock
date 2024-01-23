@@ -3764,6 +3764,7 @@ dependencies = [
  "libwebp-sys",
  "lol_html",
  "num_cpus",
+ "plist",
  "ravif",
  "regex",
  "reqwest",
