@@ -105,6 +105,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
     steps:
+      - uses: ilammy/setup-nasm@v1
       - uses: actions/checkout@v4
         with:
           submodules: recursive
