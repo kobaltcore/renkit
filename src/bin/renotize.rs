@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use renkit::renotize::{notarize_app, pack_dmg, sign_app, unpack_app};
+use renkit::renotize::{
+    full_run, notarize_app, notarize_dmg, pack_dmg, sign_app, sign_dmg, status, unpack_app,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -58,14 +60,10 @@ enum Commands {
     FullRun {
         input_file: PathBuf,
         bundle_id: String,
-        #[arg(short = 'k', long)]
         key_file: PathBuf,
-        #[arg(short = 'c', long)]
         cert_file: PathBuf,
-        #[arg(short = 'a', long)]
         app_store_key_file: PathBuf,
-        #[arg(short = 'j', long)]
-        json_bundle_file: Option<PathBuf>,
+        // json_bundle_file: Option<PathBuf>,
     },
 }
 
@@ -97,23 +95,30 @@ fn main() -> Result<()> {
             input_file,
             key_file,
             cert_file,
-        } => {}
+        } => sign_dmg(input_file, key_file, cert_file)?,
         Commands::NotarizeDmg {
             input_file,
             app_store_key_file,
-        } => {}
+        } => notarize_dmg(input_file, app_store_key_file)?,
         Commands::Status {
             uuid,
             app_store_key_file,
-        } => {}
+        } => status(uuid, app_store_key_file)?,
         Commands::FullRun {
             input_file,
             bundle_id,
             key_file,
             cert_file,
             app_store_key_file,
-            json_bundle_file,
-        } => {}
+            // json_bundle_file,
+        } => full_run(
+            input_file,
+            bundle_id,
+            key_file,
+            cert_file,
+            app_store_key_file,
+            // json_bundle_file,
+        )?,
     }
 
     Ok(())

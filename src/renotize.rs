@@ -8,10 +8,32 @@ use apple_codesign::{
     CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope, SigningSettings,
     UnifiedSigner,
 };
+use itertools::Itertools;
 use plist::Value;
 use std::{fs, io::Cursor, path::PathBuf, process::Command, time::Duration};
 
+const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 const ENTITLEMENTS_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"#;
+
+fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
+    let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
+
+    println!("Uploading file to notarization service");
+    let upload = notarizer.notarize_path(&input_file, Some(Duration::from_secs(600)))?;
+
+    match upload {
+        NotarizationUpload::UploadId(data) => {
+            println!("Notarization UUID: {}", data);
+        }
+        NotarizationUpload::NotaryResponse(data) => {
+            println!("Notarization UUID: {}", data.data.id);
+            let stapler = Stapler::new()?;
+            stapler.staple_path(&input_file)?;
+        }
+    };
+
+    Ok(())
+}
 
 pub fn unpack_app(input_file: &PathBuf, output_dir: &PathBuf, bundle_id: &String) -> Result<()> {
     if output_dir.exists() {
@@ -69,6 +91,8 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
         println!("Automatically setting team ID from signing certificate: {team_id}");
     }
 
+    settings.set_time_stamp_url(APPLE_TIMESTAMP_URL)?;
+
     settings.set_entitlements_xml(SettingsScope::Main, ENTITLEMENTS_PLIST)?;
 
     settings.set_code_signature_flags(SettingsScope::Main, CodeSignatureFlags::RUNTIME);
@@ -88,27 +112,13 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
     let signer = UnifiedSigner::new(settings);
 
     println!("Signing bundle at {:?}", input_file);
-    signer.sign_path(input_file, "out/signed.app")?;
+    signer.sign_path_in_place(input_file)?;
 
     Ok(())
 }
 
 pub fn notarize_app(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
-    let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
-
-    let upload = notarizer.notarize_path(&input_file, Some(Duration::from_secs(600)))?;
-
-    match upload {
-        NotarizationUpload::UploadId(_) => {
-            panic!("NotarizationUpload::UploadId should not be returned if we waited successfully");
-        }
-        NotarizationUpload::NotaryResponse(_) => {
-            let stapler = Stapler::new()?;
-            stapler.staple_path(&input_file)?;
-        }
-    };
-
-    Ok(())
+    notarize_file(input_file, app_store_key_file)
 }
 
 pub fn pack_dmg(
@@ -152,5 +162,99 @@ pub fn pack_dmg(
         anyhow::bail!("Unable to create DMG.");
     }
 
+    Ok(())
+}
+
+pub fn sign_dmg(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
+    let pem_key = PemSigningKey {
+        paths: vec![key_file.to_path_buf()],
+    };
+
+    let der_key = CertificateDerSigningKey {
+        paths: vec![cert_file.to_path_buf()],
+    };
+
+    let mut sign_config = SignConfig::default();
+    sign_config.signer.pem_path_key = Some(pem_key);
+    sign_config.signer.certificate_der_key = Some(der_key);
+
+    let mut settings = SigningSettings::default();
+
+    let certs = sign_config.signer.resolve_certificates(false)?;
+    certs.load_into_signing_settings(&mut settings)?;
+
+    if let Some(team_id) = settings.set_team_id_from_signing_certificate() {
+        println!("Automatically setting team ID from signing certificate: {team_id}");
+    }
+
+    let signer = UnifiedSigner::new(settings);
+
+    signer.sign_path_in_place(input_file)?;
+
+    Ok(())
+}
+
+pub fn notarize_dmg(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
+    notarize_file(input_file, app_store_key_file)
+}
+
+pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
+    let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
+
+    let log = match notarizer.fetch_notarization_log(&uuid) {
+        Ok(log) => log,
+        Err(_) => {
+            println!("Status not available yet.");
+            return Ok(());
+        }
+    };
+
+    let status = match log.get("status") {
+        Some(status) => status.as_str().unwrap(),
+        None => "unknown",
+    };
+    println!("Status: {status}");
+
+    match log.get("issues") {
+        Some(issues) => {
+            let issues = issues.as_array().unwrap().iter().map(|issue| {
+                let issue = issue.as_object().unwrap();
+                let message = issue.get("message").unwrap().as_str().unwrap();
+                let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
+                let path = issue.get("path").unwrap().as_str().unwrap();
+                (message, doc_url, path)
+            });
+
+            for (key, group) in &issues.group_by(|(message, _, _)| *message) {
+                println!("Error: {}", key);
+                for (i, (_, doc_url, path)) in group.enumerate() {
+                    if i == 0 {
+                        println!("Documentation: {}\nAffected files:", doc_url);
+                    }
+                    println!("  - {}", path);
+                }
+            }
+        }
+        None => {}
+    };
+
+    Ok(())
+}
+
+pub fn full_run(
+    input_file: &PathBuf,
+    bundle_id: &String,
+    key_file: &PathBuf,
+    cert_file: &PathBuf,
+    app_store_key_file: &PathBuf,
+    // json_bundle_file: &Option<PathBuf>,
+) -> Result<()> {
+    let output_dir = input_file.with_extension("");
+    // unpack_app(input_file, &output_dir, bundle_id)?;
+    // sign_app(&output_dir, key_file, cert_file)?;
+    // notarize_app(&output_dir, app_store_key_file)?;
+    // pack_dmg(&output_dir, &input_file, &None)?;
+    // sign_dmg(&input_file, key_file, cert_file)?;
+    // notarize_dmg(&input_file, app_store_key_file)?;
     Ok(())
 }

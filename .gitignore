@@ -7,3 +7,6 @@ extra/
 target/
 __pycache__/
 *.py[cod]
+*.zip
+*.dmg
+*.app
