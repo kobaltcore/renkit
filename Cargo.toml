@@ -35,6 +35,10 @@ indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
 [profile.dist]
 inherits = "release"
 lto = "thin"
+strip = true
+
+[profile.release]
+strip = true
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
