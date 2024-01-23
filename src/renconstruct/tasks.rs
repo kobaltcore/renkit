@@ -2,6 +2,7 @@ use super::config::{
     ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, NotarizeOptions,
 };
 use crate::common::Version;
+use crate::renotize::full_run;
 use anyhow::Result;
 use base64::prelude::*;
 use command_executor::command::Command;
@@ -321,5 +322,41 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
 }
 
 pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Result<()> {
+    // find path ending in '-mac.zip'
+    let zip_path = fs::read_dir(&ctx.input_dir)?.find_map(|entry| {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.extension().unwrap() == "zip" {
+            if path
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .ends_with("-mac")
+            {
+                Some(path)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    });
+
+    match zip_path {
+        Some(path) => {
+            full_run(
+                &path,
+                &options.bundle_id,
+                &options.key_file,
+                &options.cert_file,
+                &options.app_store_key_file,
+            )?;
+        }
+        None => {
+            return Err(anyhow!("Could not find mac zip file."));
+        }
+    }
+
     Ok(())
 }

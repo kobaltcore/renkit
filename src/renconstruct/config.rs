@@ -67,8 +67,10 @@ pub struct ConvertImagesOptions {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NotarizeOptions {
-    pub bundle_identifier: String,
-    pub json_bundle_file: String,
+    pub bundle_id: String,
+    pub key_file: PathBuf,
+    pub cert_file: PathBuf,
+    pub app_store_key_file: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize)]
