@@ -428,6 +428,7 @@ pub async fn install(
         base_path.join("rapt/project/gradlew"),
     ];
 
+    #[cfg(target_family = "unix")]
     for path in paths.iter().filter(|p| p.exists()) {
         println!(
             "Setting executable permissions for {}.",
