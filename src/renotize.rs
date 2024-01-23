@@ -64,7 +64,6 @@ pub fn unpack_app(
                         "CFBundleIdentifier".to_string(),
                         plist::Value::String(bundle_id.clone()),
                     );
-                    println!("Writing new Info.plist to {:?}", info_plist_path);
                     Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
                 }
             }
@@ -94,7 +93,7 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
     certs.load_into_signing_settings(&mut settings)?;
 
     if let Some(team_id) = settings.set_team_id_from_signing_certificate() {
-        println!("Automatically setting team ID from signing certificate: {team_id}");
+        println!("Inferred team ID: {team_id}");
     }
 
     settings.set_time_stamp_url(APPLE_TIMESTAMP_URL)?;
