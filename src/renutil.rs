@@ -4,6 +4,7 @@ use anyhow::Result;
 use lol_html::{element, HtmlRewriter, Settings};
 use std::env;
 use std::io::Cursor;
+#[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
@@ -434,9 +435,7 @@ pub async fn install(
             "Setting executable permissions for {}.",
             path.to_string_lossy()
         );
-        let mut perms = fs::metadata(path)?.permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(path, perms)?;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
     }
 
     let original_dir = env::current_dir()?;
