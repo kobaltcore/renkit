@@ -433,7 +433,9 @@ pub async fn install(
             "Setting executable permissions for {}.",
             path.to_string_lossy()
         );
-        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+        let mut perms = fs::metadata(path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(path, perms)?;
     }
 
     let original_dir = env::current_dir()?;
