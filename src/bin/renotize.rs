@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use renkit::renotize::{
-    full_run, notarize_app, notarize_dmg, pack_dmg, sign_app, sign_dmg, status, unpack_app,
+    full_run, notarize_app, notarize_dmg, pack_dmg, provision, sign_app, sign_dmg, status,
+    unpack_app,
 };
 
 #[derive(Parser)]
@@ -70,7 +71,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Provision => {}
+        Commands::Provision => provision()?,
         Commands::UnpackApp {
             input_file,
             output_dir,

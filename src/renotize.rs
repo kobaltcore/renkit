@@ -1,16 +1,18 @@
 use anyhow::{anyhow, Result};
 use apple_codesign::{
     cli::{
-        certificate_source::{CertificateDerSigningKey, PemSigningKey},
+        certificate_source::{CertificateDerSigningKey, CertificateSource, PemSigningKey},
         config::SignConfig,
     },
     stapling::Stapler,
-    CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope, SigningSettings,
-    UnifiedSigner,
+    AppleCodesignError, CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope,
+    SigningSettings, UnifiedSigner,
 };
 use itertools::Itertools;
 use plist::Value;
+use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 use std::{fs, io::Cursor, path::PathBuf, process::Command, time::Duration};
+use x509_certificate::X509CertificateBuilder;
 
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 const ENTITLEMENTS_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"#;
@@ -268,5 +270,174 @@ pub fn full_run(
     println!("Notarizing DMG at {:?}", dmg_path);
     notarize_dmg(&dmg_path, app_store_key_file)?;
     println!("Done!");
+    Ok(())
+}
+
+pub fn provision() -> Result<()> {
+    let cert_dir = PathBuf::from("certificates");
+    fs::create_dir_all(&cert_dir)?;
+
+    let mut rng = rand::thread_rng();
+    let priv_key = RsaPrivateKey::new(&mut rng, 2048)?;
+
+    let data = priv_key.to_pkcs1_pem(rsa::pkcs8::LineEnding::LF)?;
+    let private_key_path = cert_dir.join("private-key.pem");
+    fs::write(&private_key_path, data)?;
+
+    let pem_key = PemSigningKey {
+        paths: vec![private_key_path],
+    };
+
+    let mut cert_source = CertificateSource::default();
+    cert_source.pem_path_key = Some(pem_key);
+
+    let certs = cert_source.resolve_certificates(false)?;
+    let private_key = certs.private_key()?;
+
+    let mut builder = X509CertificateBuilder::default();
+    builder
+        .subject()
+        .append_common_name_utf8_string("Apple Code Signing CSR")
+        .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{e:?}")))?;
+
+    println!("Generating CSR. You may be prompted to enter credentials to unlock the signing key.");
+    let pem = builder
+        .create_certificate_signing_request(private_key.as_key_info_signer())?
+        .encode_pem()?;
+
+    let csr_path = cert_dir.join("csr.pem");
+
+    std::fs::write(csr_path, pem.as_bytes())?;
+
+    println!("This step should be completed in the browser.");
+    println!("Press 'Enter' to open the browser and continue.");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    webbrowser::open("https://developer.apple.com/account/resources/certificates/add")?;
+
+    println!("1. Select 'Developer ID Application' as the certificate type");
+    println!("2. Click 'Continue'");
+    println!("3. Select the G2 Sub-CA (Xcode 11.4.1 or later) Profile Type");
+    println!("4. Select 'csr.pem' using the file picker");
+    println!("5. Click 'Continue'");
+    println!("6. Click the 'Download' button to download your certificate");
+    println!("7. Save the certificate next to the private-key.pem and csr.pem files:");
+    println!(
+        "     {}/developerID_application.cer",
+        cert_dir.to_string_lossy()
+    );
+
+    println!("Press 'Enter' when you have saved the certificate");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    let cert_file = cert_dir.join("developerID_application.cer");
+    loop {
+        if cert_file.exists() {
+            break;
+        }
+        println!("Certificate not found. Press 'Enter' when you have saved the certificate.");
+        println!("Make sure to name the file 'developerID_application.cer' and save it next to the private-key.pem and csr.pem files.");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+    }
+
+    println!("Success!");
+
+    println!("This step should be completed in the browser.");
+    println!("Press 'Enter' to open the browser and continue.");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    webbrowser::open("https://appstoreconnect.apple.com/access/users")?;
+
+    println!("1. Click on 'Keys'");
+    println!(
+        "2. If this is your first time, click on 'Request Access' and wait until it is granted"
+    );
+    println!("3. Click on 'Generate API Key'");
+    println!("4. Enter a name for the key");
+    println!("5. For Access, select 'Developer'");
+    println!("6. Click on 'Generate'");
+    println!("7. Copy the Issuer ID and enter it here: ('Enter' to confirm)");
+
+    let mut issuer_id = String::new();
+
+    loop {
+        std::io::stdin().read_line(&mut issuer_id)?;
+
+        if issuer_id.len() > 1 {
+            break;
+        }
+
+        println!("Issuer ID can not be empty, please try again.");
+    }
+
+    println!("8. Copy the Key ID and enter it here: ('Enter' to confirm)");
+
+    let mut key_id = String::new();
+
+    loop {
+        std::io::stdin().read_line(&mut key_id)?;
+
+        if key_id.len() > 1 {
+            break;
+        }
+
+        println!("Key ID can not be empty, please try again.");
+    }
+
+    println!(
+        "9. Next to the entry of the newly-created key in the list, click on 'Download API Key'"
+    );
+    println!("10. In the following pop-up, Click on 'Download'");
+    println!("11. Save the downloaded .p8 file next to the private-key.pem and csr.pem files.");
+
+    let app_store_cert_path;
+
+    loop {
+        match fs::read_dir(&cert_dir)?.find_map(|entry| {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.extension().unwrap() == "p8" {
+                Some(path)
+            } else {
+                None
+            }
+        }) {
+            Some(path) => {
+                app_store_cert_path = path;
+                break;
+            }
+            None => {
+                println!("Key file not found. Press 'Enter' when you have saved the key file.");
+                println!(
+                    "Make sure to save the file next to the private-key.pem and csr.pem files."
+                );
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+            }
+        }
+    }
+
+    let unified = app_store_connect::UnifiedApiKey::from_ecdsa_pem_path(
+        &issuer_id,
+        &key_id,
+        &app_store_cert_path,
+    )?;
+
+    let app_store_key_path = cert_dir.join("app-store-key.json");
+    unified.write_json_file(app_store_key_path)?;
+
+    println!("Success!");
+    println!("You can now sign your app using these three files:");
+    println!("  - private-key.pem");
+    println!("  - app-store-key.pem");
+    println!("  - {}", cert_file.file_name().unwrap().to_string_lossy());
+
     Ok(())
 }
