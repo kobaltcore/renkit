@@ -1,0 +1,63 @@
+[package]
+name = "renkit"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/kobaltcore/renkit"
+
+[features]
+webp = ["dep:image", "dep:webp", "dep:libwebp-sys", "load_image/webp"]
+
+[dependencies]
+trauma = "2"
+home = "0.5.9"
+toml = "0.8.8"
+jwalk = "0.8.1"
+ravif = "0.11.4"
+regex = "1.10.2"
+base64 = "0.21.6"
+anyhow = "1.0.79"
+lol_html = "1.2.0"
+num_cpus = "1.16.0"
+itertools = "0.12.0"
+zip-extract = "0.1.2"
+apple-codesign = "0.26.0"
+command-executor = "0.1.1"
+reqwest = { version = "0.11.23" }
+webp = { version = "0.2.6", optional = true }
+image = { version = "0.24.7", optional = true }
+tokio = { version = "1.35.1", features = ["full"] }
+clap = { version = "4.4.13", features = ["derive"] }
+serde = { version = "1.0.195", features = ["derive"] }
+load_image = { version = "3.1.4", features = ["avif"] }
+indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
+libwebp-sys = { version = "0.9.4", features = [
+    "avx2",
+    "sse41",
+], optional = true }
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.8.0"
+# CI backends to support
+ci = ["github"]
+# The installers to generate for each app
+installers = ["shell", "powershell", "homebrew"]
+# A GitHub repo to push Homebrew formulas to
+tap = "kobaltcore/homebrew-renkit"
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
+# Publish jobs to run in CI
+publish-jobs = ["homebrew"]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
