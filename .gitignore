@@ -1,10 +1,6 @@
-cavif
-cwebp
-rcodesign
 *.psd
 certificates*/
 out/
-bin/
 cache/
 extra/
 
