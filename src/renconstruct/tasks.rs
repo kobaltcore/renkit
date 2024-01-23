@@ -155,69 +155,6 @@ impl Command for ProcessingCommand {
     }
 }
 
-/*
-fn load_rgba(data: &[u8], premultiplied_alpha: bool) -> Result<ImgVec<RGBA8>> {
-    let img = load_image::load_data(data)?.into_imgvec();
-    let mut img = match img {
-        load_image::export::imgref::ImgVecKind::RGB8(img) => {
-            img.map_buf(|buf| buf.into_iter().map(|px| px.alpha(255)).collect())
-        }
-        load_image::export::imgref::ImgVecKind::RGBA8(img) => img,
-        load_image::export::imgref::ImgVecKind::RGB16(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|px| px.map(|c| (c >> 8) as u8).alpha(255))
-                .collect()
-        }),
-        load_image::export::imgref::ImgVecKind::RGBA16(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|px| px.map(|c| (c >> 8) as u8))
-                .collect()
-        }),
-        load_image::export::imgref::ImgVecKind::GRAY8(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|g| {
-                    let c = g.0;
-                    RGBA8::new(c, c, c, 255)
-                })
-                .collect()
-        }),
-        load_image::export::imgref::ImgVecKind::GRAY16(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|g| {
-                    let c = (g.0 >> 8) as u8;
-                    RGBA8::new(c, c, c, 255)
-                })
-                .collect()
-        }),
-        load_image::export::imgref::ImgVecKind::GRAYA8(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|g| {
-                    let c = g.0;
-                    RGBA8::new(c, c, c, g.1)
-                })
-                .collect()
-        }),
-        load_image::export::imgref::ImgVecKind::GRAYA16(img) => img.map_buf(|buf| {
-            buf.into_iter()
-                .map(|g| {
-                    let c = (g.0 >> 8) as u8;
-                    RGBA8::new(c, c, c, (g.1 >> 8) as u8)
-                })
-                .collect()
-        }),
-    };
-
-    if premultiplied_alpha {
-        img.pixels_mut().for_each(|px| {
-            px.r = (u16::from(px.r) * u16::from(px.a) / 255) as u8;
-            px.g = (u16::from(px.g) * u16::from(px.a) / 255) as u8;
-            px.b = (u16::from(px.b) * u16::from(px.a) / 255) as u8;
-        });
-    }
-    Ok(img)
-}
-*/
-
 pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result<()> {
     let android_path;
     let android_path_backup;
