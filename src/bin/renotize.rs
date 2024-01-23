@@ -63,7 +63,6 @@ enum Commands {
         key_file: PathBuf,
         cert_file: PathBuf,
         app_store_key_file: PathBuf,
-        // json_bundle_file: Option<PathBuf>,
     },
 }
 
@@ -76,7 +75,9 @@ fn main() -> Result<()> {
             input_file,
             output_dir,
             bundle_id,
-        } => unpack_app(input_file, output_dir, bundle_id)?,
+        } => {
+            let _app_path = unpack_app(input_file, output_dir, bundle_id)?;
+        }
         Commands::SignApp {
             input_file,
             key_file,
@@ -110,14 +111,12 @@ fn main() -> Result<()> {
             key_file,
             cert_file,
             app_store_key_file,
-            // json_bundle_file,
         } => full_run(
             input_file,
             bundle_id,
             key_file,
             cert_file,
             app_store_key_file,
-            // json_bundle_file,
         )?,
     }
 

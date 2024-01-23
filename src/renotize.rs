@@ -19,7 +19,7 @@ fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<(
     let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
 
     println!("Uploading file to notarization service");
-    let upload = notarizer.notarize_path(&input_file, Some(Duration::from_secs(600)))?;
+    let upload = notarizer.notarize_path(&input_file, Some(Duration::from_secs(1800)))?;
 
     match upload {
         NotarizationUpload::UploadId(data) => {
@@ -35,7 +35,11 @@ fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<(
     Ok(())
 }
 
-pub fn unpack_app(input_file: &PathBuf, output_dir: &PathBuf, bundle_id: &String) -> Result<()> {
+pub fn unpack_app(
+    input_file: &PathBuf,
+    output_dir: &PathBuf,
+    bundle_id: &String,
+) -> Result<PathBuf> {
     if output_dir.exists() {
         std::fs::remove_dir_all(output_dir)?;
     }
@@ -44,6 +48,7 @@ pub fn unpack_app(input_file: &PathBuf, output_dir: &PathBuf, bundle_id: &String
     let app_zip = fs::read(&input_file)?;
     zip_extract::extract(Cursor::new(app_zip), &output_dir, false)?;
 
+    let mut app_path = None;
     for entry in fs::read_dir(output_dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -51,6 +56,7 @@ pub fn unpack_app(input_file: &PathBuf, output_dir: &PathBuf, bundle_id: &String
             Some(ext) => {
                 if ext.to_string_lossy() == "app" {
                     let info_plist_path = path.join("Contents/Info.plist");
+                    app_path = Some(path);
                     let mut info_plist = Value::from_file(&info_plist_path)?
                         .into_dictionary()
                         .ok_or(anyhow!("Info.plist is not a dictionary"))?;
@@ -66,7 +72,7 @@ pub fn unpack_app(input_file: &PathBuf, output_dir: &PathBuf, bundle_id: &String
         };
     }
 
-    Ok(())
+    Ok(app_path.unwrap())
 }
 
 pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
@@ -247,14 +253,21 @@ pub fn full_run(
     key_file: &PathBuf,
     cert_file: &PathBuf,
     app_store_key_file: &PathBuf,
-    // json_bundle_file: &Option<PathBuf>,
 ) -> Result<()> {
     let output_dir = input_file.with_extension("");
-    // unpack_app(input_file, &output_dir, bundle_id)?;
-    // sign_app(&output_dir, key_file, cert_file)?;
-    // notarize_app(&output_dir, app_store_key_file)?;
-    // pack_dmg(&output_dir, &input_file, &None)?;
-    // sign_dmg(&input_file, key_file, cert_file)?;
-    // notarize_dmg(&input_file, app_store_key_file)?;
+    println!("Unpacking app to {:?}", output_dir);
+    let app_path = unpack_app(input_file, &output_dir, bundle_id)?;
+    println!("Signing app at {:?}", app_path);
+    sign_app(&app_path, key_file, cert_file)?;
+    println!("Notarizing app at {:?}", app_path);
+    notarize_app(&app_path, app_store_key_file)?;
+    let dmg_path = app_path.with_extension("dmg");
+    println!("Packing DMG to {:?}", dmg_path);
+    pack_dmg(&app_path, &dmg_path, &None)?;
+    println!("Signing DMG at {:?}", dmg_path);
+    sign_dmg(&dmg_path, key_file, cert_file)?;
+    println!("Notarizing DMG at {:?}", dmg_path);
+    notarize_dmg(&dmg_path, app_store_key_file)?;
+    println!("Done!");
     Ok(())
 }
