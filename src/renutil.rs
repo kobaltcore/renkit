@@ -333,7 +333,7 @@ pub async fn install(
             println!("Forcing uninstallation of existing version {}.", version);
             uninstall(registry, version)?;
         } else {
-            panic!("Version {} is already installed.", version);
+            return Err(anyhow!("Version {} is already installed.", version));
         }
     }
 
@@ -577,6 +577,7 @@ pub fn cleanup(registry: &PathBuf, version: &Version) -> Result<()> {
     ];
 
     for path in paths.iter().filter(|p| p.exists()) {
+        println!("Cleaning up {}", path.to_string_lossy());
         fs::remove_dir_all(path)?;
     }
 
