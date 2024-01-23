@@ -4,36 +4,31 @@ version = "4.0.0-alpha"
 edition = "2021"
 repository = "https://github.com/kobaltcore/renkit"
 
-[features]
-webp = ["dep:image", "dep:webp", "dep:libwebp-sys", "load_image/webp"]
-
 [dependencies]
 trauma = "2"
 home = "0.5.9"
 toml = "0.8.8"
+webp = "0.2.6"
+rgb = "0.8.37"
 jwalk = "0.8.1"
 ravif = "0.11.4"
 regex = "1.10.2"
+image = "0.24.7"
 base64 = "0.21.6"
 anyhow = "1.0.79"
+imgref = "1.10.1"
 lol_html = "1.2.0"
 num_cpus = "1.16.0"
+reqwest = "0.11.23"
 itertools = "0.12.0"
 zip-extract = "0.1.2"
 apple-codesign = "0.26.0"
 command-executor = "0.1.1"
-reqwest = { version = "0.11.23" }
-webp = { version = "0.2.6", optional = true }
-image = { version = "0.24.7", optional = true }
 tokio = { version = "1.35.1", features = ["full"] }
 clap = { version = "4.4.13", features = ["derive"] }
 serde = { version = "1.0.195", features = ["derive"] }
-load_image = { version = "3.1.4", features = ["avif"] }
+libwebp-sys = { version = "0.9.4", features = ["avx2", "sse41"] }
 indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
-libwebp-sys = { version = "0.9.4", features = [
-    "avx2",
-    "sse41",
-], optional = true }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
