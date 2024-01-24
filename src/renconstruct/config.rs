@@ -1,5 +1,5 @@
 use crate::common::Version;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -73,7 +73,7 @@ pub struct NotarizeOptions {
     pub app_store_key_file: PathBuf,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CustomOptionValue {
     String(String),
@@ -83,7 +83,7 @@ pub enum CustomOptionValue {
     Array(Vec<CustomOptionValue>),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomOptions {
     #[serde(flatten)]
     pub options: HashMap<String, CustomOptionValue>,

@@ -4522,6 +4522,7 @@ dependencies = [
  "rustpython",
  "rustpython-vm",
  "serde",
+ "serde_json",
  "tokio",
  "toml 0.8.8",
  "trauma",

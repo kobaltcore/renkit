@@ -213,10 +213,17 @@ async fn build(
 
                 match tasks.iter().filter(|(name, _)| **name == name_slug).next() {
                     Some((_, opts)) => {
-                        println!("{opts:?}");
+                        let options = match &opts.options {
+                            TaskOptions::Custom(opts) => {
+                                serde_json::to_string(&opts.options).unwrap()
+                            }
+                            _ => panic!("Task type mismatch."),
+                        };
+                        println!("{}", options);
                         /*
                         TODO
-                        - render config object into JSON dict and pass to class method validate_config
+                        X render config object into JSON dict
+                        - pass to class method validate_config
                         - if successful, instantiate class and save handle in task options
                         - after this, things should go through the normal task filtering and running
                         */
