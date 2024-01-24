@@ -1,6 +1,6 @@
 [package]
 name = "renkit"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 edition = "2021"
 repository = "https://github.com/kobaltcore/renkit"
 
@@ -26,6 +26,7 @@ num_cpus = "1.16.0"
 itertools = "0.12.0"
 webbrowser = "0.8.12"
 zip-extract = "0.1.2"
+rustpython-vm = "0.3.0"
 apple-codesign = "0.26.0"
 command-executor = "0.1.1"
 x509-certificate = "0.23.1"
@@ -34,6 +35,7 @@ tokio = { version = "1.35.1", features = ["full"] }
 clap = { version = "4.4.13", features = ["derive"] }
 serde = { version = "1.0.195", features = ["derive"] }
 libwebp-sys = { version = "0.9.4", features = ["avx2", "sse41"] }
+rustpython = { version = "0.3.0", features = ["ssl", "freeze-stdlib"] }
 indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
 
 # The profile that 'cargo dist' will build with

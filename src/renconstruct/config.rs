@@ -74,8 +74,19 @@ pub struct NotarizeOptions {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum CustomOptionValue {
+    String(String),
+    Bool(bool),
+    Int(usize),
+    Float(f64),
+    Array(Vec<CustomOptionValue>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct CustomOptions {
-    pub options: HashMap<String, String>,
+    #[serde(flatten)]
+    pub options: HashMap<String, CustomOptionValue>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

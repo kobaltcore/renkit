@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
+use jwalk::WalkDir;
 use renkit::common::Version;
 use renkit::renconstruct::config::{Config, TaskOptions};
 use renkit::renconstruct::tasks::{
@@ -8,6 +9,11 @@ use renkit::renconstruct::tasks::{
     TaskContext,
 };
 use renkit::renutil::{get_registry, install, launch};
+use rustpython::vm::builtins::{PyList, PyStr};
+use rustpython::vm::convert::ToPyObject;
+use rustpython::vm::function::FuncArgs;
+use rustpython::vm::py_compile;
+use rustpython::InterpreterConfig;
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -39,8 +45,6 @@ async fn build(
     output_dir: &PathBuf,
     config_path: Option<PathBuf>,
 ) -> Result<()> {
-    // TODO: custom task support
-
     let config_path = config_path.unwrap_or("renconstruct.toml".into());
 
     if !config_path.exists() {
@@ -139,8 +143,133 @@ async fn build(
         active_builds
     };
 
-    let active_tasks = config
-        .tasks
+    let mut tasks = config.tasks;
+
+    for (name, opts) in tasks.iter_mut() {
+        println!("{name}: {opts:?}");
+    }
+
+    if let Some(task_dir) = config.options.task_dir {
+        println!("Loading custom tasks from {}", task_dir.to_string_lossy());
+
+        let interp = InterpreterConfig::new().init_stdlib().interpreter();
+
+        interp.enter(|vm| {
+            vm.insert_sys_path(vm.new_pyobj(".")).expect("add path");
+
+            let mut paths = vec![];
+
+            for entry in WalkDir::new(task_dir) {
+                match entry {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path.is_dir() {
+                            continue;
+                        }
+                        match path.extension() {
+                            Some(ext) => {
+                                if ext != "py" {
+                                    continue;
+                                }
+                                println!("Loading task file: {}", path.to_string_lossy());
+                                paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
+                            }
+                            None => continue,
+                        }
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
+                        continue;
+                    }
+                }
+            }
+
+            let paths = PyList::from(paths).to_pyobject(vm);
+
+            let module = vm.import("dispatch", None, 0).unwrap();
+
+            let dispatch = module.get_attr("dispatch", vm).unwrap();
+
+            let result = dispatch
+                .call_with_args(FuncArgs::from(vec![paths]), vm)
+                .unwrap();
+            let result = result.to_sequence(vm).list(vm).unwrap();
+
+            for val in result.borrow_vec().iter() {
+                let name = val
+                    .get_item("name", vm)
+                    .unwrap()
+                    .str(vm)
+                    .unwrap()
+                    .to_string();
+                let name_slug = val
+                    .get_item("name_slug", vm)
+                    .unwrap()
+                    .str(vm)
+                    .unwrap()
+                    .to_string();
+                let class = val.get_item("class", vm).unwrap();
+                println!("{name_slug} ({name}): {}", class.str(vm).unwrap());
+
+                match tasks.iter().filter(|(name, _)| **name == name_slug).next() {
+                    Some((_, opts)) => {
+                        println!("{opts:?}");
+                        /*
+                        TODO
+                        - render config object into JSON dict and pass to class method validate_config
+                        - if successful, instantiate class and save handle in task options
+                        - after this, things should go through the normal task filtering and running
+                        */
+                    }
+                    None => {}
+                }
+            }
+
+            // module.get_attr(attr_name, vm);
+
+            //         let result = vm.run_code_string(
+            //             vm.new_scope_with_builtins(),
+            //             r#"
+            // import inspect
+
+            // import two_tasks as tt
+
+            // for info in inspect.getmembers(tt, inspect.isclass):
+            //     print(info)
+            // "#,
+            //             "<...>".to_owned(),
+            //         );
+
+            // match result {
+            //     Ok(_) => {}
+            //     Err(err) => {
+            //         println!(
+            //             "Error: {}",
+            //             err.args()
+            //                 .to_vec()
+            //                 .iter()
+            //                 .map(|x| x.str(&vm).unwrap().to_string())
+            //                 .join("")
+            //         );
+            //     }
+            // }
+        });
+
+        // vm::Interpreter::without_stdlib(Default::default()).enter(|vm| {
+        //     let scope = vm.new_scope_with_builtins();
+        //     let source = r#"print("Hello World!")"#;
+        //     let code_obj = vm
+        //         .compile(source, vm::compiler::Mode::Exec, "<embedded>".to_owned())
+        //         .map_err(|err| vm.new_syntax_error(&err, Some(source)))
+        //         .unwrap();
+
+        //     vm.run_code_obj(code_obj, scope).unwrap();
+        // });
+
+        return Ok(());
+    }
+
+    let active_tasks = tasks
         .iter()
         .filter(|(_, v)| v.enabled)
         .filter(|(_, v)| (!v.on_builds.is_disjoint(&active_builds)) || v.on_builds.is_empty())
