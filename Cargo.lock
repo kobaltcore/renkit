@@ -4520,6 +4520,8 @@ dependencies = [
  "rgb",
  "rsa",
  "rustpython",
+ "rustpython-pylib",
+ "rustpython-stdlib",
  "rustpython-vm",
  "serde",
  "serde_json",

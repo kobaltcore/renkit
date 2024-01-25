@@ -12,8 +12,7 @@ use renkit::renutil::{get_registry, install, launch};
 use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
-use rustpython::vm::py_compile;
-use rustpython::InterpreterConfig;
+use rustpython_vm::{import, Interpreter};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -152,14 +151,17 @@ async fn build(
     if let Some(task_dir) = config.options.task_dir {
         println!("Loading custom tasks from {}", task_dir.to_string_lossy());
 
-        let interp = InterpreterConfig::new().init_stdlib().interpreter();
-
-        interp.enter(|vm| {
-            vm.insert_sys_path(vm.new_pyobj(".")).expect("add path");
+        Interpreter::with_init(Default::default(), |vm| {
+            vm.add_native_modules(rustpython_stdlib::get_module_inits());
+            vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
+            vm.add_frozen(rustpython_vm::py_freeze!(dir = "./py"));
+        })
+        .enter(|vm| {
+            vm.insert_sys_path(vm.new_pyobj(task_dir.to_str())).unwrap();
 
             let mut paths = vec![];
 
-            for entry in WalkDir::new(task_dir) {
+            for entry in WalkDir::new(&task_dir) {
                 match entry {
                     Ok(entry) => {
                         let path = entry.path();
@@ -186,9 +188,15 @@ async fn build(
 
             let paths = PyList::from(paths).to_pyobject(vm);
 
-            let module = vm.import("dispatch", None, 0).unwrap();
+            let rc_dispatch = match import::import_frozen(vm, "rc_dispatch") {
+                Ok(res) => res,
+                Err(e) => {
+                    vm.print_exception(e);
+                    panic!();
+                }
+            };
 
-            let dispatch = module.get_attr("dispatch", vm).unwrap();
+            let dispatch = rc_dispatch.get_attr("dispatch", vm).unwrap();
 
             let result = dispatch
                 .call_with_args(FuncArgs::from(vec![paths]), vm)
@@ -231,47 +239,7 @@ async fn build(
                     None => {}
                 }
             }
-
-            // module.get_attr(attr_name, vm);
-
-            //         let result = vm.run_code_string(
-            //             vm.new_scope_with_builtins(),
-            //             r#"
-            // import inspect
-
-            // import two_tasks as tt
-
-            // for info in inspect.getmembers(tt, inspect.isclass):
-            //     print(info)
-            // "#,
-            //             "<...>".to_owned(),
-            //         );
-
-            // match result {
-            //     Ok(_) => {}
-            //     Err(err) => {
-            //         println!(
-            //             "Error: {}",
-            //             err.args()
-            //                 .to_vec()
-            //                 .iter()
-            //                 .map(|x| x.str(&vm).unwrap().to_string())
-            //                 .join("")
-            //         );
-            //     }
-            // }
         });
-
-        // vm::Interpreter::without_stdlib(Default::default()).enter(|vm| {
-        //     let scope = vm.new_scope_with_builtins();
-        //     let source = r#"print("Hello World!")"#;
-        //     let code_obj = vm
-        //         .compile(source, vm::compiler::Mode::Exec, "<embedded>".to_owned())
-        //         .map_err(|err| vm.new_syntax_error(&err, Some(source)))
-        //         .unwrap();
-
-        //     vm.run_code_obj(code_obj, scope).unwrap();
-        // });
 
         return Ok(());
     }
