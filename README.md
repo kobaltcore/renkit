@@ -201,28 +201,28 @@ renconstruct build -i ~/my-project -o out/ -c my-config.toml
 
 ### Acquiring notarization certificates
 renotize requires a few pieces of information to be able to notarize your application. These are:
-- `bundle_identifier`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
+- `bundle_id`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
 - `key_file`: The path to the private key file for your Developer Certificate. This is typically a `.pem` file.
 - `cert_file`: The path to the public certificate file for your Developer Certificate. This is typically a `.cer` file.
 - `app_store_key_file`: The path to the combined key file for your App Store connection. This is typically a `.json` file.
-- `json_bundle_file`: `renotize`'s custom certificate format which bundles the above three certificates into one file for easier consumption by the program.
 
-It is required to either supply `key_file`, `cert_file` and `app_store_key_file` **or** `json_bundle_file`. If you supply the latter, the former will be ignored.
-
-`renotize` provides a `provision` command which will guide you through the process of acquiring the required certificates step by step. It will also generate a `renotize.json` file which you can then pass to `renotize` as the `json_bundle_file` parameter.
+`renotize` provides a `provision` command which will interactively guide you through the process of acquiring the required certificates step by step.
 
 > <picture>
 >   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/info.svg">
 >   <img alt="Info" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/info.svg">
 > </picture><br>
 >
-> Note that for the provisioning process to work, your shell must have access to the `openssl` command.
+> Note that for the notarization process to work, you must be a member of the [Apple Developer Program](https://developer.apple.com/programs/).
 
-### Fully notarize a freshly-generated .app bundle
+### Fully notarize a freshly-generated App Bundle
 ```bash
-renotize full-run -i ~/out/my-project.zip -b com.example.mygame -k certificates/private-key.pem -c certificates/developerID_application.cer -a certificates/app-store-key.json
-# alternatively, using the combined json bundle
-renotize full-run -i ~/out/my-project.zip -b com.example.mygame -j certificates/renotize.json
+renotize full-run \
+  ~/out/my-game.zip \
+  com.example.mygame \
+  certificates/private-key.pem \
+  certificates/developerID_application.cer \
+  certificates/app-store-key.json
 ```
 
 ### Verify Notarization
@@ -235,5 +235,7 @@ For a DMG:
 ```bash
 spctl -a -t open -vvv --context context:primary-signature MyGame.dmg
 ```
+
+The output will contain text informing you as to whether your app bundle or DMG file have been `accepted` or `rejected` by GateKeeper.
 
 <a href="https://www.flaticon.com/free-icons/shipping-and-delivery" title="shipping and delivery icons">Shipping and delivery icons created by Ongicon - Flaticon</a>
