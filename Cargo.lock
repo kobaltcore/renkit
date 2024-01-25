@@ -4530,6 +4530,7 @@ dependencies = [
  "trauma",
  "webbrowser",
  "webp",
+ "winapi",
  "x509-certificate",
  "zip-extract",
 ]
