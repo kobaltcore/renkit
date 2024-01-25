@@ -25,6 +25,6 @@ def dispatch(py_files: list[str]) -> list[dict[str, str]]:
             if not name.endswith("Task"):
                 continue
             name_slug = camel_to_snake(name[:-4])
-            tasks.append({"name": name, "name_slug": name_slug, "class": class_})
+            tasks.append({"name_slug": name_slug, "class": class_})
 
     return tasks

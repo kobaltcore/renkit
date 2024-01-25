@@ -53,7 +53,9 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
     }
 }
 
+#[tokio::main]
 async fn build(
+    vm: &VirtualMachine,
     input_dir: &PathBuf,
     output_dir: &PathBuf,
     config_path: Option<PathBuf>,
@@ -161,123 +163,104 @@ async fn build(
     if let Some(task_dir) = config.options.task_dir {
         println!("Loading custom tasks from {}", task_dir.to_string_lossy());
 
-        Interpreter::with_init(Default::default(), |vm| {
-            vm.add_native_modules(rustpython_stdlib::get_module_inits());
-            vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
-            vm.add_frozen(rustpython_vm::py_freeze!(dir = "./py"));
-        })
-        .enter(|vm| {
-            vm.insert_sys_path(vm.new_pyobj(task_dir.to_str())).unwrap();
+        vm.insert_sys_path(vm.new_pyobj(task_dir.to_str())).unwrap();
 
-            let mut paths = vec![];
+        let mut paths = vec![];
 
-            for entry in WalkDir::new(&task_dir) {
-                match entry {
-                    Ok(entry) => {
-                        let path = entry.path();
-                        if path.is_dir() {
-                            continue;
-                        }
-                        match path.extension() {
-                            Some(ext) => {
-                                if ext != "py" {
-                                    continue;
-                                }
-                                paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
-                            }
-                            None => continue,
-                        }
-                    }
-                    Err(err) => {
-                        println!("Error: {}", err);
+        for entry in WalkDir::new(&task_dir) {
+            match entry {
+                Ok(entry) => {
+                    let path = entry.path();
+                    if path.is_dir() {
                         continue;
                     }
-                }
-            }
-
-            let paths = PyList::from(paths).to_pyobject(vm);
-
-            let rc_dispatch = match import::import_frozen(vm, "rc_dispatch") {
-                Ok(res) => res,
-                Err(e) => {
-                    vm.print_exception(e);
-                    panic!();
-                }
-            };
-
-            let dispatch = rc_dispatch.get_attr("dispatch", vm).unwrap();
-
-            let result = dispatch
-                .call_with_args(FuncArgs::from(vec![paths]), vm)
-                .unwrap();
-            let result = result.to_sequence(vm).list(vm).unwrap();
-
-            for val in result.borrow_vec().iter() {
-                let name = val
-                    .get_item("name", vm)
-                    .unwrap()
-                    .str(vm)
-                    .unwrap()
-                    .to_string();
-                let name_slug = val
-                    .get_item("name_slug", vm)
-                    .unwrap()
-                    .str(vm)
-                    .unwrap()
-                    .to_string();
-                let class = val.get_item("class", vm).unwrap();
-                println!("{name_slug} ({name}): {}", class.str(vm).unwrap());
-
-                match tasks
-                    .iter_mut()
-                    .filter(|(name, _)| **name == name_slug)
-                    .next()
-                {
-                    Some((_, opts)) => {
-                        let options = match &opts.options {
-                            TaskOptions::Custom(opts) => {
-                                let py_dict = PyDict::new_ref(&vm.ctx);
-                                for (k, v) in &opts.options {
-                                    py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
-                                }
-                                py_dict.to_pyobject(vm)
+                    match path.extension() {
+                        Some(ext) => {
+                            if ext != "py" {
+                                continue;
                             }
-                            _ => panic!("Task type mismatch."),
-                        };
-
-                        let class_new = class.get_attr("__new__", vm).unwrap();
-                        let instance = class_new.call((class,), vm).unwrap();
-                        let instance_init = instance.get_attr("__init__", vm).unwrap();
-                        let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
-                        let output_dir_py =
-                            PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
-                        if let Err(e) =
-                            instance_init.call((options, input_dir_py, output_dir_py), vm)
-                        {
-                            vm.print_exception(e);
-                            panic!();
+                            paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
                         }
-
-                        match &mut opts.options {
-                            TaskOptions::Custom(opts) => {
-                                if instance.has_attr("pre_build", vm).unwrap() {
-                                    opts.task_handle_pre =
-                                        Some(instance.get_attr("pre_build", vm).unwrap());
-                                }
-                                if instance.has_attr("post_build", vm).unwrap() {
-                                    opts.task_handle_post =
-                                        Some(instance.get_attr("post_build", vm).unwrap());
-                                }
-                            }
-                            _ => panic!("Task type mismatch."),
-                        };
+                        None => continue,
                     }
-                    None => {}
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                    continue;
                 }
             }
-        });
+        }
 
-        return Ok(());
+        let paths = PyList::from(paths).to_pyobject(vm);
+
+        let rc_dispatch = match import::import_frozen(vm, "rc_dispatch") {
+            Ok(res) => res,
+            Err(e) => {
+                vm.print_exception(e);
+                panic!();
+            }
+        };
+
+        let dispatch = rc_dispatch.get_attr("dispatch", vm).unwrap();
+
+        let result = dispatch
+            .call_with_args(FuncArgs::from(vec![paths]), vm)
+            .unwrap();
+        let result = result.to_sequence(vm).list(vm).unwrap();
+
+        for val in result.borrow_vec().iter() {
+            let name_slug = val
+                .get_item("name_slug", vm)
+                .unwrap()
+                .str(vm)
+                .unwrap()
+                .to_string();
+            let class = val.get_item("class", vm).unwrap();
+
+            match tasks
+                .iter_mut()
+                .filter(|(name, _)| **name == name_slug)
+                .next()
+            {
+                Some((_, opts)) => {
+                    let options = match &opts.options {
+                        TaskOptions::Custom(opts) => {
+                            let py_dict = PyDict::new_ref(&vm.ctx);
+                            for (k, v) in &opts.options {
+                                py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
+                            }
+                            py_dict.to_pyobject(vm)
+                        }
+                        _ => panic!("Task type mismatch."),
+                    };
+
+                    let class_new = class.get_attr("__new__", vm).unwrap();
+                    let instance = class_new.call((class,), vm).unwrap();
+                    let instance_init = instance.get_attr("__init__", vm).unwrap();
+                    let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
+                    let output_dir_py = PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
+                    if let Err(e) = instance_init.call((options, input_dir_py, output_dir_py), vm) {
+                        vm.print_exception(e);
+                        panic!();
+                    }
+
+                    match &mut opts.options {
+                        TaskOptions::Custom(opts) => {
+                            if instance.has_attr("pre_build", vm).unwrap() {
+                                opts.task_handle_pre =
+                                    Some(instance.get_attr("pre_build", vm).unwrap());
+                            }
+                            if instance.has_attr("post_build", vm).unwrap() {
+                                opts.task_handle_post =
+                                    Some(instance.get_attr("post_build", vm).unwrap());
+                            }
+                        }
+                        _ => panic!("Task type mismatch."),
+                    };
+                }
+                None => {}
+            }
+        }
     }
 
     let active_tasks = tasks
@@ -323,13 +306,9 @@ async fn build(
             }
             TaskOptions::Custom(opts) => {
                 println!("[Pre] Running task: {}", task.name);
-                // let ctx = TaskContext {
-                //     version: config.renutil.version.clone(),
-                //     input_dir: input_dir.clone(),
-                //     output_dir: output_dir.clone(),
-                //     renpy_path: registry.join(&config.renutil.version.to_string()),
-                // };
-                // run pre build hook if it exists
+                if let Some(handler) = &opts.task_handle_pre {
+                    handler.call((), vm).unwrap();
+                }
             }
             _ => {}
         };
@@ -468,13 +447,9 @@ async fn build(
             }
             TaskOptions::Custom(opts) => {
                 println!("[Post] Running task: {}", task.name);
-                // let ctx = TaskContext {
-                //     version: config.renutil.version.clone(),
-                //     input_dir: input_dir.clone(),
-                //     output_dir: output_dir.clone(),
-                //     renpy_path: registry.join(&config.renutil.version.to_string()),
-                // };
-                // run post build hook if it exists
+                if let Some(handler) = &opts.task_handle_post {
+                    handler.call((), vm).unwrap();
+                }
             }
             _ => {}
         };
@@ -483,17 +458,19 @@ async fn build(
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    match &cli.command {
+    Interpreter::with_init(Default::default(), |vm| {
+        vm.add_native_modules(rustpython_stdlib::get_module_inits());
+        vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
+        vm.add_frozen(rustpython_vm::py_freeze!(dir = "./py"));
+    })
+    .enter(|vm| match &cli.command {
         Commands::Build {
             input_dir,
             output_dir,
             config_path,
-        } => build(input_dir, output_dir, config_path.clone()).await?,
-    }
-
-    Ok(())
+        } => build(vm, input_dir, output_dir, config_path.clone()),
+    })
 }
