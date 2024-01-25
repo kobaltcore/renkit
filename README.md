@@ -6,126 +6,71 @@ A collection of tools to help you organise and use Ren'Py instances from the com
 
 renkit consists of three tools:
 1. `renutil` manages Ren'Py instances and takes care of installing, launching and removing them.
-2. `renotize` notarizes built distributions of Ren'Py games for macOS, from any source OS.
-3. `renconstruct` automates the build process for Ren'Py games start to finish.
+2. `renotize` notarizes built distributions of Ren'Py games for macOS, from any source OS `renkit` supports.
+3. `renconstruct` automates the build process for Ren'Py games from start to finish.
 
-renkit is written in Nim and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms:
-- `Linux` amd64
-- `macOS` amd64 / arm64
-- `Windows` amd64 / i386
+renkit is written in Rust and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms:
+
+| OS      | amd64 | aarch64 |
+|---------|-------|---------|
+| Linux   | ✅     | ❌       |
+| macOS   | ✅     | ✅       |
+| Windows | ✅     | ❌       |
 
 ## Installation
 
-### Homebrew (macOS)
+### Automatic
 
-```bash
-brew tap kobaltcore/renkit
-brew install renkit --no-quarantine
-```
-
-### wget (Linux / macOS)
-
-```bash
-wget -qO- https://github.com/kobaltcore/renkit/releases/download/v3.2.0/renkit-linux-amd64.tar.gz | tar xz
-```
+`renkit` comes with several installation options for the various supported platforms. Please check out the available options for the [latest release](https://github.com/kobaltcore/renkit/releases/latest).
 
 ### Manual (Linux / Windows / macOS)
 
-Download the pre-built binaries for your operating system and architecture from the [releases](https://github.com/kobaltcore/renkit/releases) page and extract the resulting tar file.
+Download the pre-built binaries for your operating system and architecture for the [latest release](https://github.com/kobaltcore/renkit/releases/latest) and extract the resulting tar file.
 
-After this, either add the binaries to your PATH or use them from within the download directory.
-
-Please note that on Windows, `renotize` and `renconstruct` require the [Visual C++ 2015 Redistributable Update 3 RC](https://www.microsoft.com/en-us/download/details.aspx?id=52685) so please download and install it first.
+After this, either add the binaries to your PATH or use them directly from within the download directory.
 
 ## renutil
 
-### List all installed versions
+### List installed versions
 ```bash
 renutil list
 ```
 
-### List all remote versions
+### List remote versions
 ```bash
-renutil list -a
+renutil list -o
 ```
 
 ### Show information about a specific version
 ```bash
-renutil show -v 7.5.0
+renutil show 8.2.0
 ```
 
 ### Launch the Ren'Py Launcher
 ```bash
-renutil launch -v 7.5.0
+renutil launch 8.2.0
 ```
 
 ### Launch a Ren'Py project directly
 ```bash
-renutil launch -v 7.5.0 -d -a ~/my-project
+renutil launch 8.2.0 -d -- ~/my-project
 ```
+
+We use the double dash (`--`) to separate the arguments for Ren'Py from `renutil`'s. This way, you can even pass things like `--help` through to the underlying program without `renutil` interfering.
 
 ### Install a specific version
 ```bash
-renutil install -v 7.5.0
+renutil install 8.2.0
 ```
 
 ### Remove a specific version
 ```bash
-renutil uninstall -v 7.5.0
+renutil uninstall 8.2.0
 ```
 
 ### Clean up an instance after use
 ```bash
-renutil clean -v 7.5.0
-```
-
-### Full Usage
-```bash
-Usage is like:
-    renutil {SUBCMD} [subcommand-opts & args]
-where subcommand syntaxes are as follows:
-
-  list [optional-params]
-    List all available versions of RenPy, either local or remote.
-  Options:
-      -n=, --n=         int     0      The number of items to show. Shows all by default.
-      -a, --all         bool    false  If given, shows remote versions.
-      -r=, --registry=  string  ""     The path to the registry directory to use. Defaults to ~/.renutil
-
-  show [REQUIRED,optional-params]
-    Show information about a specific version of RenPy.
-  Options:
-      -v=, --version=   string  REQUIRED  The version to show.
-      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
-
-  launch [REQUIRED,optional-params]
-    Launch the given version of RenPy.
-  Options:
-      -v=, --version=   string  REQUIRED  The version to launch.
-      --headless        bool    false     If given, disables audio and video drivers for headless operation.
-      -d, --direct      bool    false     If given, invokes RenPy directly without the launcher project.
-      -a=, --args=      string  ""        The arguments to forward to RenPy.
-      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
-
-  install [REQUIRED,optional-params]
-    Install the given version of RenPy.
-  Options:
-      -v=, --version=   string  REQUIRED  The version to install.
-      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
-      -n, --no-cleanup  bool    false     If given, retains installation files.
-      -f, --force       bool    false     Overwrites any existing data for this version, if it\'s already installed.
-
-  cleanup [REQUIRED,optional-params]
-    Cleans up temporary directories for the given version of RenPy.
-  Options:
-      -v=, --version=   string  REQUIRED  The version to clean up.
-      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
-
-  uninstall [REQUIRED,optional-params]
-    Uninstalls the given version of RenPy.
-  Options:
-      -v=, --version=   string  REQUIRED  The version to uninstall.
-      -r=, --registry=  string  ""        The path to the registry directory to use. Defaults to ~/.renutil
+renutil clean 8.2.0
 ```
 
 ## renconstruct
@@ -252,22 +197,6 @@ This is an optional method that, if given, will cause the custom task to execute
 renconstruct build -i ~/my-project -o out/ -c my-config.toml
 ```
 
-### Full Usage
-```bash
-Usage is like:
-    renconstruct {SUBCMD} [subcommand-opts & args]
-where subcommand syntaxes are as follows:
-
-  build [REQUIRED,optional-params]
-    Builds a RenPy project with the specified configuration.
-  Options:
-      -i=, --input_dir=   string  REQUIRED  The path to the RenPy project to build.
-      -o=, --output_dir=  string  REQUIRED  The directory to output distributions to.
-      -c=, --config=      string  REQUIRED  The path to the configuration file to use.
-      -r=, --registry=    string  ""        The path to the registry directory to use. Defaults to ~/.renutil
-      -v=, --version=     string  ""        The target version of RenPy for renutil. Defaults to the version specified in the config file.
-```
-
 ## renotize
 
 ### Acquiring notarization certificates
@@ -296,72 +225,15 @@ renotize full-run -i ~/out/my-project.zip -b com.example.mygame -k certificates/
 renotize full-run -i ~/out/my-project.zip -b com.example.mygame -j certificates/renotize.json
 ```
 
-### Full Usage
+### Verify Notarization
+For an App bundle:
 ```bash
-Usage is like:
-    renotize {SUBCMD} [subcommand-opts & args]
-where subcommand syntaxes are as follows:
+spctl -a -t exec -vv MyGame.dmg
+```
 
-  provision [optional-params]
-    Utility method to provision required information for notarization using a step-by-step process.
-  Options:
-
-  unpack-app [REQUIRED,optional-params]
-    Unpacks the given ZIP file to the target directory.
-  Options:
-      -i=, --inputFile=         string  REQUIRED  The path to the ZIP file containing the .app bundle.
-      -b=, --bundleIdentifier=  string  REQUIRED  set bundleIdentifier
-      -o=, --outputDir=         string  ""        The directory to extract the .app bundle to.
-
-  sign-app [REQUIRED,optional-params]
-    Signs a .app bundle with the given Developer Identity.
-  Options:
-      -i=, --inputFile=  string  REQUIRED  The path to the .app bundle.
-      -k=, --keyFile=    string  REQUIRED  The private key generated via the 'provision' command.
-      -c=, --certFile=   string  REQUIRED  The certificate file obtained via the 'provision' command.
-
-  notarize-app [REQUIRED,optional-params]
-    Notarizes a .app bundle with the given Developer Account and bundle ID.
-  Options:
-      -i=, --inputFile=        string  REQUIRED  The path to the .app bundle.
-      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
-
-  pack-dmg [REQUIRED,optional-params]
-    Packages a .app bundle into a .dmg file.
-  Options:
-      -i=, --inputFile=   string  REQUIRED  The path to the .app bundle.
-      -o=, --outputFile=  string  REQUIRED  The name of the DMG file to write to.
-      -v=, --volumeName=  string  ""        The name to use for the DMG volume. By default the base name of the input file.
-
-  sign-dmg [REQUIRED,optional-params]
-    Signs a .dmg file with the given Developer Identity.
-  Options:
-      -i=, --inputFile=  string  REQUIRED  The path to the .dmg file.
-      -k=, --keyFile=    string  REQUIRED  The private key generated via the 'provision' command.
-      -c=, --certFile=   string  REQUIRED  The certificate file obtained via the 'provision' command.
-
-  notarize-dmg [REQUIRED,optional-params]
-    Notarizes a .dmg file with the given Developer Account and bundle ID.
-  Options:
-      -i=, --inputFile=        string  REQUIRED  The path to the .dmg file.
-      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
-
-  status [REQUIRED,optional-params]
-    Checks the status of a notarization operation given its UUID.
-  Options:
-      -u=, --uuid=             string  REQUIRED  The UUID of the notarization operation.
-      -a=, --appStoreKeyFile=  string  REQUIRED  The app-store-key.json file obtained via the 'provision' command.
-
-  full-run [REQUIRED,optional-params]
-    Fully notarize a given .app bundle, creating a signed and notarized artifact for distribution.
-  Options:
-      -i=, --inputFile=         string  REQUIRED  The path to the the ZIP file containing the .app bundle.
-      -b=, --bundleIdentifier=  string  ""        The internal identifier of the .app bundle.
-      -k=, --keyFile=           string  ""        The private key generated via the 'provision' command.
-      -c=, --certFile=          string  ""        The certificate file obtained via the 'provision' command.
-      -a=, --appStoreKeyFile=   string  ""        The app-store-key.json file obtained via the 'provision' command.
-      -j=, --jsonBundleFile=    string  ""        The renotize.json file obtained via the 'provision' command. If this is set, the
-                                                  other arguments are ignored.
+For a DMG:
+```bash
+spctl -a -t open -vvv --context context:primary-signature MyGame.dmg
 ```
 
 <a href="https://www.flaticon.com/free-icons/shipping-and-delivery" title="shipping and delivery icons">Shipping and delivery icons created by Ongicon - Flaticon</a>
