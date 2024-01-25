@@ -150,13 +150,11 @@ Options to pass to `renutil`.
 - `update_pickle`: If set, forces the pickle protocol version Ren'Py uses internally to `5` (from the default of `2`). This causes the game to load and save faster, at the loss of compatibility with save games and RPYC files created on Ren'Py 7.x. Do not enable this if you need backwars-compatibility.
 
 ### Custom Tasks
-`renconstruct` supports the addition of custom tasks which can run at any point in the build process to tweak config settings, modify files, convert files between formats, rename files and folders on disk and many other things.
+`renconstruct` supports the addition of custom tasks which can run at various points in the build process to tweak config settings, modify files, convert files between formats, rename files and folders on disk and many other things.
 
-To make itself extendable, `renconstruct` uses Python to allow users to create their own custom tasks. This is a fully optional feature as it relies on Python being installed on the system where it is invoked. Please note that `renconstruct` does not ship with its own Python interpreter!
+To make itself extendable, `renconstruct` uses Python to allow users to create their own custom tasks. `renconstruct` ships with its own embedded Python interpreter, so it is not reliant on any kind of external Python installation to make things as hassle-free as possible.
 
-On startup, it will attempt to find the Python version available in the current shell. If it is successful, Python support will be enabled and custom tasks can be loaded. If it fails, Python support will be disabled and only built-in tasks will be available. If you want to override `renconstruct`'s Python selection, you may supply the path to your `libpython` shared library via the environment variable `RC_LIBPYTHON`, which will take precedence over its internal Python search locations.
-
-With enabled Python support, the `options.tasks` configuration option will be used to scan the directory given there for `.py` files. All tasks in all Python files within this directory and any of its subdirectories will be loaded into `renconstruct` and will be available to configure via the config file. Multiple tasks may be present in a single Python file.
+The optional path given via `options.tasks` will be used to scan that directory for `.py` files. All tasks in all Python files within this directory and any of its subdirectories will be loaded into `renconstruct` and will be available to configure via the config file. Multiple tasks may be present in a single Python file. The tasks directory will also be added to the syspath, so imports between tasks (should these be required) are also possible.
 
 To create a custom task, create a class with the suffix `Task` (case sensitive):
 ```python
@@ -165,10 +163,6 @@ class ChangeFileTask:
         self.config = config
         self.input_dir = input_dir
         self.output_dir = output_dir
-
-    @classmethod
-    def validate_config(cls, config):
-        return config
 
     def pre_build(self):
         print("pre-build")
@@ -179,27 +173,36 @@ class ChangeFileTask:
 
 Tasks are duck-typed, meaning that they do not need to inherit from a base class, so long as they conform to `renconstruct`'s interface.
 
-This interface consists of three methods and the constructor. The `__init__` method *must* take these three arguments:
-- `config`: A dict of config values which represents the parsed and validated `renconstruct.toml` file.
+This interface consists of two methods and the constructor. The `__init__` method *must* take these three arguments:
+- `config`: A dict of config values which represents the task's parsed (but NOT validated!) subsection of the `renconstruct.toml` file.
 - `input_dir`: A string representing the path to the input directory of the build process.
 - `output_dir`: A string representing the path to the output directory of the build process.
 
-You may do any kind of additional setup work in the constructor that your task requires.
+You may do any kind of additional setup work in the constructor that your task requires, such as validating the task's configuration parameters.
 
-#### `validate_config`
-A class method that is called before the task is instantiated to validate its own section of the config file. Every custom task will have its own configuration options which are of arbitrary nature and can thus only be validated by the task itself. The name of the custom config section is derived from the class name by removing the `Task` suffix and converting the rest of the name to snake case. In the example above, `ChangeFileTask` would turn into the config section `tasks.change_file`.
+General task features such as `priorities` and `on_builds` are available, same as for all other tasks.
 
-Custom tasks share all of the common properties explained at the start of this section but may otherwise contain arbitrary keys and values.
+Note that task sections in the configuration file are snake-cased, while the task names are camel-cased. As an example, the task `ExampleTask` would end up as `[tasks.example]` in the config file.
+Such a section may look like this:
+```toml
+[tasks.example]
+  type = "custom"
+  enabled = true
+  # custom options, these are forwarded to the task class, as described above
+  custom_opt_1 = 1
+  custom_opt_2 = "some string"
+  custom_opt_3 = ["a", "b", "c"]
+```
 
 #### `pre_build`
-This is an optional method that, if given, will cause the custom task to execute it during the pre-build stage.
+This is an optional method that, if given, will cause `renconstruct` to execute it during the pre-build stage.
 
 #### `post_build`
-This is an optional method that, if given, will cause the custom task to execute it during the post-build stage.
+This is an optional method that, if given, will cause `renconstruct` to execute it during the post-build stage.
 
 ### Build a set of distributions
 ```bash
-renconstruct build -i ~/my-project -o out/ -c my-config.toml
+renconstruct build -~/my-project out/ -c my-config.toml
 ```
 
 ## renotize
@@ -207,9 +210,9 @@ renconstruct build -i ~/my-project -o out/ -c my-config.toml
 ### Acquiring notarization certificates
 renotize requires a few pieces of information to be able to notarize your application. These are:
 - `bundle_id`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
-- `key_file`: The path to the private key file for your Developer Certificate. This is typically a `.pem` file.
-- `cert_file`: The path to the public certificate file for your Developer Certificate. This is typically a `.cer` file.
-- `app_store_key_file`: The path to the combined key file for your App Store connection. This is typically a `.json` file.
+- `key_file`: The path to your private key file, typically ends in `.pem`. If you used the provisioning process, it will be named `private-key.pem`.
+- `cert_file`: The path to the Apple-generated certificate file created during the provisioning process, typically ends in `.cer`. If you used the provisioning process, it will be named `developerID_application.cer`.
+- `app_store_key_file`: The path to the combined App Store key file generated during the provisioning process, ends in `.json`. If you used the provisioning process, it will be named `app-store-key.json`.
 
 `renotize` provides a `provision` command which will interactively guide you through the process of acquiring the required certificates step by step.
 
