@@ -2,17 +2,15 @@ class ExampleTask:
     def __init__(self, config, input_dir, output_dir):
         """
         Every tasks receives:
-        - the full config object (parsed and validated dict of the input config file)
+        - its own config object (parsed and but not validated dict of the input config file section)
         - the input directory of the build process
         - the output directory of the build process
+
+        It is up to the task to validate the config object.
         """
         self.config = config
         self.input_dir = input_dir
         self.output_dir = output_dir
-
-        print(f"config={self.config}")
-        print(f"input_dir={self.input_dir}")
-        print(f"output_dir={self.output_dir}")
 
     def pre_build(self):
         """
