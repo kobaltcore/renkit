@@ -10,15 +10,9 @@ class ExampleTask:
         self.input_dir = input_dir
         self.output_dir = output_dir
 
-    @classmethod
-    def validate_config(cls, config):
-        """
-        This method receives the subset of the config object related to this particular task.
-        It should return the config it received, potentially with slight changes.
-        Its main purpose is to validate its own config subset, so it should throw an Exception
-        when it encounters an error.
-        """
-        return {**config, "new_option": 1}
+        print(f"config={self.config}")
+        print(f"input_dir={self.input_dir}")
+        print(f"output_dir={self.output_dir}")
 
     def pre_build(self):
         """

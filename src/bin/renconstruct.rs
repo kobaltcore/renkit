@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use jwalk::WalkDir;
 use renkit::common::Version;
-use renkit::renconstruct::config::{Config, TaskOptions};
+use renkit::renconstruct::config::{Config, CustomOptionValue, TaskOptions};
 use renkit::renconstruct::tasks::{
     task_convert_images_pre, task_keystore_post, task_keystore_pre, task_notarize_post, Task,
     TaskContext,
@@ -12,7 +12,8 @@ use renkit::renutil::{get_registry, install, launch};
 use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
-use rustpython_vm::{import, Interpreter};
+use rustpython_vm::builtins::PyDict;
+use rustpython_vm::{import, Interpreter, PyObjectRef, VirtualMachine};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -37,6 +38,19 @@ enum Commands {
         #[arg(short = 'c', long = "config")]
         config_path: Option<PathBuf>,
     },
+}
+
+fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
+    match opt {
+        CustomOptionValue::String(val) => PyStr::from(val.clone()).to_pyobject(vm),
+        CustomOptionValue::Bool(val) => val.to_pyobject(vm),
+        CustomOptionValue::Int(val) => val.to_pyobject(vm),
+        CustomOptionValue::Float(val) => val.to_pyobject(vm),
+        CustomOptionValue::Array(val) => {
+            let val: Vec<PyObjectRef> = val.iter().map(|e| to_pyobject(e, vm)).collect();
+            PyList::from(val).to_pyobject(vm)
+        }
+    }
 }
 
 async fn build(
@@ -144,10 +158,6 @@ async fn build(
 
     let mut tasks = config.tasks;
 
-    for (name, opts) in tasks.iter_mut() {
-        println!("{name}: {opts:?}");
-    }
-
     if let Some(task_dir) = config.options.task_dir {
         println!("Loading custom tasks from {}", task_dir.to_string_lossy());
 
@@ -173,7 +183,6 @@ async fn build(
                                 if ext != "py" {
                                     continue;
                                 }
-                                println!("Loading task file: {}", path.to_string_lossy());
                                 paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
                             }
                             None => continue,
@@ -219,22 +228,49 @@ async fn build(
                 let class = val.get_item("class", vm).unwrap();
                 println!("{name_slug} ({name}): {}", class.str(vm).unwrap());
 
-                match tasks.iter().filter(|(name, _)| **name == name_slug).next() {
+                match tasks
+                    .iter_mut()
+                    .filter(|(name, _)| **name == name_slug)
+                    .next()
+                {
                     Some((_, opts)) => {
                         let options = match &opts.options {
                             TaskOptions::Custom(opts) => {
-                                serde_json::to_string(&opts.options).unwrap()
+                                let py_dict = PyDict::new_ref(&vm.ctx);
+                                for (k, v) in &opts.options {
+                                    py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
+                                }
+                                py_dict.to_pyobject(vm)
                             }
                             _ => panic!("Task type mismatch."),
                         };
-                        println!("{}", options);
-                        /*
-                        TODO
-                        X render config object into JSON dict
-                        - pass to class method validate_config
-                        - if successful, instantiate class and save handle in task options
-                        - after this, things should go through the normal task filtering and running
-                        */
+
+                        let class_new = class.get_attr("__new__", vm).unwrap();
+                        let instance = class_new.call((class,), vm).unwrap();
+                        let instance_init = instance.get_attr("__init__", vm).unwrap();
+                        let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
+                        let output_dir_py =
+                            PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
+                        if let Err(e) =
+                            instance_init.call((options, input_dir_py, output_dir_py), vm)
+                        {
+                            vm.print_exception(e);
+                            panic!();
+                        }
+
+                        match &mut opts.options {
+                            TaskOptions::Custom(opts) => {
+                                if instance.has_attr("pre_build", vm).unwrap() {
+                                    opts.task_handle_pre =
+                                        Some(instance.get_attr("pre_build", vm).unwrap());
+                                }
+                                if instance.has_attr("post_build", vm).unwrap() {
+                                    opts.task_handle_post =
+                                        Some(instance.get_attr("post_build", vm).unwrap());
+                                }
+                            }
+                            _ => panic!("Task type mismatch."),
+                        };
                     }
                     None => {}
                 }

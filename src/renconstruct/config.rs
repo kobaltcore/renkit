@@ -1,4 +1,5 @@
 use crate::common::Version;
+use rustpython_vm::PyObjectRef;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -85,6 +86,10 @@ pub enum CustomOptionValue {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomOptions {
+    #[serde(skip)]
+    pub task_handle_pre: Option<PyObjectRef>,
+    #[serde(skip)]
+    pub task_handle_post: Option<PyObjectRef>,
     #[serde(flatten)]
     pub options: HashMap<String, CustomOptionValue>,
 }
