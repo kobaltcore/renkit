@@ -408,16 +408,6 @@ pub async fn install(
     let python = instance.python(registry)?;
     let python_parent = python.parent().ok_or(anyhow!("Unable to get parent."))?;
 
-    #[cfg(target_family = "windows")]
-    let paths = [
-        python.clone(),
-        python_parent.join("pythonw.exe"),
-        python_parent.join("renpy.exe"),
-        python_parent.join("zsync.exe"),
-        python_parent.join("zsyncmake.exe"),
-        base_path.join("rapt/prototype/gradlew.exe"),
-        base_path.join("rapt/project/gradlew.exe"),
-    ];
     #[cfg(target_family = "unix")]
     let paths = [
         python.clone(),
