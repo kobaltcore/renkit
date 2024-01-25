@@ -76,36 +76,33 @@ renutil clean 8.2.0
 ## renconstruct
 
 ### Writing a config file
-renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various supported platforms. An empty template is provided in this repository under [docs/renconstruct.toml](docs/renconstruct.toml).
+renconstruct uses a TOML file for configuration to supply the information required to complete the build process for the various supported platforms. A documented template is provided in this repository under [docs/renconstruct.toml](docs/renconstruct.toml).
 
 It consists of the sections listed below, which govern the behavior of renconstruct itself as well as the built-in and custom tasks that may be optionally activated.
 
 All tasks have the following shared properties:
+- `type`: The type of the task. Valid values are `notarize`, `keystore`, `convert_images` and `custom`. See further explanation of the various task types below.
 - `enabled`: Whether the task should run or not. Defaults to `false`.
 - `priorities`: A table of two optional configuration options that governs the priority of a task relative to other tasks. Higher values equate to earlier execution respective to the build stage.
   - `pre_build`: The priority of the pre-build stage of this task. Pre-build tasks run before any distributions are built. Defaults to `0`.
-  - `post_build`: The priority of the post-build stage of this task. Post-build tasks run afer every distribution has been built. Defaults to `0`.
+  - `post_build`: The priority of the post-build stage of this task. Post-build tasks run afer distributions have been built. Defaults to `0`.
 - `on_builds`: A list of build names that govern whether the task should run or not. For example, if `on_builds = ["mac"]` then the given task will only run if the `mac` build is enabled in this run of `renconstruct`.
 
-#### `tasks.clean`
-Runs the `clean` operation from `renutil` which removes temporary build artifacts from Ren'Py and additionally cleans out all APK files except for the universal one if building for Android platforms.
-
-#### `tasks.notarize`
+#### `notarize`
 Notarizes the macOS artifact for distribution. Same as the configuration for `renotize` below.
 
-- `apple_id`: The e-Mail address belonging to the Apple ID you want to use for signing applications.
-- `password`: An app-specific password generated through the [management portal](https://appleid.apple.com/account/manage) of your Apple ID.
-- `identity`: The identity associated with your Developer Certificate which can be found in `Keychain Access` under the category "My Certificates". It starts with `Developer ID Application:`, however it suffices to provide the 10-character code in the title of the certificate.
-- `bundle`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
-- `altool_extra`: An optional string that will be passed on to all `altool` runs in all commands. Useful for selecting an organization when your Apple ID belongs to multiple, for example. Typically you will not have to touch this and you can leave it empty.
+- `bundle_id`: The internal name for your app. This is typically the reverse domain notation of your website plus your application name, i.e. `com.example.mygame`.
+- `key_file`: The path to your private key file, typically ends in `.pem`. If you used the provisioning process, it will be named `private-key.pem`.
+- `cert_file`: The path to the Apple-generated certificate file created during the provisioning process, typically ends in `.cer`. If you used the provisioning process, it will be named `developerID_application.cer`.
+- `app_store_key_file`: The path to the combined App Store key file generated during the provisioning process, ends in `.json`. If you used the provisioning process, it will be named `app-store-key.json`.
 
-#### `tasks.keystore`
+#### `keystore`
 Overwrites the auto-generated keystore with the given one. This is useful for distributing releases via the Play Store, which requires the same keystore to be used for all builds, for example.
 
 - `keystore_apk`: The base-64 encoded binary keystore file for the APK bundles.
 - `keystore_aab`: The base-64 encoded binary keystore file for the AAB bundles.
 
-#### `tasks.convert_images`
+#### `convert_images`
 Converts the selected images in the given directories to WebP or AVIF to save space on-disk. This task specifically replaces every selected file with its converted version but does not change the file extension to ensure that all paths to assets and sprites remain the same.
 
 This task takes a dynamic set of properties where each key is the path to a directory containing image files to be converted and its value is a table of configuration options for that particular path. That way, various paths can be converted with different options for more flexibility.
@@ -115,9 +112,16 @@ Paths are evaluated relative to the base directory of the game, i.e. `game/image
 Each path may specify the following properties:
 - `extensions`: The list of file extensions to use. All files with an extension in this list will be converted. Defaults to `["png", "jpg"]`.
 - `recursive`: Whether to scan the given directory recursively or not. Defaults to `true`. If not recursive, will only take the images directly in the given directory.
-- `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites.
+- `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites. This has no effect when converting to AVIF.
 
-The image format to use may be specified at the task-level using the `format` key, which may be either `webp` (default) or `avif`. Do note that AVIF is only supported in Ren'Py `>=8.1.0`.
+The image format to use may be specified at the task-level using the `format` key, which may be either `webp` or `avif`.
+
+> <picture>
+>   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
+>   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
+> </picture><br>
+>
+> Note that AVIF is only supported in Ren'Py `>=8.1.0`
 
 #### `build`
 Specifies which distributions to build. Each of these keys may have a value of `true` or `false`.
@@ -126,7 +130,7 @@ Specifies which distributions to build. Each of these keys may have a value of `
 - `win`: Build the Windows distribution
 - `linux`: Build the Linux distribution
 - `mac`: Build the macOS distribution
-- `web`: Build the Web distribution (only on Ren'Py `>=7.3.0`)
+- `web`: Build the Web distribution (only on Ren'Py `>=8.2.0`)
 - `steam`: Build the Steam distribution
 - `market`: Build the external marketplace distribution (i.e. Itch.io)
 - `android_apk`: Build the Android distribution as an APK
@@ -135,14 +139,15 @@ Specifies which distributions to build. Each of these keys may have a value of `
 #### `options`
 Various `renconstruct`-specific options.
 
+- `task_dir`: The path to a directory containing custom Python task definitions. Only active if Python support is enabled.
 - `clear_output_dir`: Whether to clear the output directory on invocation or not. Useful for repeated runs where you want to persist previous results. Defaults to `false`.
-- `tasks`: The path to a directory containing custom Python task definitions. Only active if Python support is enabled. Defaults to `null`.
 
 #### `renutil`
 Options to pass to `renutil`.
 
 - `version`: The version of Ren'Py to use while building the distributions.
-- `registry`: The path where `renutil` data is stored. Mostly useful for CI environments.
+- `registry`: The path where `renutil` data is stored. Mostly useful for controlling cache in CI environments.
+- `update_pickle`: If set, forces the pickle protocol version Ren'Py uses internally to `5` (from the default of `2`). This causes the game to load and save faster, at the loss of compatibility with save games and RPYC files created on Ren'Py 7.x. Do not enable this if you need backwars-compatibility.
 
 ### Custom Tasks
 `renconstruct` supports the addition of custom tasks which can run at any point in the build process to tweak config settings, modify files, convert files between formats, rename files and folders on disk and many other things.
@@ -209,8 +214,8 @@ renotize requires a few pieces of information to be able to notarize your applic
 `renotize` provides a `provision` command which will interactively guide you through the process of acquiring the required certificates step by step.
 
 > <picture>
->   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/info.svg">
->   <img alt="Info" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/info.svg">
+>   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
+>   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
 > </picture><br>
 >
 > Note that for the notarization process to work, you must be a member of the [Apple Developer Program](https://developer.apple.com/programs/).
