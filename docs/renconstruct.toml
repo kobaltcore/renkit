@@ -1,19 +1,15 @@
-[tasks.clean]
-  enabled = false
-  priorities = { post_build = 0 } # the priority that determines the orders tasks will run in, defaults to 0
-  on_builds = ["pc", "win", "linux", "mac", "web", "steam", "market", "android_apk", "android_aab"] # builds this task should run for, defaults to all available builds
-
 [tasks.notarize] # required if matching task is enabled
+  type = "notarize"
   enabled = false
   priorities = { post_build = 10 } # the priority that determines the orders tasks will run in, defaults to 10
   on_builds = ["mac"] # builds this task should run for, defaults to "mac"
-  bundle_identifier = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
+  bundle_id = "com.my-game" # the bundle ID of your came, typically in reverse domain notation
   key_file = "certificates/private-key.pem" # the path to the private key file generated during the provisioning process
   cert_file = "certificates/developerID_application.cer" # the path to the Apple-generated certificate file generated during the provisioning process
   app_store_key_file = "certificates/app-store-key.json" # the path to the combined App Store key file generated during the provisioning process
-  json_bundle_file = "certificates/renotize.json" # the path to the combined certificate file. replaces the key, cert and app store files above
 
 [tasks.keystore] # required if matching task is enabled
+  type = "keystore"
   enabled = false
   priorities = { pre_build = 0 } # the priority that determines the orders tasks will run in, defaults to 0
   on_builds = ["android_apk", "android_aab"] # builds this task should run for, defaults to all android builds
@@ -21,6 +17,7 @@
   keystore_aab = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the AAB bundles
 
 [tasks.convert_images]
+  type = "convert_images"
   enabled = false
   format = "webp" # webp or avif
   priorities = { pre_build = 10 } # the priority that determines the orders tasks will run in, defaults to 10
@@ -28,11 +25,12 @@
   # extensions: a list of file extensions to convert
   # recursive: scans directories recursively if enabled, otherwise only scans the immediate directory
   # lossless: converts to lossless WebP if enabled, otherwise converts to lossy WebP
-  "game/images/cg" = { extensions = ["png", "jpg"], recursive = true, lossless = true } # default values
-  "game/images/bg" = { lossless = false }
-  "game/images" = { } # all parameters are optional
+  paths."game/images/cg" = { extensions = ["png", "jpg"], recursive = true, lossless = true } # default values
+  paths."game/images/bg" = { lossless = false }
+  paths."game/images" = { } # all parameters are optional
 
 [tasks.custom_task_1] # Maps to Python class CustomTask1Task (upper camel case + "Task" suffix)
+  type = "custom"
   enabled = false
   priorities = { pre_build = 0, post_build = 0 } # priorities per build stage to determine ordering, defaults to 0
   on_builds = ["pc", "win", "linux", "mac", "web", "steam", "market", "android_apk", "android_aab"] # builds this task should run for, defaults to all available builds
@@ -55,3 +53,4 @@
 [renutil]
   version = "8.0.3" # the Ren'Py version to use (required)
   registry = "cache" # the directory to store installation files in
+  update_pickle = true # causes renutil to update the Pickle version from 2 to 5 for speed improvements at the cost of incompatiblity with Ren'Py 7.x files

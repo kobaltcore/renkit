@@ -161,6 +161,10 @@ async fn build(
     let mut tasks = config.tasks;
 
     if let Some(task_dir) = config.options.task_dir {
+        if !task_dir.exists() {
+            return Err(anyhow!("Task directory does not exist"));
+        }
+
         println!("Loading custom tasks from {}", task_dir.to_string_lossy());
 
         vm.insert_sys_path(vm.new_pyobj(task_dir.to_str())).unwrap();
