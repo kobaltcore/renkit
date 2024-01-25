@@ -39,7 +39,7 @@ indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
 # RustPython
 rustpython-vm = "0.3.0"
 rustpython-stdlib = "0.3.0"
-rustpython = { version = "0.3.0", features = ["ssl", "freeze-stdlib"] }
+rustpython = { version = "0.3.0", features = ["freeze-stdlib"] }
 rustpython-pylib = { version = "0.3.0", features = ["freeze-stdlib"] }
 
 # The profile that 'cargo dist' will build with
