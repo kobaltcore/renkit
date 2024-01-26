@@ -62,9 +62,9 @@ impl Command for ProcessingCommand {
                 );
 
                 let avif_enc = Encoder::new()
-                    .with_quality(90.0)
-                    .with_speed(5)
-                    .with_num_threads(Some(1));
+                    .with_quality(92.0)
+                    .with_speed(4)
+                    .with_num_threads(Some(2));
                 let img = avif_enc.encode_rgba(image)?;
 
                 fs::write(&self.path, &img.avif_file)?;
