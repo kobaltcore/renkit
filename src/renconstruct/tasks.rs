@@ -10,6 +10,8 @@ use command_executor::shutdown_mode::ShutdownMode;
 use command_executor::thread_pool_builder::ThreadPoolBuilder;
 use imgref::ImgRef;
 use indicatif::{ProgressBar, ProgressStyle};
+use jpegxl_rs::encode::{EncoderFrame, EncoderResult, EncoderSpeed};
+use jpegxl_rs::encoder_builder;
 use jwalk::WalkDir;
 use ravif::Encoder;
 use rgb::FromSlice;
@@ -53,8 +55,7 @@ impl Command for ProcessingCommand {
     fn execute(&self) -> Result<()> {
         match self.image_format {
             ImageFormat::Avif => {
-                let image = ImageReader::open(&self.path)?.decode()?;
-                let image = image.to_rgba8();
+                let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
                 let image = ImgRef::new(
                     image.as_rgba(),
                     image.width() as usize,
@@ -70,8 +71,7 @@ impl Command for ProcessingCommand {
                 fs::write(&self.path, &img.avif_file)?;
             }
             ImageFormat::WebP => {
-                let image = ImageReader::open(&self.path)?.decode()?;
-                let image = image.to_rgba8();
+                let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
 
                 let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
 
@@ -149,6 +149,32 @@ impl Command for ProcessingCommand {
                 };
 
                 fs::write(&self.path, &result.as_bytes())?;
+            }
+            ImageFormat::JpegXl => {
+                let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
+                // let mut encoder = match self.lossless {
+                //     true => encoder_builder()
+                //         .has_alpha(true)
+                //         .quality(0.5)
+                //         .speed(EncoderSpeed::Kitten)
+                //         .build()?,
+                //     false => encoder_builder()
+                //         .has_alpha(true)
+                //         .quality(1.0)
+                //         .speed(EncoderSpeed::Kitten)
+                //         .build()?,
+                // };
+                let mut encoder = encoder_builder()
+                    .has_alpha(true)
+                    .quality(1.0)
+                    .speed(EncoderSpeed::Kitten)
+                    .build()?;
+                let buffer: EncoderResult<f32> = encoder.encode_frame(
+                    &EncoderFrame::new(image.as_raw()).num_channels(4),
+                    image.width(),
+                    image.height(),
+                )?;
+                fs::write(&self.path, &buffer.data)?;
             }
         }
 

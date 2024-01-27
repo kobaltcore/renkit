@@ -34,6 +34,8 @@ pub enum ImageFormat {
     WebP,
     #[serde(alias = "avif")]
     Avif,
+    #[serde(alias = "jpeg-xl")]
+    JpegXl,
 }
 
 #[derive(Debug, Clone, Deserialize)]
