@@ -38,7 +38,7 @@ image = "0.24.7"
 ravif = "0.11.4"
 webp = "0.2.6"
 libwebp-sys = { version = "0.9.4", features = ["avx2", "sse41"] }
-jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
+# jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
 # RustPython
 rustpython-vm = "0.3.0"
 rustpython-stdlib = "0.3.0"
