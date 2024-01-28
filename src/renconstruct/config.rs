@@ -139,14 +139,16 @@ pub struct GeneralTaskOptions {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub build: BuildOptions,
+    #[serde(default)]
     pub options: RenconstructOptions,
     pub renutil: RenutilOptions,
     pub tasks: HashMap<String, GeneralTaskOptions>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct RenconstructOptions {
     pub task_dir: Option<PathBuf>,
+    #[serde(default)]
     pub clear_output_dir: bool,
 }
 
