@@ -386,23 +386,25 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
 
 pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Result<()> {
     // find path ending in '-mac.zip'
-    let zip_path = fs::read_dir(&ctx.input_dir)?.find_map(|entry| {
+    let zip_path = fs::read_dir(&ctx.output_dir)?.find_map(|entry| {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().unwrap() == "zip" {
-            if path
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .ends_with("-mac")
-            {
-                Some(path)
-            } else {
-                None
+        match path.extension() {
+            Some(ext) => {
+                if ext == "zip" {
+                    if path
+                        .file_stem()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .ends_with("-mac")
+                    {
+                        return Some(path);
+                    }
+                }
+                return None;
             }
-        } else {
-            None
+            None => return None,
         }
     });
 
