@@ -39,19 +39,29 @@ pub struct ProcessingCommand {
     pub image_format: ImageFormat,
     pub path: PathBuf,
     pub lossless: bool,
+    pub webp_quality: f32,
+    pub avif_quality: f32,
 }
 
 impl ProcessingCommand {
-    fn new(image_format: ImageFormat, path: PathBuf, lossless: bool) -> ProcessingCommand {
+    fn new(
+        image_format: ImageFormat,
+        path: PathBuf,
+        lossless: bool,
+        webp_quality: f32,
+        avif_quality: f32,
+    ) -> ProcessingCommand {
         ProcessingCommand {
             image_format,
             path,
             lossless,
+            webp_quality,
+            avif_quality,
         }
     }
 }
 
-fn encode_avif(path: &PathBuf) -> Result<()> {
+fn encode_avif(path: &PathBuf, quality: f32) -> Result<()> {
     let image = ImageReader::open(path)?.decode()?.to_rgba8();
     let image = ImgRef::new(
         image.as_rgba(),
@@ -59,9 +69,17 @@ fn encode_avif(path: &PathBuf) -> Result<()> {
         image.height() as usize,
     );
 
+    // Test results from my own experiments (running DSSIM comparisons against the original PNGs):
+    // Q92: min: 0.00019111 max: 0.00081404 avg: 0.000361435797101449
+    // Q90: min: 0.00024517 max: 0.00109436 avg: 0.000517433478260870
+    // Q85: min: 0.00048456 max: 0.00254822 avg: 0.001188083995859214
+    // Q80: min: 0.00055154 max: 0.00298501 avg: 0.001368737412008282
+    // Q50: min: 0.00142641 max: 0.01011350 avg: 0.003927716728778467
+    // result: quality cutoff at about 0.001, so Q85 is a good default
+
     let avif_enc = Encoder::new()
-        .with_quality(92.0)
-        .with_speed(4)
+        .with_quality(quality)
+        .with_speed(3)
         .with_num_threads(Some(2));
     let img = avif_enc.encode_rgba(image)?;
 
@@ -70,7 +88,7 @@ fn encode_avif(path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn encode_webp(path: &PathBuf, lossless: bool) -> Result<()> {
+fn encode_webp(path: &PathBuf, quality: f32, lossless: bool) -> Result<()> {
     let image = ImageReader::open(path)?.decode()?.to_rgba8();
 
     let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
@@ -115,7 +133,7 @@ fn encode_webp(path: &PathBuf, lossless: bool) -> Result<()> {
             // -q 90 -m 6 -sharp_yuv -pre 4
             enc.encode_advanced(&webp::WebPConfig {
                 lossless: 0,
-                quality: 90.0,
+                quality: quality,
                 method: 6,
                 image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
                 target_size: 0,
@@ -183,16 +201,16 @@ impl Command for ProcessingCommand {
             //     fs::write(&self.path, &buffer.data)?;
             // }
             ImageFormat::HybridWebPAvif => match self.lossless {
-                true => encode_webp(&self.path, true)?,
-                false => encode_avif(&self.path)?,
+                true => encode_webp(&self.path, self.webp_quality, true)?,
+                false => encode_avif(&self.path, self.avif_quality)?,
             },
             ImageFormat::Avif => {
                 if self.lossless {
                     bail!("Lossless AVIF is not supported.");
                 }
-                encode_avif(&self.path)?
+                encode_avif(&self.path, self.avif_quality)?
             }
-            ImageFormat::WebP => encode_webp(&self.path, self.lossless)?,
+            ImageFormat::WebP => encode_webp(&self.path, self.webp_quality, self.lossless)?,
         }
 
         Ok(())
@@ -352,6 +370,8 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
             options.format.clone(),
             path,
             lossless,
+            options.webp_quality,
+            options.avif_quality,
         )));
         bar.inc(1);
     }

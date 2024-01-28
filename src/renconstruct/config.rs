@@ -20,6 +20,14 @@ where
     }
 }
 
+fn default_avif_quality() -> f32 {
+    85.0
+}
+
+fn default_webp_quality() -> f32 {
+    90.0
+}
+
 fn default_as_true() -> bool {
     true
 }
@@ -28,8 +36,9 @@ fn default_convert_images_extensions() -> Vec<String> {
     vec!["png".into(), "jpg".into(), "jpeg".into()]
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub enum ImageFormat {
+    #[default]
     #[serde(alias = "webp")]
     WebP,
     #[serde(alias = "avif")]
@@ -64,9 +73,13 @@ pub struct KeystoreOptions {
     pub keystore_aab: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct ConvertImagesOptions {
     pub format: ImageFormat,
+    #[serde(default = "default_avif_quality")]
+    pub avif_quality: f32,
+    #[serde(default = "default_webp_quality")]
+    pub webp_quality: f32,
     pub paths: HashMap<String, ConvertImagesPathConfig>,
 }
 

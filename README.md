@@ -119,6 +119,12 @@ The image format to use may be specified at the task-level using the `format` ke
 - `avif`: Converts all images to AVIF. Does not support lossless mode.
 - `hybrid-webp-avif`: Converts lossless images to WebP and the rest to AVIF for optimal space savings.
 
+It is also possible to specify custom quality values for both encoders via these flags:
+- `webp_quality`: Range of 0 to 100. Default: `90.0`.
+- `avif_quality`: Range of 0 to 100. Default: `85.0`.
+
+These quality settings will only take effect when not in `lossless` mode.
+
 > <picture>
 >   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
 >   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
