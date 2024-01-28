@@ -1,40 +1,48 @@
 [package]
 name = "renkit"
-version = "4.0.0-alpha.3"
+version = "4.0.0-alpha.4"
 edition = "2021"
 repository = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
-trauma = "2"
+# System
 rsa = "0.9.6"
-home = "0.5.9"
-toml = "0.8.8"
-rgb = "0.8.37"
 rand = "0.8.5"
-jwalk = "0.8.1"
-plist = "1.6.0"
 regex = "1.10.2"
 base64 = "0.21.6"
 anyhow = "1.0.79"
-imgref = "1.10.1"
-lol_html = "1.2.0"
-reqwest = "0.11.23"
 num_cpus = "1.16.0"
 itertools = "0.12.0"
-webbrowser = "0.8.12"
-zip-extract = "0.1.2"
-serde_json = "1.0.111"
-apple-codesign = "0.26.0"
 command-executor = "0.1.1"
+tokio = { version = "1.35.1", features = ["full"] }
+# this is only here because it doesn't enable profileapi
+# as a feature by default, breaking the build on windows
+winapi = { version = "0.3.9", features = ["profileapi"] }
+# Parsing
+toml = "0.8.8"
+plist = "1.6.0"
+lol_html = "1.2.0"
+serde_json = "1.0.111"
+serde = { version = "1.0.195", features = ["derive"] }
+# Filesystem
+home = "0.5.9"
+jwalk = "0.8.1"
+zip-extract = "0.1.2"
+# Internet
+trauma = "2"
+reqwest = "0.11.23"
+webbrowser = "0.8.12"
+# Apple
+apple-codesign = "0.26.0"
 x509-certificate = "0.23.1"
 app-store-connect = "0.5.0"
-tokio = { version = "1.35.1", features = ["full"] }
+# CLI
 clap = { version = "4.4.13", features = ["derive"] }
-serde = { version = "1.0.195", features = ["derive"] }
-winapi = { version = "0.3.9", features = ["profileapi"] }
 indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
 # Images
 image = "0.24.7"
+rgb = "0.8.37"
+imgref = "1.10.1"
 ravif = "0.11.4"
 webp = "0.2.6"
 libwebp-sys = { version = "0.9.4", features = ["avx2", "sse41"] }
