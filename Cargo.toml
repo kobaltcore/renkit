@@ -78,10 +78,10 @@ tap = "kobaltcore/homebrew-renkit"
 targets = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
-    "aarch64-unknown-linux-musl",
+    # "aarch64-unknown-linux-musl",
     "x86_64-apple-darwin",
     "x86_64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
+    # "x86_64-unknown-linux-musl",
     "x86_64-pc-windows-msvc",
 ]
 # Publish jobs to run in CI
@@ -91,4 +91,4 @@ pr-run-mode = "plan"
 
 [workspace.metadata.dist.github-custom-runners]
 aarch64-unknown-linux-gnu = "buildjet-8vcpu-ubuntu-2204-arm"
-aarch64-unknown-linux-musl = "buildjet-8vcpu-ubuntu-2204-arm"
+# aarch64-unknown-linux-musl = "buildjet-8vcpu-ubuntu-2204-arm"
