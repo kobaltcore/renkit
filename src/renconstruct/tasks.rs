@@ -3,7 +3,7 @@ use super::config::{
 };
 use crate::common::Version;
 use crate::renotize::full_run;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use base64::prelude::*;
 use command_executor::command::Command;
 use command_executor::shutdown_mode::ShutdownMode;
@@ -51,132 +51,154 @@ impl ProcessingCommand {
     }
 }
 
+fn encode_avif(path: &PathBuf) -> Result<()> {
+    let image = ImageReader::open(path)?.decode()?.to_rgba8();
+    let image = ImgRef::new(
+        image.as_rgba(),
+        image.width() as usize,
+        image.height() as usize,
+    );
+
+    let avif_enc = Encoder::new()
+        .with_quality(92.0)
+        .with_speed(4)
+        .with_num_threads(Some(1));
+    let img = avif_enc.encode_rgba(image)?;
+
+    fs::write(path, &img.avif_file)?;
+
+    Ok(())
+}
+
+fn encode_webp(path: &PathBuf, lossless: bool) -> Result<()> {
+    let image = ImageReader::open(path)?.decode()?.to_rgba8();
+
+    let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
+
+    let result = match lossless {
+        true => {
+            // -z 9 -m 6
+            enc.encode_advanced(&webp::WebPConfig {
+                lossless: 1,
+                quality: 100.0,
+                method: 6,
+                image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
+                target_size: 0,
+                target_PSNR: 0.0,
+                segments: 4,
+                sns_strength: 50,
+                filter_strength: 60,
+                filter_sharpness: 0,
+                filter_type: 1,
+                autofilter: 0,
+                alpha_compression: 1,
+                alpha_filtering: 1,
+                alpha_quality: 100,
+                pass: 1,
+                show_compressed: 0,
+                preprocessing: 0,
+                partitions: 0,
+                partition_limit: 0,
+                emulate_jpeg_size: 0,
+                thread_level: 0,
+                low_memory: 0,
+                near_lossless: 100,
+                exact: 0,
+                use_delta_palette: 0,
+                use_sharp_yuv: 0,
+                qmin: 0,
+                qmax: 100,
+            })
+            .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
+        }
+        false => {
+            // -q 90 -m 6 -sharp_yuv -pre 4
+            enc.encode_advanced(&webp::WebPConfig {
+                lossless: 0,
+                quality: 90.0,
+                method: 6,
+                image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
+                target_size: 0,
+                target_PSNR: 0.0,
+                segments: 4,
+                sns_strength: 50,
+                filter_strength: 60,
+                filter_sharpness: 0,
+                filter_type: 1,
+                autofilter: 0,
+                alpha_compression: 1,
+                alpha_filtering: 1,
+                alpha_quality: 100,
+                pass: 1,
+                show_compressed: 0,
+                preprocessing: 4,
+                partitions: 0,
+                partition_limit: 0,
+                emulate_jpeg_size: 0,
+                thread_level: 0,
+                low_memory: 0,
+                near_lossless: 100,
+                exact: 0,
+                use_delta_palette: 0,
+                use_sharp_yuv: 1,
+                qmin: 0,
+                qmax: 100,
+            })
+            .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
+        }
+    };
+
+    fs::write(path, &result.as_bytes())?;
+
+    Ok(())
+}
+
 impl Command for ProcessingCommand {
     fn execute(&self) -> Result<()> {
         match self.image_format {
+            // ImageFormat::JpegXl => {
+            //     let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
+            //     // let mut encoder = match self.lossless {
+            //     //     true => encoder_builder()
+            //     //         .has_alpha(true)
+            //     //         .quality(0.5)
+            //     //         .speed(EncoderSpeed::Kitten)
+            //     //         .build()?,
+            //     //     false => encoder_builder()
+            //     //         .has_alpha(true)
+            //     //         .quality(1.0)
+            //     //         .speed(EncoderSpeed::Kitten)
+            //     //         .build()?,
+            //     // };
+            //     let mut encoder = encoder_builder()
+            //         .has_alpha(true)
+            //         .quality(1.0)
+            //         .speed(EncoderSpeed::Kitten)
+            //         .build()?;
+            //     let buffer: EncoderResult<f32> = encoder.encode_frame(
+            //         &EncoderFrame::new(image.as_raw()).num_channels(4),
+            //         image.width(),
+            //         image.height(),
+            //     )?;
+            //     fs::write(&self.path, &buffer.data)?;
+            // }
+            ImageFormat::HybridWebPAvif => match self.lossless {
+                true => {
+                    println!("Encoding WebP (lossless): {}", self.path.display());
+                    encode_webp(&self.path, true)?
+                }
+                false => {
+                    println!("Encoding AVIF (lossy): {}", self.path.display());
+                    encode_avif(&self.path)?
+                }
+            },
             ImageFormat::Avif => {
-                let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
-                let image = ImgRef::new(
-                    image.as_rgba(),
-                    image.width() as usize,
-                    image.height() as usize,
-                );
-
-                let avif_enc = Encoder::new()
-                    .with_quality(92.0)
-                    .with_speed(4)
-                    .with_num_threads(Some(2));
-                let img = avif_enc.encode_rgba(image)?;
-
-                fs::write(&self.path, &img.avif_file)?;
+                if self.lossless {
+                    bail!("Lossless AVIF is not supported.");
+                }
+                encode_avif(&self.path)?
             }
-            ImageFormat::WebP => {
-                let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
-
-                let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
-
-                let result = match self.lossless {
-                    true => {
-                        // -z 9 -m 6
-                        enc.encode_advanced(&webp::WebPConfig {
-                            lossless: 1,
-                            quality: 100.0,
-                            method: 6,
-                            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-                            target_size: 0,
-                            target_PSNR: 0.0,
-                            segments: 4,
-                            sns_strength: 50,
-                            filter_strength: 60,
-                            filter_sharpness: 0,
-                            filter_type: 1,
-                            autofilter: 0,
-                            alpha_compression: 1,
-                            alpha_filtering: 1,
-                            alpha_quality: 100,
-                            pass: 1,
-                            show_compressed: 0,
-                            preprocessing: 0,
-                            partitions: 0,
-                            partition_limit: 0,
-                            emulate_jpeg_size: 0,
-                            thread_level: 0,
-                            low_memory: 0,
-                            near_lossless: 100,
-                            exact: 0,
-                            use_delta_palette: 0,
-                            use_sharp_yuv: 0,
-                            qmin: 0,
-                            qmax: 100,
-                        })
-                        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-                    }
-                    false => {
-                        // -q 90 -m 6 -sharp_yuv -pre 4
-                        enc.encode_advanced(&webp::WebPConfig {
-                            lossless: 0,
-                            quality: 90.0,
-                            method: 6,
-                            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-                            target_size: 0,
-                            target_PSNR: 0.0,
-                            segments: 4,
-                            sns_strength: 50,
-                            filter_strength: 60,
-                            filter_sharpness: 0,
-                            filter_type: 1,
-                            autofilter: 0,
-                            alpha_compression: 1,
-                            alpha_filtering: 1,
-                            alpha_quality: 100,
-                            pass: 1,
-                            show_compressed: 0,
-                            preprocessing: 4,
-                            partitions: 0,
-                            partition_limit: 0,
-                            emulate_jpeg_size: 0,
-                            thread_level: 0,
-                            low_memory: 0,
-                            near_lossless: 100,
-                            exact: 0,
-                            use_delta_palette: 0,
-                            use_sharp_yuv: 1,
-                            qmin: 0,
-                            qmax: 100,
-                        })
-                        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-                    }
-                };
-
-                fs::write(&self.path, &result.as_bytes())?;
-            } /*
-              ImageFormat::JpegXl => {
-                  let image = ImageReader::open(&self.path)?.decode()?.to_rgba8();
-                  // let mut encoder = match self.lossless {
-                  //     true => encoder_builder()
-                  //         .has_alpha(true)
-                  //         .quality(0.5)
-                  //         .speed(EncoderSpeed::Kitten)
-                  //         .build()?,
-                  //     false => encoder_builder()
-                  //         .has_alpha(true)
-                  //         .quality(1.0)
-                  //         .speed(EncoderSpeed::Kitten)
-                  //         .build()?,
-                  // };
-                  let mut encoder = encoder_builder()
-                      .has_alpha(true)
-                      .quality(1.0)
-                      .speed(EncoderSpeed::Kitten)
-                      .build()?;
-                  let buffer: EncoderResult<f32> = encoder.encode_frame(
-                      &EncoderFrame::new(image.as_raw()).num_channels(4),
-                      image.width(),
-                      image.height(),
-                  )?;
-                  fs::write(&self.path, &buffer.data)?;
-              }
-              */
+            ImageFormat::WebP => encode_webp(&self.path, self.lossless)?,
         }
 
         Ok(())
