@@ -114,14 +114,17 @@ Each path may specify the following properties:
 - `recursive`: Whether to scan the given directory recursively or not. Defaults to `true`. If not recursive, will only take the images directly in the given directory.
 - `lossless`: Whether to convert to lossless WebP or lossy WebP. Defaults to `true`. Lossy WebP produces smaller files but may introduce artifacts, so is better suited for things like backgrounds, while lossless WebP should be used for i.e. character sprites. This has no effect when converting to AVIF.
 
-The image format to use may be specified at the task-level using the `format` key, which may be either `webp` or `avif`.
+The image format to use may be specified at the task-level using the `format` key, which may be one of:
+- `webp`: Converts all images to WebP. Supports lossless mode.
+- `avif`: Converts all images to AVIF. Does not support lossless mode.
+- `hybrid-webp-avif`: Converts lossless images to WebP and the rest to AVIF for optimal space savings.
 
 > <picture>
 >   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
 >   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
 > </picture><br>
 >
-> Note that AVIF is only supported in Ren'Py `>=8.1.0`
+> Note that AVIF is only supported in Ren'Py `>=8.1.0` and does not support lossless encoding!
 
 #### `build`
 Specifies which distributions to build. Each of these keys may have a value of `true` or `false`.
