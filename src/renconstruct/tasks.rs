@@ -183,14 +183,8 @@ impl Command for ProcessingCommand {
             //     fs::write(&self.path, &buffer.data)?;
             // }
             ImageFormat::HybridWebPAvif => match self.lossless {
-                true => {
-                    println!("Encoding WebP (lossless): {}", self.path.display());
-                    encode_webp(&self.path, true)?
-                }
-                false => {
-                    println!("Encoding AVIF (lossy): {}", self.path.display());
-                    encode_avif(&self.path)?
-                }
+                true => encode_webp(&self.path, true)?,
+                false => encode_avif(&self.path)?,
             },
             ImageFormat::Avif => {
                 if self.lossless {
