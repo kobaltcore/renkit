@@ -114,7 +114,7 @@ impl Command for ProcessingCommand {
                     false => {
                         // -q 90 -m 6 -sharp_yuv -pre 4
                         enc.encode_advanced(&webp::WebPConfig {
-                            lossless: 1,
+                            lossless: 0,
                             quality: 90.0,
                             method: 6,
                             image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_PICTURE,
