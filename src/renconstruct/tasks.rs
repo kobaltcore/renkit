@@ -62,7 +62,7 @@ fn encode_avif(path: &PathBuf) -> Result<()> {
     let avif_enc = Encoder::new()
         .with_quality(92.0)
         .with_speed(4)
-        .with_num_threads(Some(1));
+        .with_num_threads(Some(2));
     let img = avif_enc.encode_rgba(image)?;
 
     fs::write(path, &img.avif_file)?;
