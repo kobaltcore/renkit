@@ -17,7 +17,7 @@ use ravif::Encoder;
 use rgb::FromSlice;
 use std::io::Read;
 use std::path::PathBuf;
-use std::{env, fs};
+use std::{env, fs, thread};
 use {anyhow::anyhow, image::io::Reader as ImageReader, image::EncodableLayout};
 
 #[derive(Debug)]
@@ -410,13 +410,18 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
 
     match zip_path {
         Some(path) => {
-            full_run(
-                &path,
-                &options.bundle_id,
-                &options.key_file,
-                &options.cert_file,
-                &options.app_store_key_file,
-            )?;
+            let options = options.clone();
+            thread::spawn(move || {
+                full_run(
+                    &path,
+                    &options.bundle_id,
+                    &options.key_file,
+                    &options.cert_file,
+                    &options.app_store_key_file,
+                )
+            })
+            .join()
+            .unwrap()?
         }
         None => {
             return Err(anyhow!("Could not find mac zip file."));
