@@ -1,8 +1,10 @@
 use super::config::{
-    ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, NotarizeOptions,
+    ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, LintOptions,
+    NotarizeOptions,
 };
 use crate::common::Version;
 use crate::renotize::full_run;
+use crate::renutil::launch;
 use anyhow::{bail, Result};
 use base64::prelude::*;
 use command_executor::command::Command;
@@ -33,6 +35,7 @@ pub struct TaskContext {
     pub input_dir: PathBuf,
     pub output_dir: PathBuf,
     pub renpy_path: PathBuf,
+    pub registry: PathBuf,
 }
 
 pub struct ProcessingCommand {
@@ -215,6 +218,23 @@ impl Command for ProcessingCommand {
 
         Ok(())
     }
+}
+
+pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
+    let (status, _stdout, _stderr) = launch(
+        &ctx.registry,
+        &ctx.version,
+        true,
+        true,
+        &vec![ctx.input_dir.to_string_lossy().to_string(), "lint".into()],
+        false,
+    )?;
+
+    if !status.success() {
+        bail!("Lint failed with status code: {}", status);
+    }
+
+    Ok(())
 }
 
 pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result<()> {

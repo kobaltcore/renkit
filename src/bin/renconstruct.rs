@@ -5,8 +5,8 @@ use jwalk::WalkDir;
 use renkit::common::Version;
 use renkit::renconstruct::config::{Config, CustomOptionValue, TaskOptions};
 use renkit::renconstruct::tasks::{
-    task_convert_images_pre, task_keystore_post, task_keystore_pre, task_notarize_post, Task,
-    TaskContext,
+    task_convert_images_pre, task_keystore_post, task_keystore_pre, task_lint_pre,
+    task_notarize_post, Task, TaskContext,
 };
 use renkit::renutil::{get_registry, install, launch};
 use rustpython::vm::builtins::{PyList, PyStr};
@@ -287,7 +287,19 @@ async fn build(
             .pre_build
             .cmp(&b.kind.priorities.pre_build)
     }) {
+        let registry = registry.clone();
         match &task.kind.options {
+            TaskOptions::Notarize(_) => {}
+            TaskOptions::Lint(opts) => {
+                let ctx = TaskContext {
+                    version: config.renutil.version.clone(),
+                    input_dir: input_dir.clone(),
+                    output_dir: output_dir.clone(),
+                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    registry,
+                };
+                task_lint_pre(&ctx, opts)?
+            }
             TaskOptions::Keystore(opts) => {
                 println!("[Pre] Running task: {}", task.name);
                 let ctx = TaskContext {
@@ -295,6 +307,7 @@ async fn build(
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(&config.renutil.version.to_string()),
+                    registry,
                 };
                 task_keystore_pre(&ctx, &opts)?
             }
@@ -305,6 +318,7 @@ async fn build(
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(&config.renutil.version.to_string()),
+                    registry,
                 };
                 task_convert_images_pre(&ctx, &opts)?
             }
@@ -314,7 +328,6 @@ async fn build(
                     handler.call((), vm).unwrap();
                 }
             }
-            _ => {}
         };
     }
 
@@ -342,7 +355,14 @@ async fn build(
                 output_dir.to_string_lossy().to_string(),
             ];
 
-            launch(&registry, &config.renutil.version, false, false, &args)?;
+            launch(
+                &registry,
+                &config.renutil.version,
+                false,
+                false,
+                &args,
+                true,
+            )?;
         } else {
             let args = vec![
                 "android_build".into(),
@@ -352,7 +372,14 @@ async fn build(
                 output_dir.to_string_lossy().to_string(),
             ];
 
-            launch(&registry, &config.renutil.version, false, false, &args)?;
+            launch(
+                &registry,
+                &config.renutil.version,
+                false,
+                false,
+                &args,
+                true,
+            )?;
         }
     }
 
@@ -367,7 +394,14 @@ async fn build(
                 output_dir.to_string_lossy().to_string(),
             ];
 
-            launch(&registry, &config.renutil.version, false, false, &args)?;
+            launch(
+                &registry,
+                &config.renutil.version,
+                false,
+                false,
+                &args,
+                true,
+            )?;
         }
     }
 
@@ -382,7 +416,14 @@ async fn build(
             output_dir.to_string_lossy().to_string(),
         ];
 
-        launch(&registry, &config.renutil.version, false, false, &args)?;
+        launch(
+            &registry,
+            &config.renutil.version,
+            false,
+            false,
+            &args,
+            true,
+        )?;
     }
 
     println!("Building other packages.");
@@ -420,7 +461,14 @@ async fn build(
         args.push("--package".into());
         args.push("market".into());
     }
-    launch(&registry, &config.renutil.version, false, false, &args)?;
+    launch(
+        &registry,
+        &config.renutil.version,
+        false,
+        false,
+        &args,
+        true,
+    )?;
 
     for task in active_tasks.iter().sorted_by(|a, b| {
         a.kind
@@ -428,6 +476,7 @@ async fn build(
             .post_build
             .cmp(&b.kind.priorities.post_build)
     }) {
+        let registry = registry.clone();
         match &task.kind.options {
             TaskOptions::Keystore(opts) => {
                 println!("[Post] Running task: {}", task.name);
@@ -436,6 +485,7 @@ async fn build(
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(&config.renutil.version.to_string()),
+                    registry,
                 };
                 task_keystore_post(&ctx, &opts)?
             }
@@ -446,6 +496,7 @@ async fn build(
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(&config.renutil.version.to_string()),
+                    registry,
                 };
                 task_notarize_post(&ctx, &opts)?
             }

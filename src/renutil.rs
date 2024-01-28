@@ -3,11 +3,18 @@ use anyhow::anyhow;
 use anyhow::Result;
 use lol_html::{element, HtmlRewriter, Settings};
 use std::env;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::io::Cursor;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+use std::process::ExitStatus;
+use std::process::Stdio;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
 use std::{fs, marker::PhantomData, path::PathBuf};
 use trauma::download::Download;
 use trauma::downloader::DownloaderBuilder;
@@ -268,7 +275,8 @@ pub fn launch(
     headless: bool,
     direct: bool,
     args: &[String],
-) -> Result<()> {
+    check_status: bool,
+) -> Result<(ExitStatus, String, String)> {
     let instance = version.to_local(registry)?;
 
     let python = instance.python(registry)?;
@@ -278,6 +286,8 @@ pub fn launch(
     let entrypoint = entrypoint.to_str().unwrap();
 
     let mut cmd = Command::new(python);
+
+    let cmd = cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
     cmd.arg("-EO").arg(entrypoint);
 
@@ -294,13 +304,52 @@ pub fn launch(
         std::env::set_var("SDL_AUDIODRIVER", "dummy");
         std::env::set_var("SDL_VIDEODRIVER", "dummy");
     }
+    let mut child = cmd.spawn()?;
 
-    let status = cmd.status()?;
-    if !status.success() {
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    // We do some thread magic here to both print stdout and stderr as they come in,
+    // as well as capturing them to return them once the process has exited.
+
+    let bufread_stdout = BufReader::new(stdout);
+    let bufread_stderr = BufReader::new(stderr);
+
+    let result_stdout = Arc::new(Mutex::new(vec![]));
+    let result_stdout_clone = result_stdout.clone();
+    let h_stdout = thread::spawn(move || {
+        for line in bufread_stdout.lines() {
+            let line = line.unwrap();
+            println!("{}", line);
+            let mut handle = result_stdout_clone.lock().unwrap();
+            handle.push(line);
+        }
+    });
+
+    let result_stderr = Arc::new(Mutex::new(vec![]));
+    let result_stderr_clone = result_stderr.clone();
+    let h_stderr = thread::spawn(move || {
+        for line in bufread_stderr.lines() {
+            let line = line.unwrap();
+            println!("{}", line);
+            let mut handle = result_stderr_clone.lock().unwrap();
+            handle.push(line);
+        }
+    });
+
+    h_stdout.join().unwrap();
+    h_stderr.join().unwrap();
+
+    let status = child.wait()?;
+
+    if check_status && !status.success() {
         anyhow::bail!("Unable to launch Ren'Py.");
     }
 
-    Ok(())
+    let out_stdout = result_stdout.lock().unwrap().join("\n");
+    let out_stderr = result_stderr.lock().unwrap().join("\n");
+
+    Ok((status, out_stdout, out_stderr))
 }
 
 pub async fn install(

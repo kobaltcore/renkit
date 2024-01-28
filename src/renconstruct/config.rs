@@ -68,6 +68,9 @@ pub struct PriorityOptions {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct LintOptions {}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct KeystoreOptions {
     pub keystore_apk: String,
     pub keystore_aab: String,
@@ -114,6 +117,8 @@ pub struct CustomOptions {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type")]
 pub enum TaskOptions {
+    #[serde(rename = "lint")]
+    Lint(LintOptions),
     #[serde(rename = "keystore")]
     Keystore(KeystoreOptions),
     #[serde(rename = "convert_images")]

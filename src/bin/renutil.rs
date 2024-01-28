@@ -45,6 +45,8 @@ enum Commands {
         headless: bool,
         #[arg(short = 'd', long)]
         direct: bool,
+        #[arg(short = 'c', long, default_value_t = false)]
+        check_status: bool,
     },
     /// Install the given version of Ren'Py.
     Install {
@@ -84,7 +86,15 @@ async fn main() -> Result<()> {
             headless,
             direct,
             args,
-        } => launch(&registry, version, *headless, *direct, args)?,
+            check_status,
+        } => {
+            let (status, _stdout, _stderr) =
+                launch(&registry, version, *headless, *direct, args, *check_status)?;
+            if !status.success() {
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            return Ok(());
+        }
         Commands::Install {
             version,
             no_cleanup,
