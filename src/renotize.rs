@@ -223,25 +223,28 @@ pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
     println!("Status: {status}");
 
     match log.get("issues") {
-        Some(issues) => {
-            let issues = issues.as_array().unwrap().iter().map(|issue| {
-                let issue = issue.as_object().unwrap();
-                let message = issue.get("message").unwrap().as_str().unwrap();
-                let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
-                let path = issue.get("path").unwrap().as_str().unwrap();
-                (message, doc_url, path)
-            });
+        Some(issues) => match issues {
+            serde_json::Value::Array(_) => {
+                let issues = issues.as_array().unwrap().iter().map(|issue| {
+                    let issue = issue.as_object().unwrap();
+                    let message = issue.get("message").unwrap().as_str().unwrap();
+                    let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
+                    let path = issue.get("path").unwrap().as_str().unwrap();
+                    (message, doc_url, path)
+                });
 
-            for (key, group) in &issues.group_by(|(message, _, _)| *message) {
-                println!("Error: {}", key);
-                for (i, (_, doc_url, path)) in group.enumerate() {
-                    if i == 0 {
-                        println!("Documentation: {}\nAffected files:", doc_url);
+                for (key, group) in &issues.group_by(|(message, _, _)| *message) {
+                    println!("Error: {}", key);
+                    for (i, (_, doc_url, path)) in group.enumerate() {
+                        if i == 0 {
+                            println!("Documentation: {}\nAffected files:", doc_url);
+                        }
+                        println!("  - {}", path);
                     }
-                    println!("  - {}", path);
                 }
             }
-        }
+            _ => {}
+        },
         None => {}
     };
 
