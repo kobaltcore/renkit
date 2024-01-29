@@ -410,15 +410,19 @@ async fn build(
         }
     }
 
-    // TODO: This needs testing once 8.2.0 is released.
     if config.build.web {
         println!("Building Web package.");
+
+        // The web build clears the destination directory when it runs, which is undesirable
+        // As such, we contain it in a subfolder and move it out afterwards.
+        let web_dir = output_dir.join("web");
+        fs::create_dir_all(&web_dir)?;
 
         let args = vec![
             "web_build".into(),
             input_dir.to_string_lossy().to_string(),
             "--dest".into(),
-            output_dir.to_string_lossy().to_string(),
+            web_dir.to_string_lossy().to_string(),
         ];
 
         launch(
@@ -429,51 +433,55 @@ async fn build(
             &args,
             true,
         )?;
+
+        fs::remove_dir_all(web_dir)?;
     }
 
-    println!("Building other packages.");
-    let mut args = vec![
-        "distribute".into(),
-        input_dir.to_string_lossy().to_string(),
-        "--destination".into(),
-        output_dir.to_string_lossy().to_string(),
-    ];
-    if config.build.pc {
-        args.push("--package".into());
-        args.push("pc".into());
+    let mut active_builds_copy = active_builds.clone();
+    active_builds_copy.remove("web");
+
+    if active_builds_copy.len() > 0 {
+        println!("Building other packages.");
+        let mut args = vec![
+            "distribute".into(),
+            input_dir.to_string_lossy().to_string(),
+            "--destination".into(),
+            output_dir.to_string_lossy().to_string(),
+        ];
+        if config.build.pc {
+            args.push("--package".into());
+            args.push("pc".into());
+        }
+        if config.build.win {
+            args.push("--package".into());
+            args.push("win".into());
+        }
+        if config.build.linux {
+            args.push("--package".into());
+            args.push("linux".into());
+        }
+        if config.build.mac {
+            args.push("--package".into());
+            args.push("mac".into());
+        }
+        if config.build.steam {
+            args.push("--package".into());
+            args.push("steam".into());
+        }
+        if config.build.market {
+            args.push("--package".into());
+            args.push("market".into());
+        }
+
+        launch(
+            &registry,
+            &config.renutil.version,
+            false,
+            false,
+            &args,
+            true,
+        )?;
     }
-    if config.build.win {
-        args.push("--package".into());
-        args.push("win".into());
-    }
-    if config.build.linux {
-        args.push("--package".into());
-        args.push("linux".into());
-    }
-    if config.build.mac {
-        args.push("--package".into());
-        args.push("mac".into());
-    }
-    if config.build.web {
-        args.push("--package".into());
-        args.push("web".into());
-    }
-    if config.build.steam {
-        args.push("--package".into());
-        args.push("steam".into());
-    }
-    if config.build.market {
-        args.push("--package".into());
-        args.push("market".into());
-    }
-    launch(
-        &registry,
-        &config.renutil.version,
-        false,
-        false,
-        &args,
-        true,
-    )?;
 
     for task in active_tasks.iter().sorted_by(|a, b| {
         a.kind
