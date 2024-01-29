@@ -1,6 +1,6 @@
 [package]
 name = "renkit"
-version = "4.0.0-alpha.6"
+version = "4.0.0"
 edition = "2021"
 repository = "https://github.com/kobaltcore/renkit"
 
