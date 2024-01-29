@@ -116,18 +116,31 @@ async fn build(
         }
     }
 
-    let registry = if cli_registry.is_some() {
-        get_registry(cli_registry)
-    } else {
-        get_registry(config.renutil.registry)
-    };
-
     if config.options.clear_output_dir {
         println!("Clearing output directory");
         fs::remove_dir_all(output_dir)?;
     }
 
     fs::create_dir_all(output_dir)?;
+
+    let registry = if cli_registry.is_some() {
+        get_registry(cli_registry)
+    } else {
+        get_registry(config.renutil.registry)
+    };
+
+    if !config.renutil.version.is_installed(&registry) {
+        println!("Installing Ren'Py {}", config.renutil.version);
+
+        install(
+            &registry,
+            &config.renutil.version,
+            false,
+            false,
+            config.renutil.update_pickle,
+        )
+        .await?;
+    }
 
     let active_builds = {
         let mut active_builds = HashSet::<String>::new();
@@ -334,19 +347,6 @@ async fn build(
                 }
             }
         };
-    }
-
-    if !config.renutil.version.is_installed(&registry) {
-        println!("Installing Ren'Py {}", config.renutil.version);
-
-        install(
-            &registry,
-            &config.renutil.version,
-            false,
-            false,
-            config.renutil.update_pickle,
-        )
-        .await?;
     }
 
     if config.build.android_apk {
