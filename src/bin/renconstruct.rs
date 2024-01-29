@@ -59,6 +59,7 @@ async fn build(
     input_dir: &PathBuf,
     output_dir: &PathBuf,
     config_path: Option<PathBuf>,
+    cli_registry: Option<PathBuf>,
 ) -> Result<()> {
     let config_path = config_path.unwrap_or("renconstruct.toml".into());
 
@@ -115,7 +116,11 @@ async fn build(
         }
     }
 
-    let registry = get_registry(config.renutil.registry);
+    let registry = if cli_registry.is_some() {
+        get_registry(cli_registry)
+    } else {
+        get_registry(config.renutil.registry)
+    };
 
     if config.options.clear_output_dir {
         println!("Clearing output directory");
@@ -526,6 +531,6 @@ fn main() -> Result<()> {
             input_dir,
             output_dir,
             config_path,
-        } => build(vm, input_dir, output_dir, config_path.clone()),
+        } => build(vm, input_dir, output_dir, config_path.clone(), cli.registry),
     })
 }
