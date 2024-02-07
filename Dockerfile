@@ -3,9 +3,9 @@
 # to run commands:
 # docker run --rm -it --volume /local/project/path:/project renpy:8.2.0 renutil launch 8.2.0 -d -- "/project compile"
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 ARG renpy_version=8.2.0
-ARG renkit_version=v4.0.0
+ARG renkit_version=v4.0.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -16,7 +16,7 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # install dependencies
 RUN apt-get update && \
-    apt-get install -y curl wget xz-utils libgl1 libssl-dev && \
+    apt-get install -y curl wget xz-utils libgl1 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV PATH="/root/.cargo/bin:${PATH}"
