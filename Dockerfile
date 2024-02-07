@@ -1,24 +1,31 @@
 # build for a specific version of Ren'Py with:
-# docker build . --tag renpy:8.0.3 --build-arg renpy_version=8.0.3
+# docker build . --tag renpy:8.2.0 --build-arg renpy_version=8.2.0
 # to run commands:
-# docker run --rm -it --volume /local/project/path:/project renpy:8.0.3 'renutil launch -v 8.0.3 --headless -d -a "/project compile"'
+# docker run --rm -it --volume /local/project/path:/project renpy:8.2.0 renutil launch 8.2.0 -d -- "/project compile"
 
-FROM --platform=linux/x86_64 openjdk:8-jdk-slim-bullseye
-ARG renpy_version=8.0.3
-ARG renkit_version=v3.2.0
+FROM ubuntu:20.04
+ARG renpy_version=8.2.0
+ARG renkit_version=v4.0.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# install java
+ENV JAVA_HOME=/opt/java/openjdk
+COPY --from=eclipse-temurin:21-jdk $JAVA_HOME $JAVA_HOME
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
 # install dependencies
 RUN apt-get update && \
-    apt-get install -y curl wget libgl1 && \
+    apt-get install -y curl wget xz-utils libgl1 libssl-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# install renkit tools
-RUN wget -qO- https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-linux-amd64.tar.gz | tar xz -C /usr/local/bin
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# install renkit
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-installer.sh | sh
 
 # install the specified version of Ren'Py
-RUN renutil install -v $renpy_version
+RUN $HOME/.cargo/bin/renutil install $renpy_version
 
 # default entrypoint so people can dispatch to any of renkit's tools
-ENTRYPOINT ["sh", "-c"]
+CMD [ "/bin/bash", "-c"]
