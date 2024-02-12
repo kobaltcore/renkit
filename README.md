@@ -19,6 +19,14 @@ renkit is written in Rust and compiled into standalone executables, batteries in
 
 ## Installation
 
+> <picture>
+>   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
+>   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
+> </picture><br>
+>
+> Note that `renutil` and `renconstruct` require Java to be installed. The recommended variant at this moment is [Eclipse Temurin](https://adoptium.net/temurin/releases). Starting from Ren'Py 8.2.0, Ren'Py requires Java 21. For any versions before 8.2.0, Java 8 is required.
+> Please ensure that the correct Java version is referenced via the `JAVA_HOME` environment variable before running either of the two tools.
+
 ### Automatic
 
 `renkit` comes with several installation options for the various supported platforms. Please check out the available options for the [latest release](https://github.com/kobaltcore/renkit/releases/latest).
