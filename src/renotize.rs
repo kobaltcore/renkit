@@ -406,10 +406,15 @@ pub fn provision() -> Result<()> {
         match fs::read_dir(&cert_dir)?.find_map(|entry| {
             let entry = entry.unwrap();
             let path = entry.path();
-            if path.extension().unwrap() == "p8" {
-                Some(path)
-            } else {
-                None
+            match path.extension() {
+                Some(ext) => {
+                    if ext == "p8" {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                }
+                None => None,
             }
         }) {
             Some(path) => {
