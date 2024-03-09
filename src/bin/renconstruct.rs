@@ -118,7 +118,9 @@ async fn build(
 
     if config.options.clear_output_dir {
         println!("Clearing output directory");
-        fs::remove_dir_all(output_dir)?;
+        if output_dir.exists() {
+            fs::remove_dir_all(output_dir)?;
+        }
     }
 
     fs::create_dir_all(output_dir)?;
