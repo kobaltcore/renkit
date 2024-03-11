@@ -1,5 +1,5 @@
 # Version 4.0.3
-TBD
+This minor release implements better output during notarization to make it easier to follow what the tool is doing at any given moment (see #15), specifically with view of the potentially-long notarization wait times from Apple's servers.
 
 # Version 4.0.2
 This minor release fixes two bugs reported in #13 and #14.
