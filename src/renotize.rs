@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use app_store_connect::notary_api::{self, SubmissionResponseStatus};
 use apple_codesign::{
     cli::{
         certificate_source::{CertificateDerSigningKey, CertificateSource, PemSigningKey},
@@ -8,6 +9,7 @@ use apple_codesign::{
     AppleCodesignError, CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope,
     SigningSettings, UnifiedSigner,
 };
+use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use plist::Value;
 use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
@@ -21,17 +23,72 @@ fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<(
     let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
 
     println!("Uploading file to notarization service");
-    let upload = notarizer.notarize_path(&input_file, Some(Duration::from_secs(1800)))?;
+    let upload = notarizer.notarize_path(&input_file, None)?;
 
     match upload {
-        NotarizationUpload::UploadId(data) => {
-            println!("Notarization UUID: {}", data);
+        NotarizationUpload::UploadId(id) => {
+            println!("Upload complete");
+            println!("Notarization UUID: {id}");
+            println!("Waiting for notarization to complete");
+
+            let wait_limit = Duration::from_secs(1800);
+            let wait_interval = Duration::from_secs(5);
+            let start_time = std::time::Instant::now();
+
+            let bar =ProgressBar::new(wait_limit.as_secs()).with_style(
+                ProgressStyle::with_template(
+                    "{bar:48.green/black} {human_pos:>5.green}/{human_len:<5.green} {per_sec:.red} eta {eta:.blue}",
+                )
+                .unwrap()
+                .progress_chars("━╾╴─"),
+            );
+
+            bar.inc(1);
+
+            let mut status;
+
+            loop {
+                status = notarizer.get_submission(&id)?;
+
+                let elapsed = start_time.elapsed();
+
+                if status.data.attributes.status != notary_api::SubmissionResponseStatus::InProgress
+                {
+                    println!("Notary API Server has finished processing the uploaded asset");
+                    break;
+                }
+
+                if elapsed >= wait_limit {
+                    println!("reached wait limit after {}s", elapsed.as_secs());
+                    break;
+                }
+
+                std::thread::sleep(wait_interval);
+                bar.inc(wait_interval.as_secs());
+            }
+
+            bar.finish();
+
+            match status.data.attributes.status {
+                SubmissionResponseStatus::Accepted => {
+                    println!("Notarization accepted");
+
+                    println!("Stapling notarization to file");
+                    let stapler = Stapler::new()?;
+                    stapler.staple_path(&input_file)?;
+                }
+                _ => {
+                    println!("Notarization failed.");
+
+                    let log = notarizer.fetch_notarization_log(&id)?;
+
+                    for line in serde_json::to_string_pretty(&log)?.lines() {
+                        println!("notary log> {}", line);
+                    }
+                }
+            };
         }
-        NotarizationUpload::NotaryResponse(data) => {
-            println!("Notarization UUID: {}", data.data.id);
-            let stapler = Stapler::new()?;
-            stapler.staple_path(&input_file)?;
-        }
+        _ => unreachable!("NotarizationUpload::NotaryResponse should be returned"),
     };
 
     Ok(())
