@@ -1,3 +1,4 @@
+use crate::common::zip_dir;
 use anyhow::{anyhow, Result};
 use app_store_connect::notary_api::{self, SubmissionResponseStatus};
 use apple_codesign::{
@@ -11,15 +12,27 @@ use apple_codesign::{
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
+use jwalk::WalkDir;
 use plist::Value;
 use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-use std::{fs, io::Cursor, path::PathBuf, process::Command, time::Duration};
+use std::{
+    fs::{self, File},
+    io::Cursor,
+    path::PathBuf,
+    process::Command,
+    time::Duration,
+};
 use x509_certificate::X509CertificateBuilder;
+use zip::CompressionMethod;
 
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 const ENTITLEMENTS_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"#;
 
-fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
+fn notarize_file(
+    input_file: &PathBuf,
+    app_store_key_file: &PathBuf,
+    staple_file: Option<&PathBuf>,
+) -> Result<()> {
     let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
 
     println!("Uploading file to notarization service");
@@ -75,7 +88,11 @@ fn notarize_file(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<(
 
                     println!("Stapling notarization to file");
                     let stapler = Stapler::new()?;
-                    stapler.staple_path(&input_file)?;
+
+                    match staple_file {
+                        Some(sf) => stapler.staple_path(sf)?,
+                        None => stapler.staple_path(input_file)?,
+                    };
                 }
                 _ => {
                     println!("Notarization failed.");
@@ -182,7 +199,7 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
 }
 
 pub fn notarize_app(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
-    notarize_file(input_file, app_store_key_file)
+    notarize_file(input_file, app_store_key_file, None)
 }
 
 pub fn pack_dmg(
@@ -259,7 +276,30 @@ pub fn sign_dmg(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
 }
 
 pub fn notarize_dmg(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
-    notarize_file(input_file, app_store_key_file)
+    notarize_file(input_file, app_store_key_file, None)
+}
+
+pub fn pack_zip(input_file: &PathBuf, output_file: &PathBuf) -> Result<()> {
+    let mut files = WalkDir::new(input_file).into_iter();
+
+    let file = File::create(output_file).unwrap();
+
+    zip_dir(
+        &mut files,
+        Some(&input_file.parent().unwrap().to_owned()),
+        file,
+        CompressionMethod::Deflated,
+    )?;
+
+    Ok(())
+}
+
+pub fn notarize_zip(
+    input_file: &PathBuf,
+    app_store_key_file: &PathBuf,
+    app_file: &PathBuf,
+) -> Result<()> {
+    notarize_file(input_file, app_store_key_file, Some(app_file))
 }
 
 pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
@@ -322,14 +362,37 @@ pub fn full_run(
     sign_app(&app_path, key_file, cert_file)?;
     println!("Notarizing app at {:?}", app_path);
     notarize_app(&app_path, app_store_key_file)?;
-    let dmg_path = app_path.with_extension("dmg");
-    println!("Packing DMG to {:?}", dmg_path);
-    pack_dmg(&app_path, &dmg_path, &None)?;
-    println!("Signing DMG at {:?}", dmg_path);
-    sign_dmg(&dmg_path, key_file, cert_file)?;
-    println!("Notarizing DMG at {:?}", dmg_path);
-    notarize_dmg(&dmg_path, app_store_key_file)?;
+
+    let zip_path = app_path
+        .parent()
+        .unwrap()
+        .with_file_name(format!(
+            "{}-notarized",
+            input_file.file_stem().unwrap().to_string_lossy()
+        ))
+        .with_extension("zip");
+    println!("Packing ZIP to {:?}", input_file);
+    pack_zip(&app_path, &zip_path)?;
+
+    fs::remove_file(&input_file)?;
+    fs::rename(&zip_path, &input_file)?;
+
+    if std::env::consts::OS == "macos" {
+        let dmg_path = input_file.with_extension("dmg");
+        println!("Packing DMG to {:?}", dmg_path);
+        pack_dmg(&app_path, &dmg_path, &None)?;
+        println!("Signing DMG at {:?}", dmg_path);
+        sign_dmg(&dmg_path, key_file, cert_file)?;
+        println!("Notarizing DMG at {:?}", dmg_path);
+        notarize_dmg(&dmg_path, app_store_key_file)?;
+
+        fs::remove_dir_all(app_path.parent().unwrap())?;
+    } else {
+        println!("Skipping DMG creation and signing: Only supported on macOS.");
+    }
+
     println!("Done!");
+
     Ok(())
 }
 

@@ -4482,7 +4482,7 @@ checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "renkit"
-version = "4.0.2"
+version = "4.0.3"
 dependencies = [
  "anyhow",
  "app-store-connect",
@@ -4520,6 +4520,7 @@ dependencies = [
  "webp",
  "winapi",
  "x509-certificate",
+ "zip",
  "zip-extract",
 ]
 
@@ -7361,6 +7362,7 @@ dependencies = [
  "hmac",
  "pbkdf2",
  "sha1",
+ "time",
  "zstd",
 ]
 
