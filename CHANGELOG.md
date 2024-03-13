@@ -1,3 +1,10 @@
+# Version 4.1.0
+This release changes the notarization process to be more useful on non-Apple platforms.
+
+Specifically, `renotize` will now:
+1. Sign and notarize the `.app` bundle on all platforms, replacing the original ZIP file with its notarized version.
+2. On macOS, it will additionally sign and notarize a DMG image.
+
 # Version 4.0.3
 This minor release implements better output during notarization to make it easier to follow what the tool is doing at any given moment (see #15), specifically with view of the potentially-long notarization wait times from Apple's servers.
 
