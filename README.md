@@ -66,6 +66,16 @@ renutil launch 8.2.0 -d -- ~/my-project
 
 We use the double dash (`--`) to separate the arguments for Ren'Py from `renutil`'s. This way, you can even pass things like `--help` through to the underlying program without `renutil` interfering.
 
+### Launch a Ren'Py project with an interactive Terminal REPL
+```bash
+renutil launch 8.3.1 -di -- ~/my-project
+```
+
+### Launch a Ren'Py project with custom code to run after startup
+```bash
+renutil launch 8.3.1 -di --code 'print("Hello World!")' -- ~/my-project
+```
+
 ### Install a specific version
 ```bash
 renutil install 8.2.0
