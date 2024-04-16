@@ -49,6 +49,10 @@ enum Commands {
         direct: bool,
         #[arg(short = 'c', long, default_value_t = false)]
         check_status: bool,
+        #[arg(short = 'i', long, default_value_t = false)]
+        interactive: bool,
+        #[arg(long)]
+        code: Option<String>,
     },
     /// Install the given version of Ren'Py.
     Install {
@@ -93,9 +97,20 @@ async fn main() -> Result<()> {
             direct,
             args,
             check_status,
+            interactive,
+            code,
         } => {
-            let (status, _stdout, _stderr) =
-                launch(&registry, version, *headless, *direct, args, *check_status)?;
+            let code: Option<&String> = code.as_ref();
+            let (status, _stdout, _stderr) = launch(
+                &registry,
+                version,
+                *headless,
+                *direct,
+                args,
+                *check_status,
+                *interactive,
+                code,
+            )?;
             if !status.success() {
                 std::process::exit(status.code().unwrap_or(1));
             }

@@ -16,7 +16,6 @@ base64 = "0.21.6"
 anyhow = "1.0.79"
 num_cpus = "1.16.0"
 itertools = "0.12.0"
-rustyline = "14.0.0"
 command-executor = "0.1.1"
 tokio = { version = "1.35.1", features = ["full"] }
 # this is only here because it doesn't enable profileapi
@@ -42,6 +41,11 @@ apple-codesign = "0.27.0"
 x509-certificate = "0.23.1"
 app-store-connect = "0.5.0"
 # CLI
+ratatui = "0.26.2"
+crossterm = "0.27.0"
+wait-timeout = "0.2.0"
+tui-textarea = "0.4.0"
+tui-scrollview = "0.3.4"
 clap = { version = "4.4.13", features = ["derive"] }
 indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
 # Images
