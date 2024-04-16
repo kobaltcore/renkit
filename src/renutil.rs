@@ -136,10 +136,14 @@ impl std::fmt::Display for Version {
                 minor,
                 patch,
                 hotfix,
+                nightly,
             } => {
                 write!(f, "{}.{}.{}", major, minor, patch)?;
                 if *hotfix > 0 {
                     write!(f, ".{}", hotfix)?;
+                }
+                if *nightly {
+                    write!(f, "+nightly")?;
                 }
                 Ok(())
             }
@@ -166,39 +170,44 @@ pub fn get_registry(registry: Option<PathBuf>) -> PathBuf {
 }
 
 pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<Vec<Version>> {
-    let body = reqwest::get("https://www.renpy.org/dl")
-        .await?
-        .text()
-        .await?;
-
     let mut versions = vec![];
 
     if online {
-        let mut rewriter = HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![element!("a[href]", |el| {
-                    let href = el
-                        .get_attribute("href")
-                        .ok_or(anyhow!("Unable to get attribute."))?;
-                    let href = href
-                        .strip_suffix("/")
-                        .ok_or(anyhow!("Unable to strip suffix."))?;
+        for (i, url) in ["https://nightly.renpy.org", "https://www.renpy.org/dl"]
+            .iter()
+            .enumerate()
+        {
+            let body = reqwest::get(*url).await?.text().await?;
 
-                    match Version::from_str(href) {
-                        Some(version) => {
-                            versions.push(version);
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!("a[href]", |el| {
+                        let href = el
+                            .get_attribute("href")
+                            .ok_or(anyhow!("Unable to get attribute."))?;
+                        let href = match i {
+                            0 => &href,
+                            _ => href
+                                .strip_suffix("/")
+                                .ok_or(anyhow!("Unable to strip suffix."))?,
+                        };
+
+                        match Version::from_str(href) {
+                            Some(version) => {
+                                versions.push(version);
+                            }
+                            None => {}
                         }
-                        None => {}
-                    }
 
-                    Ok(())
-                })],
-                ..Settings::default()
-            },
-            |_: &[u8]| {},
-        );
-        rewriter.write(body.as_bytes())?;
-        rewriter.end()?;
+                        Ok(())
+                    })],
+                    ..Settings::default()
+                },
+                |_: &[u8]| {},
+            );
+            rewriter.write(body.as_bytes())?;
+            rewriter.end()?;
+        }
     } else {
         for entry in fs::read_dir(registry)? {
             let entry = entry?;
@@ -221,8 +230,16 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
     Ok(versions)
 }
 
-pub async fn list(registry: &PathBuf, online: bool, num: usize) -> Result<()> {
-    let mut versions = get_available_versions(registry, online).await?;
+pub async fn list(registry: &PathBuf, online: bool, num: usize, nightly: bool) -> Result<()> {
+    let versions = get_available_versions(registry, online).await?;
+
+    let mut versions = match online {
+        true => versions
+            .iter()
+            .filter(|v| !v.nightly || nightly)
+            .collect::<Vec<&Version>>(),
+        false => versions.iter().collect::<Vec<&Version>>(),
+    };
 
     versions.sort_by(|a, b| b.cmp(a));
 
@@ -263,8 +280,8 @@ pub async fn show(registry: &PathBuf, version: &Version) -> Result<()> {
     } else {
         println!("Installed: No");
     }
-    println!("SDK URL: https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip");
-    println!("RAPT URL: https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip");
+    println!("SDK URL: {}", version.sdk_url()?);
+    println!("RAPT URL: {}", version.rapt_url()?);
 
     Ok(())
 }
@@ -394,17 +411,20 @@ pub async fn install(
 
     fs::create_dir_all(&base_path).expect("Unable to create directory.");
 
-    let sdk_url = format!("https://www.renpy.org/dl/{version}/renpy-{version}-sdk.zip");
-    let rapt_url = format!("https://www.renpy.org/dl/{version}/renpy-{version}-rapt.zip");
-    let steam_url = format!("https://www.renpy.org/dl/{version}/renpy-{version}-steam.zip");
-    let web_url = format!("https://www.renpy.org/dl/{version}/renpy-{version}-web.zip");
+    let sdk_url = version.sdk_url()?;
+    let rapt_url = version.rapt_url()?;
+    let steam_url = version.steam_url()?;
+    let web_url = version.web_url()?;
 
     println!("Downloading Ren'Py {version}...");
     let downloads = vec![
-        Download::try_from(sdk_url.as_str()).unwrap(),
-        Download::try_from(rapt_url.as_str()).unwrap(),
-        Download::try_from(steam_url.as_str()).unwrap(),
-        Download::try_from(web_url.as_str()).unwrap(),
+        Download::new(&sdk_url, sdk_url.path_segments().unwrap().last().unwrap()),
+        Download::new(&rapt_url, rapt_url.path_segments().unwrap().last().unwrap()),
+        Download::new(
+            &steam_url,
+            steam_url.path_segments().unwrap().last().unwrap(),
+        ),
+        Download::new(&web_url, web_url.path_segments().unwrap().last().unwrap()),
     ];
     let downloader = DownloaderBuilder::new().directory(registry.clone()).build();
     downloader.download(&downloads).await;

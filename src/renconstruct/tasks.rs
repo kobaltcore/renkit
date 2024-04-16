@@ -228,6 +228,7 @@ pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
         true,
         &vec![ctx.input_dir.to_string_lossy().to_string(), "lint".into()],
         false,
+        false,
     )?;
 
     if !status.success() {

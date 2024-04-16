@@ -1,6 +1,7 @@
 use crate::renutil::{Instance, Local, Remote};
 use anyhow::Result;
 use jwalk::{ClientState, DirEntry};
+use reqwest::Url;
 use std::{
     fs::File,
     io::{Read, Seek, Write},
@@ -14,11 +15,12 @@ pub struct Version {
     pub minor: u32,
     pub patch: u32,
     pub hotfix: u32,
+    pub nightly: bool,
 }
 
 impl Version {
     pub fn from_str(s: &str) -> Option<Self> {
-        let reg = regex::Regex::new(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
+        let reg = regex::Regex::new(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?(\+nightly)?$").unwrap();
         match reg.captures(s) {
             Some(caps) => {
                 let major = caps.get(1).unwrap().as_str().parse::<u32>().unwrap();
@@ -31,11 +33,13 @@ impl Version {
                     .get(4)
                     .map(|m| m.as_str().parse::<u32>().unwrap())
                     .unwrap_or(0);
+                let nightly = caps.get(5).is_some();
                 Some(Self {
                     major,
                     minor,
                     patch,
                     hotfix,
+                    nightly,
                 })
             }
             None => None,
@@ -65,6 +69,58 @@ impl Version {
             ))
         } else {
             Ok(Instance::new(self.clone()))
+        }
+    }
+
+    pub fn sdk_url(&self) -> Result<Url> {
+        match self.nightly {
+            true => Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+            false => Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+        }
+    }
+
+    pub fn rapt_url(&self) -> Result<Url> {
+        match self.nightly {
+            true => Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-rapt.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+            false => Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-rapt.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+        }
+    }
+
+    pub fn steam_url(&self) -> Result<Url> {
+        match self.nightly {
+            true => Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-steam.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+            false => Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-steam.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+        }
+    }
+
+    pub fn web_url(&self) -> Result<Url> {
+        match self.nightly {
+            true => Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-web.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
+            false => Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-web.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e)),
         }
     }
 }

@@ -30,6 +30,8 @@ enum Commands {
         online: bool,
         #[arg(short = 'n', long, default_value_t = 5)]
         num: usize,
+        #[arg(long, default_value_t = false)]
+        nightly: bool,
     },
     /// Show information about a specific version of Ren'Py.
     Show {
@@ -79,7 +81,11 @@ async fn main() -> Result<()> {
     let registry = get_registry(cli.registry);
 
     match &cli.command {
-        Commands::List { online, num } => list(&registry, *online, *num).await?,
+        Commands::List {
+            online,
+            num,
+            nightly,
+        } => list(&registry, *online, *num, *nightly).await?,
         Commands::Show { version } => show(&registry, version).await?,
         Commands::Launch {
             version,
