@@ -369,6 +369,8 @@ async fn build(
                 false,
                 &args,
                 true,
+                false,
+                None,
             )?;
         } else {
             let args = vec![
@@ -386,6 +388,8 @@ async fn build(
                 false,
                 &args,
                 true,
+                false,
+                None,
             )?;
         }
     }
@@ -408,6 +412,8 @@ async fn build(
                 false,
                 &args,
                 true,
+                false,
+                None,
             )?;
         }
     }
@@ -434,6 +440,8 @@ async fn build(
             false,
             &args,
             true,
+            false,
+            None,
         )?;
 
         fs::remove_dir_all(web_dir)?;
@@ -482,6 +490,8 @@ async fn build(
             false,
             &args,
             true,
+            false,
+            None,
         )?;
     }
 
