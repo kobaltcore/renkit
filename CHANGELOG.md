@@ -3,7 +3,7 @@ This release introduces two new features:
 1. Support for nightly versions of Ren'Py
 3. An interactive REPL for Ren'Py versions above `8.3.0` (introduced via https://github.com/renpy/renpy/issues/5455)
 
-The interactive REPL allows for the ability send Python commands directly into a running instance of a Ren'Py game, where they will be executed within the context of an interaction. Code can either be supplied through an interactive text prompt in the terminal or directly via the command line.
+The interactive REPL allows for the ability to send Python commands directly into a running instance of a Ren'Py game, where they will be executed within the context of an interaction. Code can either be supplied through an interactive text prompt in the terminal or directly via the command line while the game is running.
 
 # Version 4.1.0
 This release changes the notarization process to be more useful on non-Apple platforms.
