@@ -2,6 +2,8 @@
 
 This release adds support for Keystore aliases and passwords when building Android application bundles. They may be specified in the `renconstruct` config file or via environment variables (for use inside CI environments).
 
+`renutil` will now print the exit code if Ren'Py fails to launch.
+
 # Version 4.2.0
 
 This release introduces two new features:
