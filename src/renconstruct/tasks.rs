@@ -305,9 +305,9 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
     let mut found_android_json = false;
     for path in [
         // newly-introduced naming convention in 8.1
-        ctx.renpy_path.join("android.json"),
+        ctx.input_dir.join("android.json"),
         // filename before 8.1
-        ctx.renpy_path.join(".android.json"),
+        ctx.input_dir.join(".android.json"),
     ] {
         if path.exists() {
             found_android_json = true;
@@ -346,7 +346,7 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         options.alias.clone().unwrap_or("android".to_string()),
         password,
         password,
-        android_path.to_string_lossy(),
+        fs::canonicalize(android_path)?.to_string_lossy(),
         ctx.renpy_path.to_string_lossy()
     );
     fs::write(&local_properties_path, &property_contents)?;
