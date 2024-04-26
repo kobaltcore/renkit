@@ -17,6 +17,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use jwalk::WalkDir;
 use ravif::Encoder;
 use rgb::FromSlice;
+use serde_json::Value;
+use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
 use std::{env, fs, thread};
@@ -245,6 +247,15 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
     let bundle_path;
     let bundle_path_backup;
 
+    let local_properties_path = ctx.renpy_path.join("rapt/project/local.properties");
+    let local_properties_path_backup = ctx
+        .renpy_path
+        .join("rapt/project/local.properties.original");
+    let bundle_properties_path = ctx.renpy_path.join("rapt/project/bundle.properties");
+    let bundle_properties_path_backup = ctx
+        .renpy_path
+        .join("rapt/project/bundle.properties.original");
+
     if ctx.version < Version::from_str("7.6.0").unwrap()
         && ctx.version < Version::from_str("8.1.0").unwrap()
     {
@@ -267,11 +278,18 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         fs::copy(&bundle_path, &bundle_path_backup)?;
     }
 
+    if local_properties_path.exists() && !local_properties_path_backup.exists() {
+        fs::copy(&local_properties_path, &local_properties_path_backup)?;
+    }
+
+    if bundle_properties_path.exists() && !bundle_properties_path_backup.exists() {
+        fs::copy(&bundle_properties_path, &bundle_properties_path_backup)?;
+    }
+
     let android_keystore = match env::var("RC_KEYSTORE_APK") {
         Ok(val) => BASE64_STANDARD.decode(val)?,
         Err(_) => BASE64_STANDARD.decode(options.keystore_apk.clone())?,
     };
-
     fs::write(&android_path, android_keystore)?;
 
     let bundle_keystore = match env::var("RC_KEYSTORE_AAB") {
@@ -279,6 +297,63 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         Err(_) => BASE64_STANDARD.decode(options.keystore_aab.clone())?,
     };
     fs::write(&bundle_path, bundle_keystore)?;
+
+    // We need to disable the update_keystores option in android.json
+    // otherwise Ren'Py will overwrite our changes to the property files.
+
+    // find android file
+    let mut found_android_json = false;
+    for path in [
+        // newly-introduced naming convention in 8.1
+        ctx.renpy_path.join("android.json"),
+        // filename before 8.1
+        ctx.renpy_path.join(".android.json"),
+    ] {
+        if path.exists() {
+            found_android_json = true;
+            let mut config: HashMap<String, Value> =
+                serde_json::from_str(&fs::read_to_string(&path)?)?;
+            config.insert("update_keystores".to_string(), Value::Bool(false));
+            fs::write(&path, serde_json::to_string(&config)?)?;
+            break;
+        }
+    }
+
+    // if neither file exists, create one
+    if !found_android_json {
+        let path = ctx.input_dir.join("android.json");
+        let mut config = HashMap::new();
+        config.insert("update_keystores".to_string(), Value::Bool(false));
+        fs::write(&path, serde_json::to_string_pretty(&config)?)?;
+    }
+
+    // set alias and password in rapt/project/local.properties and rapt/project/bundle.properties
+    // both files should have the same content except for the key.store property
+    // Example contents from default Ren'Py project:
+    // key.alias=android
+    // key.store.password=android
+    // key.alias.password=android
+    // key.store=/Applications/renpy-sdk/rapt/android.keystore
+    // sdk.dir=/Applications/renpy-sdk/rapt/Sdk
+
+    let password = match env::var("RC_KEYSTORE_PASSWORD") {
+        Ok(val) => val,
+        Err(_) => options.password.clone().unwrap_or("android".to_string()),
+    };
+
+    let property_contents = format!(
+        "key.alias={}\nkey.store.password={}\nkey.alias.password={}\nkey.store={}\nsdk.dir={}",
+        options.alias.clone().unwrap_or("android".to_string()),
+        password,
+        password,
+        android_path.to_string_lossy(),
+        ctx.renpy_path.to_string_lossy()
+    );
+    fs::write(&local_properties_path, &property_contents)?;
+    fs::write(
+        &bundle_properties_path,
+        &property_contents.replace("android.keystore", "bundle.keystore"),
+    )?;
 
     Ok(())
 }
@@ -288,6 +363,15 @@ pub fn task_keystore_post(ctx: &TaskContext, _options: &KeystoreOptions) -> Resu
     let android_path_backup;
     let bundle_path;
     let bundle_path_backup;
+
+    let local_properties_path = ctx.renpy_path.join("rapt/project/local.properties");
+    let local_properties_path_backup = ctx
+        .renpy_path
+        .join("rapt/project/local.properties.original");
+    let bundle_properties_path = ctx.renpy_path.join("rapt/project/bundle.properties");
+    let bundle_properties_path_backup = ctx
+        .renpy_path
+        .join("rapt/project/bundle.properties.original");
 
     if ctx.version < Version::from_str("7.6.0").unwrap()
         && ctx.version < Version::from_str("8.1.0").unwrap()
@@ -315,6 +399,20 @@ pub fn task_keystore_post(ctx: &TaskContext, _options: &KeystoreOptions) -> Resu
         fs::remove_file(&bundle_path_backup)?;
     } else {
         fs::remove_file(&bundle_path)?;
+    }
+
+    if local_properties_path_backup.exists() {
+        fs::copy(&local_properties_path_backup, &local_properties_path)?;
+        fs::remove_file(&local_properties_path_backup)?;
+    } else {
+        fs::remove_file(&local_properties_path)?;
+    }
+
+    if bundle_properties_path_backup.exists() {
+        fs::copy(&bundle_properties_path_backup, &bundle_properties_path)?;
+        fs::remove_file(&bundle_properties_path_backup)?;
+    } else {
+        fs::remove_file(&bundle_properties_path)?;
     }
 
     Ok(())

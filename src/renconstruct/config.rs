@@ -74,6 +74,8 @@ pub struct LintOptions {}
 pub struct KeystoreOptions {
     pub keystore_apk: String,
     pub keystore_aab: String,
+    pub alias: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
