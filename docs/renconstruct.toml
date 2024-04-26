@@ -15,6 +15,8 @@
   on_builds = ["android_apk", "android_aab"] # builds this task should run for, defaults to all android builds
   keystore_apk = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the APK bundles
   keystore_aab = "<base64-encoded keystore file>" # the base-64 encoded binary keystore file for the AAB bundles
+  alias = "<keystore-alias>" # the optional alias for both keystores
+  password = "<keystore-password>" # the optional password for both keystores
 
 [tasks.convert_images]
   type = "convert_images"
