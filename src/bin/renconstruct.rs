@@ -144,7 +144,7 @@ async fn build(
         .await?;
     }
 
-    let active_builds = {
+    let mut active_builds = {
         let mut active_builds = HashSet::<String>::new();
 
         if config.build.pc {
@@ -353,7 +353,7 @@ async fn build(
 
     if config.build.android_apk {
         println!("Building Android APK package.");
-
+        active_builds.remove("android_apk");
         if config.renutil.version >= Version::from_str("7.5.0").unwrap() {
             let args = vec![
                 "android_build".into(),
@@ -396,6 +396,7 @@ async fn build(
 
     if config.build.android_aab {
         println!("Building Android App Bundle package.");
+        active_builds.remove("android_aab");
         if config.renutil.version >= Version::from_str("7.5.0").unwrap() {
             let args = vec![
                 "android_build".into(),
@@ -420,6 +421,7 @@ async fn build(
 
     if config.build.web {
         println!("Building Web package.");
+        active_builds.remove("web");
 
         // The web build clears the destination directory when it runs, which is undesirable
         // As such, we contain it in a subfolder and move it out afterwards.
@@ -447,10 +449,7 @@ async fn build(
         fs::remove_dir_all(web_dir)?;
     }
 
-    let mut active_builds_copy = active_builds.clone();
-    active_builds_copy.remove("web");
-
-    if active_builds_copy.len() > 0 {
+    if active_builds.len() > 0 {
         println!("Building other packages.");
         let mut args = vec![
             "distribute".into(),
