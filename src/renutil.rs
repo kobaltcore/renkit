@@ -612,7 +612,10 @@ pub fn launch(
     let status = child.wait()?;
 
     if check_status && !status.success() {
-        anyhow::bail!("Unable to launch Ren'Py.");
+        anyhow::bail!(
+            "Unable to launch Ren'Py: Status {}",
+            status.code().unwrap_or(1)
+        );
     }
 
     match rpy_log_val_orig {
