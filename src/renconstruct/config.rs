@@ -1,4 +1,4 @@
-use crate::common::Version;
+use crate::version::Version;
 use rustpython_vm::PyObjectRef;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::{
@@ -12,10 +12,10 @@ where
 {
     let buf = String::deserialize(deserializer)?;
     match Version::from_str(&buf) {
-        Some(version) => Ok(version),
-        None => Err(serde::de::Error::custom(format!(
-            "Invalid version: {}",
-            buf
+        Ok(version) => Ok(version),
+        Err(e) => Err(serde::de::Error::custom(format!(
+            "Invalid version: {} - {}",
+            buf, e
         ))),
     }
 }

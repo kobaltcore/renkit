@@ -2,13 +2,13 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use jwalk::WalkDir;
-use renkit::common::Version;
 use renkit::renconstruct::config::{Config, CustomOptionValue, TaskOptions};
 use renkit::renconstruct::tasks::{
     task_convert_images_pre, task_keystore_post, task_keystore_pre, task_lint_pre,
     task_notarize_post, Task, TaskContext,
 };
 use renkit::renutil::{get_registry, install, launch};
+use renkit::version::Version;
 use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;

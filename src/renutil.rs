@@ -1,4 +1,4 @@
-use crate::common::Version;
+use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;
 use crossterm::{
@@ -219,10 +219,10 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
                         };
 
                         match Version::from_str(href) {
-                            Some(version) => {
+                            Ok(version) => {
                                 versions.push(version);
                             }
-                            None => {}
+                            Err(_) => {}
                         }
 
                         Ok(())
@@ -245,10 +245,10 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
                 .ok_or(anyhow!("Unable to get file name."))?;
 
             match Version::from_str(path) {
-                Some(version) => {
+                Ok(version) => {
                     versions.push(version);
                 }
-                None => {}
+                Err(_) => {}
             }
         }
     }

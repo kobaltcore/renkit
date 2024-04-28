@@ -2,9 +2,9 @@ use super::config::{
     ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, LintOptions,
     NotarizeOptions,
 };
-use crate::common::Version;
 use crate::renotize::full_run;
 use crate::renutil::launch;
+use crate::version::Version;
 use anyhow::{bail, Result};
 use base64::prelude::*;
 use command_executor::command::Command;

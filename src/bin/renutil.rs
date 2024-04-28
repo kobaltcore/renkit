@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use renkit::common::Version;
 use renkit::renutil::{cleanup, get_registry, install, launch, list, show, uninstall};
+use renkit::version::Version;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -17,8 +17,8 @@ struct Cli {
 
 fn parse_version(version: &str) -> Result<Version> {
     match Version::from_str(version) {
-        Some(version) => Ok(version),
-        None => Err(anyhow!("Invalid version: {}", version)),
+        Ok(version) => Ok(version),
+        Err(e) => Err(anyhow!("Invalid version: {} - {}", version, e)),
     }
 }
 
