@@ -54,3 +54,27 @@ where
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use jwalk::WalkDir;
+    use std::fs::File;
+    use zip::CompressionMethod;
+
+    #[test]
+    fn zip_dir() -> Result<()> {
+        let mut files = WalkDir::new("src").into_iter();
+
+        let file = File::create("src.zip").unwrap();
+
+        super::zip_dir(&mut files, None, file, CompressionMethod::Deflated)?;
+
+        let size = std::fs::metadata("src.zip")?.len();
+        assert!(size > 0);
+
+        std::fs::remove_file("src.zip")?;
+
+        Ok(())
+    }
+}
