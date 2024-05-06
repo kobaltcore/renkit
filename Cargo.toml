@@ -79,9 +79,9 @@ strip = true
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["ci"]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.13.2"
+cargo-dist-version = "0.14.0"
 # CI backends to support
-ci = ["github"]
+ci = "github"
 # The installers to generate for each app
 installers = ["shell", "powershell", "homebrew"]
 # A GitHub repo to push Homebrew formulas to
