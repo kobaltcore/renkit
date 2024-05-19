@@ -301,7 +301,7 @@ renotize full-run \
 For an App bundle:
 
 ```bash
-spctl -a -t exec -vv MyGame.dmg
+spctl -a -t exec -vv MyGame.app
 ```
 
 For a DMG:
