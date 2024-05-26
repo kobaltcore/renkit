@@ -10,7 +10,7 @@ renkit consists of three tools:
 2. `renotize` notarizes built distributions of Ren'Py games for macOS, from any source OS `renkit` supports.
 3. `renconstruct` automates the build process for Ren'Py games from start to finish.
 
-renkit is written in Rust and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms:
+renkit is written in Rust and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms (mirroring what Ren'Py itself supports):
 
 | OS      | amd64 | aarch64 |
 | ------- | ----- | ------- |
