@@ -61,6 +61,8 @@ rustpython-vm = "0.3.0"
 rustpython-stdlib = "0.3.0"
 rustpython = { version = "0.3.0", features = ["freeze-stdlib"] }
 rustpython-pylib = { version = "0.3.0", features = ["freeze-stdlib"] }
+# Testing
+test-context = "0.3.0"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
@@ -79,7 +81,7 @@ strip = true
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["ci"]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.15.1"
+cargo-dist-version = "0.16.0"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
