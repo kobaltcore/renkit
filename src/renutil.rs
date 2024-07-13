@@ -758,27 +758,28 @@ pub async fn install(
 
     let instance = version.to_local(registry)?;
 
-    let python = instance.python(registry)?;
-    let python_parent = python.parent().ok_or(anyhow!("Unable to get parent."))?;
-
     #[cfg(target_family = "unix")]
-    let paths = [
-        python.clone(),
-        python_parent.join("pythonw"),
-        python_parent.join("renpy"),
-        python_parent.join("zsync"),
-        python_parent.join("zsyncmake"),
-        base_path.join("rapt/prototype/gradlew"),
-        base_path.join("rapt/project/gradlew"),
-    ];
+    {
+        let python = instance.python(registry)?;
+        let python_parent = python.parent().ok_or(anyhow!("Unable to get parent."))?;
 
-    #[cfg(target_family = "unix")]
-    for path in paths.iter().filter(|p| p.exists()) {
-        println!(
-            "Setting executable permissions for {}.",
-            path.to_string_lossy()
-        );
-        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+        let paths = [
+            python.clone(),
+            python_parent.join("pythonw"),
+            python_parent.join("renpy"),
+            python_parent.join("zsync"),
+            python_parent.join("zsyncmake"),
+            base_path.join("rapt/prototype/gradlew"),
+            base_path.join("rapt/project/gradlew"),
+        ];
+
+        for path in paths.iter().filter(|p| p.exists()) {
+            println!(
+                "Setting executable permissions for {}.",
+                path.to_string_lossy()
+            );
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+        }
     }
 
     let original_dir = env::current_dir()?;
