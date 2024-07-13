@@ -262,7 +262,7 @@ This is an optional method that, if given, will cause `renconstruct` to execute 
 ### Build a set of distributions
 
 ```bash
-renconstruct build -~/my-project out/ -c my-config.toml
+renconstruct build -c my-config.toml ~/my-project out/
 ```
 
 ## renotize
