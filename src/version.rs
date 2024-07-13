@@ -67,15 +67,33 @@ impl Version {
     }
 
     pub fn sdk_url(&self) -> Result<Url> {
+        let supports_arm = self >= &Version::from_str("7.5.0").unwrap();
+
         match self.nightly {
-            true => Url::parse(&format!(
-                "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-            false => Url::parse(&format!(
-                "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
+            true => {
+                if supports_arm {
+                    return Url::parse(&format!(
+                        "https://nightly.renpy.org/{self}/renpy-{self}-sdkarm.tar.bz2"
+                    ))
+                    .map_err(|e| anyhow::anyhow!(e));
+                }
+                return Url::parse(&format!(
+                    "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
+                ))
+                .map_err(|e| anyhow::anyhow!(e));
+            }
+            false => {
+                if supports_arm {
+                    return Url::parse(&format!(
+                        "https://www.renpy.org/dl/{self}/renpy-{self}-sdkarm.tar.bz2"
+                    ))
+                    .map_err(|e| anyhow::anyhow!(e));
+                }
+                return Url::parse(&format!(
+                    "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
+                ))
+                .map_err(|e| anyhow::anyhow!(e));
+            }
         }
     }
 

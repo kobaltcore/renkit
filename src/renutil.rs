@@ -1,6 +1,7 @@
 use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;
+use bzip2::read::BzDecoder;
 use crossterm::{
     event,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -36,6 +37,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::{fs, marker::PhantomData, path::PathBuf};
+use tar::Archive;
 use trauma::download::Download;
 use trauma::downloader::DownloaderBuilder;
 use tui_scrollview::ScrollView;
@@ -691,19 +693,41 @@ pub async fn install(
 
     println!("Extracting SDK");
 
-    let sdk_zip_path = registry.join(format!("renpy-{version}-sdk.zip"));
+    let sdk_zip_path = registry.join(sdk_url.path_segments().unwrap().last().unwrap());
 
-    let sdk_zip = fs::read(&sdk_zip_path)?;
-    zip_extract::extract(Cursor::new(sdk_zip), &base_path, true)?;
+    if sdk_zip_path.extension().unwrap() == "bz2" {
+        let compressed_file = fs::File::open(&sdk_zip_path)?;
+        let tar_path = sdk_zip_path.with_extension("");
+        let mut tar_file = fs::File::create(&tar_path)?;
+
+        let mut decompressor = BzDecoder::new(compressed_file);
+        std::io::copy(&mut decompressor, &mut tar_file)?;
+
+        let tar_file = fs::File::open(&tar_path).unwrap();
+        let mut tar_archive = Archive::new(tar_file);
+        for file in tar_archive.entries().unwrap() {
+            let mut file = file?;
+            let path = file.path()?.components().skip(1).collect::<PathBuf>();
+            if path.as_os_str().is_empty() {
+                continue;
+            }
+            file.unpack(base_path.join(path))?;
+        }
+
+        fs::remove_file(tar_path)?;
+    } else {
+        let sdk_zip = fs::read(&sdk_zip_path)?;
+        zip_extract::extract(Cursor::new(sdk_zip), &base_path, true)?;
+    }
 
     println!("Extracting RAPT");
 
-    let rapt_zip_path = registry.join(format!("renpy-{version}-rapt.zip"));
+    let rapt_zip_path = registry.join(rapt_url.path_segments().unwrap().last().unwrap());
 
     let rapt_zip = fs::read(&rapt_zip_path)?;
     zip_extract::extract(Cursor::new(rapt_zip), &base_path.join("rapt"), true)?;
 
-    let steam_zip_path = registry.join(format!("renpy-{version}-steam.zip"));
+    let steam_zip_path = registry.join(steam_url.path_segments().unwrap().last().unwrap());
     if steam_zip_path.exists() {
         println!("Extracting Steam support");
 
@@ -711,7 +735,7 @@ pub async fn install(
         zip_extract::extract(Cursor::new(steam_zip), &base_path.join("lib"), true)?;
     }
 
-    let web_zip_path = registry.join(format!("renpy-{version}-web.zip"));
+    let web_zip_path = registry.join(web_url.path_segments().unwrap().last().unwrap());
     if web_zip_path.exists() {
         println!("Extracting Web support");
 
