@@ -1,3 +1,7 @@
+# Version 4.4.0
+
+This release adds ARM-based Linux systems as a target for built distributions on Ren'Py versions above and including 7.5.0. These libraries are shipped separately by Ren'Py at the current point in time, so `renutil` will now take care of installing them when available.
+
 # Version 4.3.0
 
 This release adds support for Keystore aliases and passwords when building Android application bundles. They may be specified in the `renconstruct` config file or via environment variables (for use inside CI environments).
