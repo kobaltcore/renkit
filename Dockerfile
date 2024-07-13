@@ -5,7 +5,7 @@
 
 FROM ubuntu:22.04
 ARG renpy_version=8.2.0
-ARG renkit_version=v4.0.1
+ARG renkit_version=v4.3.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
