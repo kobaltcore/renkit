@@ -14,7 +14,7 @@ renkit is written in Rust and compiled into standalone executables, batteries in
 
 | OS      | amd64 | aarch64 |
 | ------- | ----- | ------- |
-| Linux   | ✅    | ❌      |
+| Linux   | ✅    | ✅      |
 | macOS   | ✅    | ✅      |
 | Windows | ✅    | ❌      |
 
