@@ -5,7 +5,7 @@
 
 FROM ubuntu:22.04
 ARG renpy_version=8.2.0
-ARG renkit_version=v4.3.0
+ARG renkit_version=latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -22,7 +22,7 @@ RUN apt-get update && \
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # install renkit
-RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/kobaltcore/renkit/releases/download/$renkit_version/renkit-installer.sh | sh
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/kobaltcore/renkit/releases/$(if [ "$renkit_version" = "latest" ]; then echo "latest/download"; else echo "download/v$renkit_version"; fi)/renkit-installer.sh | sh
 
 # install the specified version of Ren'Py
 RUN $HOME/.cargo/bin/renutil install $renpy_version
