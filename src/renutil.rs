@@ -758,9 +758,10 @@ pub async fn install(
 
     let instance = version.to_local(registry)?;
 
+    let python = instance.python(registry)?;
+
     #[cfg(target_family = "unix")]
     {
-        let python = instance.python(registry)?;
         let python_parent = python.parent().ok_or(anyhow!("Unable to get parent."))?;
 
         let paths = [
