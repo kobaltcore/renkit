@@ -99,7 +99,7 @@ impl Instance<Local> {
                         Ok("py3-windows-i686")
                     }
                 }
-                _ => panic!("Unsupported architecture: {}", architecture),
+                _ => Err(anyhow!("Unsupported architecture: {}", architecture)),
             },
             "linux" => match architecture {
                 "x86_64" => {
@@ -120,7 +120,25 @@ impl Instance<Local> {
                         Ok("py3-linux-i686")
                     }
                 }
-                _ => panic!("Unsupported architecture: {}", architecture),
+                "arm" => {
+                    if self.version < Version::from_str("7.5.0").unwrap() {
+                        Err(anyhow!("Unsupported architecture: {}", architecture))
+                    } else if self.version < Version::from_str("8.0.0").unwrap() {
+                        Ok("py2-linux-armv7l")
+                    } else {
+                        Ok("py3-linux-armv7l")
+                    }
+                }
+                "aarch64" => {
+                    if self.version < Version::from_str("7.5.0").unwrap() {
+                        Err(anyhow!("Unsupported architecture: {}", architecture))
+                    } else if self.version < Version::from_str("8.0.0").unwrap() {
+                        Ok("py2-linux-aarch64")
+                    } else {
+                        Ok("py3-linux-aarch64")
+                    }
+                }
+                _ => Err(anyhow!("Unsupported architecture: {}", architecture)),
             },
             "macos" => {
                 if self.version < Version::from_str("7.4.0").unwrap() {
