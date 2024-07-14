@@ -12,11 +12,11 @@ renkit consists of three tools:
 
 renkit is written in Rust and compiled into standalone executables, batteries included, so it's easy to use anywhere. Currently it supports the following platforms (mirroring what Ren'Py itself supports):
 
-| OS      | amd64 | aarch64 |
-| ------- | ----- | ------- |
-| Linux   | ✅    | ✅      |
-| macOS   | ✅    | ✅      |
-| Windows | ✅    | ❌      |
+| OS      | amd64 | aarch64              |
+| ------- | ----- | -------------------- |
+| Linux   | ✅    | ✅ (deployment only) |
+| macOS   | ✅    | ✅                   |
+| Windows | ✅    | ❌                   |
 
 ## Installation
 
