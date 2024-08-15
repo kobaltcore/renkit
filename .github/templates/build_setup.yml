@@ -1,0 +1,2 @@
+- name: Instal NASM dependency
+  uses: ilammy/setup-nasm@v1
