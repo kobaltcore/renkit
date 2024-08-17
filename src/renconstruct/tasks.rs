@@ -138,7 +138,7 @@ fn encode_webp(path: &PathBuf, quality: f32, lossless: bool) -> Result<()> {
             // -q 90 -m 6 -sharp_yuv -pre 4
             enc.encode_advanced(&webp::WebPConfig {
                 lossless: 0,
-                quality: quality,
+                quality,
                 method: 6,
                 image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
                 target_size: 0,
