@@ -1,3 +1,24 @@
+# Version 4.5.0
+
+This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:
+
+```toml
+[tasks.example]
+type = "custom"
+enabled = true
+
+[tasks.example.dict_config_val]
+key = "value"
+```
+
+This will result in the following config structure:
+
+```json
+{ "dict_config_val": { "key": "value" } }
+```
+
+In addition, many of the dependencies that `renkit` relies on have been updated to their latest versions.
+
 # Version 4.4.0
 
 This release adds ARM-based Linux systems as a target for built distributions on Ren'Py versions above and including 7.5.0. These libraries are shipped separately by Ren'Py at the current point in time, so `renutil` will now take care of installing them when available.
