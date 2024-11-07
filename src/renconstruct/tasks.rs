@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
 use std::{env, fs, thread};
-use {anyhow::anyhow, image::io::Reader as ImageReader, image::EncodableLayout};
+use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 
 #[derive(Debug)]
 pub struct Task {

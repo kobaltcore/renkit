@@ -495,7 +495,7 @@ pub fn launch(
                 let stderr_len = result_stderr.lock().unwrap().len();
 
                 terminal.draw(|frame| {
-                let area = frame.size();
+                let area = frame.area();
 
                 let outer_layout = Layout::default()
                     .direction(Direction::Vertical)
@@ -516,8 +516,7 @@ pub fn launch(
                     outer_layout[2],
                 );
 
-                let widget = textarea.widget();
-                frame.render_widget(widget, outer_layout[1]);
+                frame.render_widget(&textarea, outer_layout[1]);
 
                 let mut scroll_view_stdout = ScrollView::new(Size::new(100, stdout_len as u16));
 

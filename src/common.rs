@@ -5,7 +5,7 @@ use std::{
     io::{Read, Seek, Write},
     path::PathBuf,
 };
-use zip::{write::FileOptions, ZipWriter};
+use zip::{write::SimpleFileOptions, ZipWriter};
 
 pub fn zip_dir<T, C>(
     it: &mut dyn Iterator<Item = jwalk::Result<DirEntry<C>>>,
@@ -18,7 +18,7 @@ where
     C: ClientState,
 {
     let mut zip = ZipWriter::new(writer);
-    let options = FileOptions::default()
+    let options = SimpleFileOptions::default()
         .compression_method(method)
         .unix_permissions(0o755);
 

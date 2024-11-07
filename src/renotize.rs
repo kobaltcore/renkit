@@ -330,7 +330,7 @@ pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
                     (message, doc_url, path)
                 });
 
-                for (key, group) in &issues.group_by(|(message, _, _)| *message) {
+                for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
                     println!("Error: {}", key);
                     for (i, (_, doc_url, path)) in group.enumerate() {
                         if i == 0 {

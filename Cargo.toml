@@ -3,68 +3,68 @@ name = "renkit"
 version = "4.4.0"
 edition = "2021"
 repository = "https://github.com/kobaltcore/renkit"
-description = "Description"
+description = "A collection of tools to help you organise and use Ren'Py instances from the command line."
 homepage = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
 # System
-zip = "0.6.6"
+zip = "2.2.0"
 rsa = "0.9.6"
 rand = "0.8.5"
-regex = "1.10.2"
-base64 = "0.21.6"
-anyhow = "1.0.79"
+regex = "1.11.1"
+base64 = "0.22.1"
+anyhow = "1.0.93"
 num_cpus = "1.16.0"
-itertools = "0.12.0"
+itertools = "0.13.0"
 command-executor = "0.1.1"
-tokio = { version = "1.35.1", features = ["full"] }
+tokio = { version = "1.41.1", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
-toml = "0.8.8"
-plist = "1.6.0"
-lol_html = "1.2.0"
-serde_json = "1.0.111"
-serde = { version = "1.0.195", features = ["derive"] }
+toml = "0.8.19"
+plist = "1.7.0"
+lol_html = "2.0.0"
+serde_json = "1.0.132"
+serde = { version = "1.0.214", features = ["derive"] }
 # Filesystem
 home = "0.5.9"
-tar = "0.4.41"
+tar = "0.4.43"
 bzip2 = "0.4.4"
 jwalk = "0.8.1"
-zip-extract = "0.1.2"
+zip-extract = "0.2.1"
 # Internet
 trauma = "2"
-webbrowser = "0.8.12"
-reqwest = { version = "^0.11.23", default-features = false, features = [
+webbrowser = "1.0.2"
+reqwest = { version = "^0.12.9", default-features = false, features = [
     "native-tls-vendored",
 ] }
 # Apple
-apple-bundles = "0.19.0"
-apple-codesign = "0.27.0"
-x509-certificate = "0.23.1"
-app-store-connect = "0.5.0"
+apple-bundles = "0.20.0"
+apple-codesign = "0.28.0"
+x509-certificate = "0.24.0"
+app-store-connect = "0.6.0"
 # CLI
-ratatui = "0.27.0"
-crossterm = "0.27.0"
+ratatui = "0.29.0"
+crossterm = "0.28.1"
 wait-timeout = "0.2.0"
-tui-textarea = "0.4.0"
-tui-scrollview = "0.3.4"
-clap = { version = "4.4.13", features = ["derive"] }
-indicatif = { version = "0.17.7", features = ["improved_unicode", "rayon"] }
+tui-textarea = "0.7.0"
+tui-scrollview = "0.5.0"
+clap = { version = "4.5.20", features = ["derive"] }
+indicatif = { version = "0.17.8", features = ["improved_unicode", "rayon"] }
 # Images
-image = "0.24.7"
-rgb = "0.8.37"
-imgref = "1.10.1"
-ravif = "0.11.4"
-webp = "0.2.6"
-libwebp-sys = { version = "0.9.4", features = ["avx2", "sse41"] }
+image = "0.25.5"
+rgb = "0.8.50"
+imgref = "1.11.0"
+ravif = "0.11.11"
+webp = "0.3.0"
+libwebp-sys = { version = "0.9.6", features = ["avx2", "sse41"] }
 # jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
 # RustPython
-rustpython-vm = "0.3.0"
-rustpython-stdlib = "0.3.0"
-rustpython = { version = "0.3.0", features = ["freeze-stdlib"] }
-rustpython-pylib = { version = "0.3.0", features = ["freeze-stdlib"] }
+rustpython-vm = "0.4.0"
+rustpython-stdlib = "0.4.0"
+rustpython = { version = "0.4.0", features = ["freeze-stdlib"] }
+rustpython-pylib = { version = "0.4.0", features = ["freeze-stdlib"] }
 # Testing
 test-context = "0.3.0"
 
@@ -91,7 +91,13 @@ installers = ["shell", "powershell", "homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "kobaltcore/homebrew-renkit"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+targets = [
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
 # Which actions to run on pull requests

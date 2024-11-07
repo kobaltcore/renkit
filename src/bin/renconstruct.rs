@@ -230,7 +230,7 @@ async fn build(
         let result = dispatch
             .call_with_args(FuncArgs::from(vec![paths]), vm)
             .unwrap();
-        let result = result.to_sequence(vm).list(vm).unwrap();
+        let result = result.to_sequence().list(vm).unwrap();
 
         for val in result.borrow_vec().iter() {
             let name_slug = val
