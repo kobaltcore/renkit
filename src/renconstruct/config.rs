@@ -104,6 +104,7 @@ pub enum CustomOptionValue {
     Int(usize),
     Float(f64),
     Array(Vec<CustomOptionValue>),
+    Dict(HashMap<String, CustomOptionValue>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

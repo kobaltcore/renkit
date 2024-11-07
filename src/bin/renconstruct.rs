@@ -13,7 +13,7 @@ use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
 use rustpython_vm::builtins::PyDict;
-use rustpython_vm::{import, Interpreter, PyObjectRef, VirtualMachine};
+use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, VirtualMachine};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -49,6 +49,13 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
         CustomOptionValue::Array(val) => {
             let val: Vec<PyObjectRef> = val.iter().map(|e| to_pyobject(e, vm)).collect();
             PyList::from(val).to_pyobject(vm)
+        }
+        CustomOptionValue::Dict(val) => {
+            let dict = PyRef::new_ref(PyDict::default(), vm.ctx.types.dict_type.to_owned(), None);
+            for (key, value) in val.iter() {
+                dict.set_item(key, to_pyobject(value, vm), vm).unwrap();
+            }
+            dict.to_pyobject(vm)
         }
     }
 }
