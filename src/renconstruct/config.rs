@@ -144,9 +144,30 @@ pub struct GeneralTaskOptions {
     pub options: TaskOptions,
 }
 
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum BuildOption {
+    Known(KnownBuildOption),
+    Custom(String),
+}
+
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KnownBuildOption {
+    Pc,
+    Win,
+    Linux,
+    Mac,
+    Web,
+    Steam,
+    Market,
+    AndroidApk,
+    AndroidAab,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub build: BuildOptions,
+    pub builds: HashMap<BuildOption, bool>,
     #[serde(default)]
     pub options: RenconstructOptions,
     pub renutil: RenutilOptions,
@@ -167,26 +188,4 @@ pub struct RenutilOptions {
     pub registry: Option<PathBuf>,
     #[serde(default)]
     pub update_pickle: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct BuildOptions {
-    #[serde(default)]
-    pub pc: bool,
-    #[serde(default)]
-    pub win: bool,
-    #[serde(default)]
-    pub linux: bool,
-    #[serde(default)]
-    pub mac: bool,
-    #[serde(default)]
-    pub web: bool,
-    #[serde(default)]
-    pub steam: bool,
-    #[serde(default)]
-    pub market: bool,
-    #[serde(default)]
-    pub android_apk: bool,
-    #[serde(default)]
-    pub android_aab: bool,
 }

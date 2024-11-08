@@ -2,7 +2,9 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use jwalk::WalkDir;
-use renkit::renconstruct::config::{Config, CustomOptionValue, TaskOptions};
+use renkit::renconstruct::config::{
+    BuildOption, Config, CustomOptionValue, KnownBuildOption, TaskOptions,
+};
 use renkit::renconstruct::tasks::{
     task_convert_images_pre, task_keystore_post, task_keystore_pre, task_lint_pre,
     task_notarize_post, Task, TaskContext,
@@ -81,32 +83,41 @@ async fn build(
         return Err(anyhow!("Input directory does not exist"));
     }
 
-    if !config.build.pc
-        && !config.build.win
-        && !config.build.linux
-        && !config.build.mac
-        && !config.build.web
-        && !config.build.steam
-        && !config.build.market
-        && !config.build.android_apk
-        && !config.build.android_aab
-    {
+    if config.builds.is_empty() {
         return Err(anyhow!("No build options enabled"));
     }
 
-    if config.build.web && config.renutil.version < Version::from_str("8.2.0").unwrap() {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::Web))
+        .unwrap_or(&false)
+        && config.renutil.version < Version::from_str("8.2.0").unwrap()
+    {
         return Err(anyhow!(
             "Web build support requires Ren'Py 8.2.0 or higher."
         ));
     }
 
-    if config.build.android_aab && config.renutil.version < Version::from_str("7.5.0").unwrap() {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::AndroidAab))
+        .unwrap_or(&false)
+        && config.renutil.version < Version::from_str("7.5.0").unwrap()
+    {
         return Err(anyhow!(
             "Android App Bundle build support requires Ren'Py 7.5.0 or higher."
         ));
     }
 
-    if config.build.android_apk || config.build.android_aab {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::AndroidApk))
+        .unwrap_or(&false)
+        || *config
+            .builds
+            .get(&BuildOption::Known(KnownBuildOption::AndroidAab))
+            .unwrap_or(&false)
+    {
         let has_keystore_task = config
             .tasks
             .iter()
@@ -154,32 +165,28 @@ async fn build(
     let mut active_builds = {
         let mut active_builds = HashSet::<String>::new();
 
-        if config.build.pc {
-            active_builds.insert("pc".into());
-        }
-        if config.build.win {
-            active_builds.insert("win".into());
-        }
-        if config.build.linux {
-            active_builds.insert("linux".into());
-        }
-        if config.build.mac {
-            active_builds.insert("mac".into());
-        }
-        if config.build.web {
-            active_builds.insert("web".into());
-        }
-        if config.build.steam {
-            active_builds.insert("steam".into());
-        }
-        if config.build.market {
-            active_builds.insert("market".into());
-        }
-        if config.build.android_apk {
-            active_builds.insert("android_apk".into());
-        }
-        if config.build.android_aab {
-            active_builds.insert("android_aab".into());
+        for (build, enabled) in &config.builds {
+            if !enabled {
+                continue;
+            }
+            match build {
+                BuildOption::Known(KnownBuildOption::Pc) => active_builds.insert("pc".into()),
+                BuildOption::Known(KnownBuildOption::Win) => active_builds.insert("win".into()),
+                BuildOption::Known(KnownBuildOption::Linux) => active_builds.insert("linux".into()),
+                BuildOption::Known(KnownBuildOption::Mac) => active_builds.insert("mac".into()),
+                BuildOption::Known(KnownBuildOption::Web) => active_builds.insert("web".into()),
+                BuildOption::Known(KnownBuildOption::Steam) => active_builds.insert("steam".into()),
+                BuildOption::Known(KnownBuildOption::Market) => {
+                    active_builds.insert("market".into())
+                }
+                BuildOption::Known(KnownBuildOption::AndroidApk) => {
+                    active_builds.insert("android_apk".into())
+                }
+                BuildOption::Known(KnownBuildOption::AndroidAab) => {
+                    active_builds.insert("android_aab".into())
+                }
+                BuildOption::Custom(s) => active_builds.insert(s.into()),
+            };
         }
 
         active_builds
@@ -358,7 +365,11 @@ async fn build(
         };
     }
 
-    if config.build.android_apk {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::AndroidApk))
+        .unwrap_or(&false)
+    {
         println!("Building Android APK package.");
         active_builds.remove("android_apk");
         if config.renutil.version >= Version::from_str("7.5.0").unwrap() {
@@ -401,7 +412,11 @@ async fn build(
         }
     }
 
-    if config.build.android_aab {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::AndroidAab))
+        .unwrap_or(&false)
+    {
         println!("Building Android App Bundle package.");
         active_builds.remove("android_aab");
         if config.renutil.version >= Version::from_str("7.5.0").unwrap() {
@@ -426,7 +441,11 @@ async fn build(
         }
     }
 
-    if config.build.web {
+    if *config
+        .builds
+        .get(&BuildOption::Known(KnownBuildOption::Web))
+        .unwrap_or(&false)
+    {
         println!("Building Web package.");
         active_builds.remove("web");
 
@@ -464,29 +483,44 @@ async fn build(
             "--destination".into(),
             output_dir.to_string_lossy().to_string(),
         ];
-        if config.build.pc {
-            args.push("--package".into());
-            args.push("pc".into());
-        }
-        if config.build.win {
-            args.push("--package".into());
-            args.push("win".into());
-        }
-        if config.build.linux {
-            args.push("--package".into());
-            args.push("linux".into());
-        }
-        if config.build.mac {
-            args.push("--package".into());
-            args.push("mac".into());
-        }
-        if config.build.steam {
-            args.push("--package".into());
-            args.push("steam".into());
-        }
-        if config.build.market {
-            args.push("--package".into());
-            args.push("market".into());
+
+        for (build, enabled) in config.builds {
+            if !enabled {
+                continue;
+            }
+            match build {
+                BuildOption::Known(KnownBuildOption::Pc) => {
+                    args.push("--package".into());
+                    args.push("pc".into());
+                }
+                BuildOption::Known(KnownBuildOption::Win) => {
+                    args.push("--package".into());
+                    args.push("win".into());
+                }
+                BuildOption::Known(KnownBuildOption::Linux) => {
+                    args.push("--package".into());
+                    args.push("linux".into());
+                }
+                BuildOption::Known(KnownBuildOption::Mac) => {
+                    args.push("--package".into());
+                    args.push("mac".into());
+                }
+                BuildOption::Known(KnownBuildOption::Web) => continue,
+                BuildOption::Known(KnownBuildOption::Steam) => {
+                    args.push("--package".into());
+                    args.push("steam".into());
+                }
+                BuildOption::Known(KnownBuildOption::Market) => {
+                    args.push("--package".into());
+                    args.push("market".into());
+                }
+                BuildOption::Known(KnownBuildOption::AndroidApk) => continue,
+                BuildOption::Known(KnownBuildOption::AndroidAab) => continue,
+                BuildOption::Custom(s) => {
+                    args.push("--package".into());
+                    args.push(s);
+                }
+            };
         }
 
         launch(
