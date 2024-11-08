@@ -17,6 +17,15 @@ This will result in the following config structure:
 { "dict_config_val": { "key": "value" } }
 ```
 
+It also brings support for [custom packages](https://www.renpy.org/doc/html/build.html#build.package) which can now be built like any other package (provided they exist for the target game that is being built). They can be specified by name like any other package:
+
+```toml
+[builds]
+pc = true
+mac = true
+custom = true
+```
+
 In addition, many of the dependencies that `renkit` relies on have been updated to their latest versions.
 
 # Version 4.4.0
