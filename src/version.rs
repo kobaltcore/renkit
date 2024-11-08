@@ -40,7 +40,7 @@ impl Version {
         }
     }
 
-    pub fn is_installed(&self, registry: &PathBuf) -> bool {
+    #[must_use] pub fn is_installed(&self, registry: &PathBuf) -> bool {
         registry.join(self.to_string()).exists()
     }
 
@@ -50,7 +50,7 @@ impl Version {
         } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Version {} is not installed.", self),
+                format!("Version {self} is not installed."),
             ))
         }
     }
@@ -59,7 +59,7 @@ impl Version {
         if self.is_installed(registry) {
             Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("Version {} is installed.", self),
+                format!("Version {self} is installed."),
             ))
         } else {
             Ok(Instance::new(self.clone()))

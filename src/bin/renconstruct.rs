@@ -54,7 +54,7 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
         }
         CustomOptionValue::Dict(val) => {
             let dict = PyRef::new_ref(PyDict::default(), vm.ctx.types.dict_type.to_owned(), None);
-            for (key, value) in val.iter() {
+            for (key, value) in val {
                 dict.set_item(key, to_pyobject(value, vm), vm).unwrap();
             }
             dict.to_pyobject(vm)
@@ -223,7 +223,7 @@ async fn build(
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                     continue;
                 }
             }
@@ -261,7 +261,7 @@ async fn build(
                     TaskOptions::Custom(opts) => {
                         let py_dict = PyDict::new_ref(&vm.ctx);
                         for (k, v) in &opts.options {
-                            py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
+                            py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap();
                         }
                         py_dict.to_pyobject(vm)
                     }
@@ -326,7 +326,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_lint_pre(&ctx, opts)?
+                task_lint_pre(&ctx, opts)?;
             }
             TaskOptions::Keystore(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -337,7 +337,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_keystore_pre(&ctx, opts)?
+                task_keystore_pre(&ctx, opts)?;
             }
             TaskOptions::ConvertImages(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -348,7 +348,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_convert_images_pre(&ctx, opts)?
+                task_convert_images_pre(&ctx, opts)?;
             }
             TaskOptions::Custom(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -546,7 +546,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_keystore_post(&ctx, opts)?
+                task_keystore_post(&ctx, opts)?;
             }
             TaskOptions::Notarize(opts) => {
                 println!("[Post] Running task: {}", task.name);
@@ -557,7 +557,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_notarize_post(&ctx, opts)?
+                task_notarize_post(&ctx, opts)?;
             }
             TaskOptions::Custom(opts) => {
                 println!("[Post] Running task: {}", task.name);

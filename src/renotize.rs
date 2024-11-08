@@ -82,26 +82,23 @@ fn notarize_file(
 
             bar.finish();
 
-            match status.data.attributes.status {
-                SubmissionResponseStatus::Accepted => {
-                    println!("Notarization accepted");
+            if status.data.attributes.status == SubmissionResponseStatus::Accepted {
+                println!("Notarization accepted");
 
-                    println!("Stapling notarization to file");
-                    let stapler = Stapler::new()?;
+                println!("Stapling notarization to file");
+                let stapler = Stapler::new()?;
 
-                    match staple_file {
-                        Some(sf) => stapler.staple_path(sf)?,
-                        None => stapler.staple_path(input_file)?,
-                    };
-                }
-                _ => {
-                    println!("Notarization failed.");
+                match staple_file {
+                    Some(sf) => stapler.staple_path(sf)?,
+                    None => stapler.staple_path(input_file)?,
+                };
+            } else {
+                println!("Notarization failed.");
 
-                    let log = notarizer.fetch_notarization_log(&id)?;
+                let log = notarizer.fetch_notarization_log(&id)?;
 
-                    for line in serde_json::to_string_pretty(&log)?.lines() {
-                        println!("notary log> {}", line);
-                    }
+                for line in serde_json::to_string_pretty(&log)?.lines() {
+                    println!("notary log> {line}");
                 }
             };
         }
@@ -152,11 +149,11 @@ pub fn unpack_app(
 
 pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
     let pem_key = PemSigningKey {
-        paths: vec![key_file.to_path_buf()],
+        paths: vec![key_file.clone()],
     };
 
     let der_key = CertificateDerSigningKey {
-        paths: vec![cert_file.to_path_buf()],
+        paths: vec![cert_file.clone()],
     };
 
     let mut sign_config = SignConfig::default();
@@ -192,7 +189,7 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
 
     let signer = UnifiedSigner::new(settings);
 
-    println!("Signing bundle at {:?}", input_file);
+    println!("Signing bundle at {input_file:?}");
     signer.sign_path_in_place(input_file)?;
 
     Ok(())
@@ -207,21 +204,18 @@ pub fn pack_dmg(
     output_file: &PathBuf,
     volume_name: &Option<String>,
 ) -> Result<()> {
-    let volume_name = match volume_name {
-        Some(name) => name.clone(),
-        None => {
-            let input_file_name = input_file
-                .file_name()
-                .ok_or(anyhow!("Input file name is not valid UTF-8"))?
-                .to_string_lossy();
-            input_file_name
-                .strip_suffix(".app")
-                .ok_or(anyhow!("Input file name does not end with .app"))?
-                .to_string()
-        }
+    let volume_name = if let Some(name) = volume_name { name.clone() } else {
+        let input_file_name = input_file
+            .file_name()
+            .ok_or(anyhow!("Input file name is not valid UTF-8"))?
+            .to_string_lossy();
+        input_file_name
+            .strip_suffix(".app")
+            .ok_or(anyhow!("Input file name does not end with .app"))?
+            .to_string()
     };
 
-    println!("Name: {}", volume_name);
+    println!("Name: {volume_name}");
 
     let mut cmd = Command::new("hdiutil");
     cmd.args([
@@ -248,11 +242,11 @@ pub fn pack_dmg(
 
 pub fn sign_dmg(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
     let pem_key = PemSigningKey {
-        paths: vec![key_file.to_path_buf()],
+        paths: vec![key_file.clone()],
     };
 
     let der_key = CertificateDerSigningKey {
-        paths: vec![cert_file.to_path_buf()],
+        paths: vec![cert_file.clone()],
     };
 
     let mut sign_config = SignConfig::default();
@@ -305,12 +299,9 @@ pub fn notarize_zip(
 pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
     let notarizer = Notarizer::from_api_key(app_store_key_file)?;
 
-    let log = match notarizer.fetch_notarization_log(uuid) {
-        Ok(log) => log,
-        Err(_) => {
-            println!("Status not available yet.");
-            return Ok(());
-        }
+    let log = if let Ok(log) = notarizer.fetch_notarization_log(uuid) { log } else {
+        println!("Status not available yet.");
+        return Ok(());
     };
 
     let status = match log.get("status") {
@@ -329,12 +320,12 @@ pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
         });
 
         for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
-            println!("Error: {}", key);
+            println!("Error: {key}");
             for (i, (_, doc_url, path)) in group.enumerate() {
                 if i == 0 {
-                    println!("Documentation: {}\nAffected files:", doc_url);
+                    println!("Documentation: {doc_url}\nAffected files:");
                 }
-                println!("  - {}", path);
+                println!("  - {path}");
             }
         }
     } };
@@ -350,11 +341,11 @@ pub fn full_run(
     app_store_key_file: &PathBuf,
 ) -> Result<()> {
     let output_dir = input_file.with_extension("");
-    println!("Unpacking app to {:?}", output_dir);
+    println!("Unpacking app to {output_dir:?}");
     let app_path = unpack_app(input_file, &output_dir, bundle_id)?;
-    println!("Signing app at {:?}", app_path);
+    println!("Signing app at {app_path:?}");
     sign_app(&app_path, key_file, cert_file)?;
-    println!("Notarizing app at {:?}", app_path);
+    println!("Notarizing app at {app_path:?}");
     notarize_app(&app_path, app_store_key_file)?;
 
     let zip_path = app_path
@@ -365,7 +356,7 @@ pub fn full_run(
             input_file.file_stem().unwrap().to_string_lossy()
         ))
         .with_extension("zip");
-    println!("Packing ZIP to {:?}", input_file);
+    println!("Packing ZIP to {input_file:?}");
     pack_zip(&app_path, &zip_path)?;
 
     fs::remove_file(input_file)?;
@@ -373,11 +364,11 @@ pub fn full_run(
 
     if std::env::consts::OS == "macos" {
         let dmg_path = input_file.with_extension("dmg");
-        println!("Packing DMG to {:?}", dmg_path);
+        println!("Packing DMG to {dmg_path:?}");
         pack_dmg(&app_path, &dmg_path, &None)?;
-        println!("Signing DMG at {:?}", dmg_path);
+        println!("Signing DMG at {dmg_path:?}");
         sign_dmg(&dmg_path, key_file, cert_file)?;
-        println!("Notarizing DMG at {:?}", dmg_path);
+        println!("Notarizing DMG at {dmg_path:?}");
         notarize_dmg(&dmg_path, app_store_key_file)?;
 
         fs::remove_dir_all(app_path.parent().unwrap())?;
@@ -517,7 +508,7 @@ pub fn provision() -> Result<()> {
     let app_store_cert_path;
 
     loop {
-        match fs::read_dir(&cert_dir)?.find_map(|entry| {
+        if let Some(path) = fs::read_dir(&cert_dir)?.find_map(|entry| {
             let entry = entry.unwrap();
             let path = entry.path();
             match path.extension() {
@@ -531,18 +522,15 @@ pub fn provision() -> Result<()> {
                 None => None,
             }
         }) {
-            Some(path) => {
-                app_store_cert_path = path;
-                break;
-            }
-            None => {
-                println!("Key file not found. Press 'Enter' when you have saved the key file.");
-                println!(
-                    "Make sure to save the file next to the private-key.pem and csr.pem files."
-                );
-                let mut input = String::new();
-                std::io::stdin().read_line(&mut input)?;
-            }
+            app_store_cert_path = path;
+            break;
+        } else {
+            println!("Key file not found. Press 'Enter' when you have saved the key file.");
+            println!(
+                "Make sure to save the file next to the private-key.pem and csr.pem files."
+            );
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
         }
     }
 

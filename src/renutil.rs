@@ -61,14 +61,14 @@ pub struct Instance<S: InstanceState> {
 }
 
 impl<S: InstanceState> Instance<S> {
-    pub fn new(version: Version) -> Self {
+    #[must_use] pub fn new(version: Version) -> Self {
         Self {
             version,
             _marker: PhantomData,
         }
     }
 
-    pub fn path(&self, registry: &PathBuf) -> PathBuf {
+    #[must_use] pub fn path(&self, registry: &PathBuf) -> PathBuf {
         let base_path = fs::canonicalize(registry).expect("Unable to canonicalize path.");
         base_path.join(self.version.to_string())
     }
@@ -169,7 +169,7 @@ impl Instance<Local> {
         }
     }
 
-    pub fn entrypoint(&self, registry: &PathBuf) -> PathBuf {
+    #[must_use] pub fn entrypoint(&self, registry: &PathBuf) -> PathBuf {
         self.path(registry).join("renpy.py")
     }
 }
@@ -184,9 +184,9 @@ impl std::fmt::Display for Version {
                 hotfix,
                 nightly,
             } => {
-                write!(f, "{}.{}.{}", major, minor, patch)?;
+                write!(f, "{major}.{minor}.{patch}")?;
                 if *hotfix > 0 {
-                    write!(f, ".{}", hotfix)?;
+                    write!(f, ".{hotfix}")?;
                 }
                 if *nightly {
                     write!(f, "+nightly")?;
@@ -197,7 +197,7 @@ impl std::fmt::Display for Version {
     }
 }
 
-pub fn get_registry(registry: Option<PathBuf>) -> PathBuf {
+#[must_use] pub fn get_registry(registry: Option<PathBuf>) -> PathBuf {
     let registry = registry
         .or_else(|| match home::home_dir() {
             Some(mut path) => {
@@ -464,7 +464,7 @@ pub fn launch(
     if interactive {
         if let Some(code) = &code {
             match exec_py(PathBuf::from(&args[0]), code) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => {
                     eprintln!("{e}");
                 }
@@ -570,7 +570,7 @@ pub fn launch(
                             ctrl: true,
                             ..
                         } => match exec_py(PathBuf::from(&args[0]), &textarea.lines().join("\n")) {
-                            Ok(_) => {}
+                            Ok(()) => {}
                             Err(e) => {
                                 eprintln!("{e}");
                                 break;
@@ -654,22 +654,19 @@ pub async fn install(
         anyhow::bail!("{} is not a valid version of Ren'Py.", version);
     }
 
-    let java_home = match env::var("JAVA_HOME") {
-        Ok(val) => PathBuf::from(val),
-        Err(_) => {
-            let jdk_version = match version >= &Version::from_str("8.2.0").unwrap() {
-                true => "21",
-                false => "8",
-            };
-            anyhow::bail!(
-                "JAVA_HOME is not set. Please check if you need to install OpenJDK {jdk_version}"
-            );
-        }
+    let java_home = if let Ok(val) = env::var("JAVA_HOME") { PathBuf::from(val) } else {
+        let jdk_version = match version >= &Version::from_str("8.2.0").unwrap() {
+            true => "21",
+            false => "8",
+        };
+        anyhow::bail!(
+            "JAVA_HOME is not set. Please check if you need to install OpenJDK {jdk_version}"
+        );
     };
 
     if version.is_installed(registry) {
         if force {
-            println!("Forcing uninstallation of existing version {}.", version);
+            println!("Forcing uninstallation of existing version {version}.");
             uninstall(registry, version)?;
         } else {
             return Err(anyhow!("Version {} is already installed.", version));

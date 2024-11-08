@@ -213,7 +213,7 @@ impl Command for ProcessingCommand {
                 if self.lossless {
                     bail!("Lossless AVIF is not supported.");
                 }
-                encode_avif(&self.path, self.avif_quality)?
+                encode_avif(&self.path, self.avif_quality)?;
             }
             ImageFormat::WebP => encode_webp(&self.path, self.webp_quality, self.lossless)?,
         }
@@ -461,7 +461,7 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                     continue;
                 }
             }
@@ -538,7 +538,7 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                 )
             })
             .join()
-            .unwrap()?
+            .unwrap()?;
         }
         None => {
             return Err(anyhow!("Could not find mac zip file."));

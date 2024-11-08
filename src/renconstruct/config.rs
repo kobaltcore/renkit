@@ -14,8 +14,7 @@ where
     match Version::from_str(&buf) {
         Ok(version) => Ok(version),
         Err(e) => Err(serde::de::Error::custom(format!(
-            "Invalid version: {} - {}",
-            buf, e
+            "Invalid version: {buf} - {e}"
         ))),
     }
 }
