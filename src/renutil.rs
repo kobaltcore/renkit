@@ -61,14 +61,16 @@ pub struct Instance<S: InstanceState> {
 }
 
 impl<S: InstanceState> Instance<S> {
-    #[must_use] pub fn new(version: Version) -> Self {
+    #[must_use]
+    pub fn new(version: Version) -> Self {
         Self {
             version,
             _marker: PhantomData,
         }
     }
 
-    #[must_use] pub fn path(&self, registry: &PathBuf) -> PathBuf {
+    #[must_use]
+    pub fn path(&self, registry: &PathBuf) -> PathBuf {
         let base_path = fs::canonicalize(registry).expect("Unable to canonicalize path.");
         base_path.join(self.version.to_string())
     }
@@ -169,35 +171,36 @@ impl Instance<Local> {
         }
     }
 
-    #[must_use] pub fn entrypoint(&self, registry: &PathBuf) -> PathBuf {
+    #[must_use]
+    pub fn entrypoint(&self, registry: &PathBuf) -> PathBuf {
         self.path(registry).join("renpy.py")
     }
 }
 
 impl std::fmt::Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Version {
-                major,
-                minor,
-                patch,
-                hotfix,
-                nightly,
-            } => {
-                write!(f, "{major}.{minor}.{patch}")?;
-                if *hotfix > 0 {
-                    write!(f, ".{hotfix}")?;
-                }
-                if *nightly {
-                    write!(f, "+nightly")?;
-                }
-                Ok(())
+        let Version {
+            major,
+            minor,
+            patch,
+            hotfix,
+            nightly,
+        } = self;
+        {
+            write!(f, "{major}.{minor}.{patch}")?;
+            if *hotfix > 0 {
+                write!(f, ".{hotfix}")?;
             }
+            if *nightly {
+                write!(f, "+nightly")?;
+            }
+            Ok(())
         }
     }
 }
 
-#[must_use] pub fn get_registry(registry: Option<PathBuf>) -> PathBuf {
+#[must_use]
+pub fn get_registry(registry: Option<PathBuf>) -> PathBuf {
     let registry = registry
         .or_else(|| match home::home_dir() {
             Some(mut path) => {
@@ -350,7 +353,7 @@ fn activate(textarea: &mut TextArea<'_>) {
     );
 }
 
-fn exec_py(base_dir: PathBuf, code: &String) -> Result<()> {
+fn exec_py(base_dir: &Path, code: &String) -> Result<()> {
     fs::write(base_dir.join("exec.py"), code).unwrap();
 
     let mut wait_time = 0;
@@ -399,13 +402,12 @@ pub fn launch(
 
     cmd.arg("-EO").arg(entrypoint);
 
-    match direct {
-        true => cmd.args(args),
-        false => {
-            let launcher_path = instance.path(registry).join("launcher");
-            let launcher_path = launcher_path.to_str().unwrap();
-            cmd.arg(launcher_path).args(args)
-        }
+    if direct {
+        cmd.args(args);
+    } else {
+        let launcher_path = instance.path(registry).join("launcher");
+        let launcher_path = launcher_path.to_str().unwrap();
+        cmd.arg(launcher_path).args(args);
     };
 
     if headless {
@@ -463,7 +465,7 @@ pub fn launch(
 
     if interactive {
         if let Some(code) = &code {
-            match exec_py(PathBuf::from(&args[0]), code) {
+            match exec_py(Path::new(&args[0]), code) {
                 Ok(()) => {}
                 Err(e) => {
                     eprintln!("{e}");
@@ -569,7 +571,7 @@ pub fn launch(
                             key: Key::Char('x'),
                             ctrl: true,
                             ..
-                        } => match exec_py(PathBuf::from(&args[0]), &textarea.lines().join("\n")) {
+                        } => match exec_py(Path::new(&args[0]), &textarea.lines().join("\n")) {
                             Ok(()) => {}
                             Err(e) => {
                                 eprintln!("{e}");
@@ -654,7 +656,9 @@ pub async fn install(
         anyhow::bail!("{} is not a valid version of Ren'Py.", version);
     }
 
-    let java_home = if let Ok(val) = env::var("JAVA_HOME") { PathBuf::from(val) } else {
+    let java_home = if let Ok(val) = env::var("JAVA_HOME") {
+        PathBuf::from(val)
+    } else {
         let jdk_version = match version >= &Version::from_str("8.2.0").unwrap() {
             true => "21",
             false => "8",

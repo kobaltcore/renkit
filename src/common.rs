@@ -7,6 +7,13 @@ use std::{
 };
 use zip::{write::SimpleFileOptions, ZipWriter};
 
+/// # Panics
+///
+/// May panic on prefix unwrap.
+///
+/// # Errors
+///
+/// Will return `Err` when ZIP file can't be written.
 pub fn zip_dir<T, C>(
     it: &mut dyn Iterator<Item = jwalk::Result<DirEntry<C>>>,
     prefix: Option<&PathBuf>,

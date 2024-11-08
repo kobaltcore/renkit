@@ -18,7 +18,7 @@ use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 use std::{
     fs::{self, File},
     io::Cursor,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
     time::Duration,
 };
@@ -29,9 +29,9 @@ const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 const ENTITLEMENTS_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/></dict></plist>"#;
 
 fn notarize_file(
-    input_file: &PathBuf,
-    app_store_key_file: &PathBuf,
-    staple_file: Option<&PathBuf>,
+    input_file: &Path,
+    app_store_key_file: &Path,
+    staple_file: Option<&Path>,
 ) -> Result<()> {
     let notarizer = Notarizer::from_api_key(app_store_key_file)?;
 
@@ -102,17 +102,15 @@ fn notarize_file(
                 }
             };
         }
-        _ => unreachable!("NotarizationUpload::NotaryResponse should be returned"),
+        NotarizationUpload::NotaryResponse(_) => {
+            unreachable!("NotarizationUpload::NotaryResponse should be returned")
+        }
     };
 
     Ok(())
 }
 
-pub fn unpack_app(
-    input_file: &PathBuf,
-    output_dir: &PathBuf,
-    bundle_id: &String,
-) -> Result<PathBuf> {
+pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Result<PathBuf> {
     if output_dir.exists() {
         std::fs::remove_dir_all(output_dir)?;
     }
@@ -135,7 +133,7 @@ pub fn unpack_app(
                         .ok_or(anyhow!("Info.plist is not a dictionary"))?;
                     info_plist.insert(
                         "CFBundleIdentifier".to_string(),
-                        plist::Value::String(bundle_id.clone()),
+                        plist::Value::String(bundle_id.to_owned()),
                     );
                     Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
                 }
@@ -147,13 +145,13 @@ pub fn unpack_app(
     Ok(app_path.unwrap())
 }
 
-pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
+pub fn sign_app(input_file: &Path, key_file: &Path, cert_file: &Path) -> Result<()> {
     let pem_key = PemSigningKey {
-        paths: vec![key_file.clone()],
+        paths: vec![key_file.to_path_buf()],
     };
 
     let der_key = CertificateDerSigningKey {
-        paths: vec![cert_file.clone()],
+        paths: vec![cert_file.to_path_buf()],
     };
 
     let mut sign_config = SignConfig::default();
@@ -195,16 +193,14 @@ pub fn sign_app(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
     Ok(())
 }
 
-pub fn notarize_app(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
+pub fn notarize_app(input_file: &Path, app_store_key_file: &Path) -> Result<()> {
     notarize_file(input_file, app_store_key_file, None)
 }
 
-pub fn pack_dmg(
-    input_file: &PathBuf,
-    output_file: &PathBuf,
-    volume_name: &Option<String>,
-) -> Result<()> {
-    let volume_name = if let Some(name) = volume_name { name.clone() } else {
+pub fn pack_dmg(input_file: &Path, output_file: &Path, volume_name: &Option<String>) -> Result<()> {
+    let volume_name = if let Some(name) = volume_name {
+        name.clone()
+    } else {
         let input_file_name = input_file
             .file_name()
             .ok_or(anyhow!("Input file name is not valid UTF-8"))?
@@ -240,13 +236,13 @@ pub fn pack_dmg(
     Ok(())
 }
 
-pub fn sign_dmg(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -> Result<()> {
+pub fn sign_dmg(input_file: &Path, key_file: &Path, cert_file: &Path) -> Result<()> {
     let pem_key = PemSigningKey {
-        paths: vec![key_file.clone()],
+        paths: vec![key_file.to_path_buf()],
     };
 
     let der_key = CertificateDerSigningKey {
-        paths: vec![cert_file.clone()],
+        paths: vec![cert_file.to_path_buf()],
     };
 
     let mut sign_config = SignConfig::default();
@@ -269,11 +265,11 @@ pub fn sign_dmg(input_file: &PathBuf, key_file: &PathBuf, cert_file: &PathBuf) -
     Ok(())
 }
 
-pub fn notarize_dmg(input_file: &PathBuf, app_store_key_file: &PathBuf) -> Result<()> {
+pub fn notarize_dmg(input_file: &Path, app_store_key_file: &Path) -> Result<()> {
     notarize_file(input_file, app_store_key_file, None)
 }
 
-pub fn pack_zip(input_file: &PathBuf, output_file: &PathBuf) -> Result<()> {
+pub fn pack_zip(input_file: &Path, output_file: &Path) -> Result<()> {
     let mut files = WalkDir::new(input_file).into_iter();
 
     let file = File::create(output_file).unwrap();
@@ -288,18 +284,14 @@ pub fn pack_zip(input_file: &PathBuf, output_file: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn notarize_zip(
-    input_file: &PathBuf,
-    app_store_key_file: &PathBuf,
-    app_file: &PathBuf,
-) -> Result<()> {
+pub fn notarize_zip(input_file: &Path, app_store_key_file: &Path, app_file: &Path) -> Result<()> {
     notarize_file(input_file, app_store_key_file, Some(app_file))
 }
 
-pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
+pub fn status(uuid: &str, app_store_key_file: &Path) -> Result<()> {
     let notarizer = Notarizer::from_api_key(app_store_key_file)?;
 
-    let log = if let Ok(log) = notarizer.fetch_notarization_log(uuid) { log } else {
+    let Ok(log) = notarizer.fetch_notarization_log(uuid) else {
         println!("Status not available yet.");
         return Ok(());
     };
@@ -310,35 +302,37 @@ pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
     };
     println!("Status: {status}");
 
-    if let Some(issues) = log.get("issues") { if let serde_json::Value::Array(_) = issues {
-        let issues = issues.as_array().unwrap().iter().map(|issue| {
-            let issue = issue.as_object().unwrap();
-            let message = issue.get("message").unwrap().as_str().unwrap();
-            let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
-            let path = issue.get("path").unwrap().as_str().unwrap();
-            (message, doc_url, path)
-        });
+    if let Some(issues) = log.get("issues") {
+        if let serde_json::Value::Array(_) = issues {
+            let issues = issues.as_array().unwrap().iter().map(|issue| {
+                let issue = issue.as_object().unwrap();
+                let message = issue.get("message").unwrap().as_str().unwrap();
+                let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
+                let path = issue.get("path").unwrap().as_str().unwrap();
+                (message, doc_url, path)
+            });
 
-        for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
-            println!("Error: {key}");
-            for (i, (_, doc_url, path)) in group.enumerate() {
-                if i == 0 {
-                    println!("Documentation: {doc_url}\nAffected files:");
+            for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
+                println!("Error: {key}");
+                for (i, (_, doc_url, path)) in group.enumerate() {
+                    if i == 0 {
+                        println!("Documentation: {doc_url}\nAffected files:");
+                    }
+                    println!("  - {path}");
                 }
-                println!("  - {path}");
             }
         }
-    } };
+    };
 
     Ok(())
 }
 
 pub fn full_run(
-    input_file: &PathBuf,
-    bundle_id: &String,
-    key_file: &PathBuf,
-    cert_file: &PathBuf,
-    app_store_key_file: &PathBuf,
+    input_file: &Path,
+    bundle_id: &str,
+    key_file: &Path,
+    cert_file: &Path,
+    app_store_key_file: &Path,
 ) -> Result<()> {
     let output_dir = input_file.with_extension("");
     println!("Unpacking app to {output_dir:?}");
@@ -382,8 +376,8 @@ pub fn full_run(
 }
 
 pub fn provision() -> Result<()> {
-    let cert_dir = PathBuf::from("certificates");
-    fs::create_dir_all(&cert_dir)?;
+    let cert_dir = Path::new("certificates");
+    fs::create_dir_all(cert_dir)?;
 
     let mut rng = rand::thread_rng();
     let priv_key = RsaPrivateKey::new(&mut rng, 2048)?;
@@ -396,8 +390,10 @@ pub fn provision() -> Result<()> {
         paths: vec![private_key_path],
     };
 
-    let mut cert_source = CertificateSource::default();
-    cert_source.pem_path_key = Some(pem_key);
+    let cert_source = CertificateSource {
+        pem_path_key: Some(pem_key),
+        ..Default::default()
+    };
 
     let certs = cert_source.resolve_certificates(false)?;
     let private_key = certs.private_key()?;
@@ -508,7 +504,7 @@ pub fn provision() -> Result<()> {
     let app_store_cert_path;
 
     loop {
-        if let Some(path) = fs::read_dir(&cert_dir)?.find_map(|entry| {
+        if let Some(path) = fs::read_dir(cert_dir)?.find_map(|entry| {
             let entry = entry.unwrap();
             let path = entry.path();
             match path.extension() {
@@ -524,14 +520,11 @@ pub fn provision() -> Result<()> {
         }) {
             app_store_cert_path = path;
             break;
-        } else {
-            println!("Key file not found. Press 'Enter' when you have saved the key file.");
-            println!(
-                "Make sure to save the file next to the private-key.pem and csr.pem files."
-            );
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
         }
+        println!("Key file not found. Press 'Enter' when you have saved the key file.");
+        println!("Make sure to save the file next to the private-key.pem and csr.pem files.");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
     }
 
     let unified = app_store_connect::UnifiedApiKey::from_ecdsa_pem_path(

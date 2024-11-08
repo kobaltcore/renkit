@@ -98,77 +98,74 @@ fn encode_webp(path: &PathBuf, quality: f32, lossless: bool) -> Result<()> {
 
     let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
 
-    let result = match lossless {
-        true => {
-            // -z 9 -m 6
-            enc.encode_advanced(&webp::WebPConfig {
-                lossless: 1,
-                quality: 100.0,
-                method: 6,
-                image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-                target_size: 0,
-                target_PSNR: 0.0,
-                segments: 4,
-                sns_strength: 50,
-                filter_strength: 60,
-                filter_sharpness: 0,
-                filter_type: 1,
-                autofilter: 0,
-                alpha_compression: 1,
-                alpha_filtering: 1,
-                alpha_quality: 100,
-                pass: 1,
-                show_compressed: 0,
-                preprocessing: 0,
-                partitions: 0,
-                partition_limit: 0,
-                emulate_jpeg_size: 0,
-                thread_level: 0,
-                low_memory: 0,
-                near_lossless: 100,
-                exact: 0,
-                use_delta_palette: 0,
-                use_sharp_yuv: 0,
-                qmin: 0,
-                qmax: 100,
-            })
-            .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-        }
-        false => {
-            // -q 90 -m 6 -sharp_yuv -pre 4
-            enc.encode_advanced(&webp::WebPConfig {
-                lossless: 0,
-                quality,
-                method: 6,
-                image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-                target_size: 0,
-                target_PSNR: 0.0,
-                segments: 4,
-                sns_strength: 50,
-                filter_strength: 60,
-                filter_sharpness: 0,
-                filter_type: 1,
-                autofilter: 0,
-                alpha_compression: 1,
-                alpha_filtering: 1,
-                alpha_quality: 100,
-                pass: 1,
-                show_compressed: 0,
-                preprocessing: 4,
-                partitions: 0,
-                partition_limit: 0,
-                emulate_jpeg_size: 0,
-                thread_level: 0,
-                low_memory: 0,
-                near_lossless: 100,
-                exact: 0,
-                use_delta_palette: 0,
-                use_sharp_yuv: 1,
-                qmin: 0,
-                qmax: 100,
-            })
-            .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-        }
+    let result = if lossless {
+        // -z 9 -m 6
+        enc.encode_advanced(&webp::WebPConfig {
+            lossless: 1,
+            quality: 100.0,
+            method: 6,
+            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
+            target_size: 0,
+            target_PSNR: 0.0,
+            segments: 4,
+            sns_strength: 50,
+            filter_strength: 60,
+            filter_sharpness: 0,
+            filter_type: 1,
+            autofilter: 0,
+            alpha_compression: 1,
+            alpha_filtering: 1,
+            alpha_quality: 100,
+            pass: 1,
+            show_compressed: 0,
+            preprocessing: 0,
+            partitions: 0,
+            partition_limit: 0,
+            emulate_jpeg_size: 0,
+            thread_level: 0,
+            low_memory: 0,
+            near_lossless: 100,
+            exact: 0,
+            use_delta_palette: 0,
+            use_sharp_yuv: 0,
+            qmin: 0,
+            qmax: 100,
+        })
+        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
+    } else {
+        // -q 90 -m 6 -sharp_yuv -pre 4
+        enc.encode_advanced(&webp::WebPConfig {
+            lossless: 0,
+            quality,
+            method: 6,
+            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
+            target_size: 0,
+            target_PSNR: 0.0,
+            segments: 4,
+            sns_strength: 50,
+            filter_strength: 60,
+            filter_sharpness: 0,
+            filter_type: 1,
+            autofilter: 0,
+            alpha_compression: 1,
+            alpha_filtering: 1,
+            alpha_quality: 100,
+            pass: 1,
+            show_compressed: 0,
+            preprocessing: 4,
+            partitions: 0,
+            partition_limit: 0,
+            emulate_jpeg_size: 0,
+            thread_level: 0,
+            low_memory: 0,
+            near_lossless: 100,
+            exact: 0,
+            use_delta_palette: 0,
+            use_sharp_yuv: 1,
+            qmin: 0,
+            qmax: 100,
+        })
+        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
     };
 
     fs::write(path, result.as_bytes())?;
@@ -205,10 +202,13 @@ impl Command for ProcessingCommand {
             //     )?;
             //     fs::write(&self.path, &buffer.data)?;
             // }
-            ImageFormat::HybridWebPAvif => match self.lossless {
-                true => encode_webp(&self.path, self.webp_quality, true)?,
-                false => encode_avif(&self.path, self.avif_quality)?,
-            },
+            ImageFormat::HybridWebPAvif => {
+                if self.lossless {
+                    encode_webp(&self.path, self.webp_quality, true)?;
+                } else {
+                    encode_avif(&self.path, self.avif_quality)?;
+                }
+            }
             ImageFormat::Avif => {
                 if self.lossless {
                     bail!("Lossless AVIF is not supported.");
@@ -511,12 +511,14 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
         let path = entry.path();
         match path.extension() {
             Some(ext) => {
-                if ext == "zip" && path
+                if ext == "zip"
+                    && path
                         .file_stem()
                         .unwrap()
                         .to_str()
                         .unwrap()
-                        .ends_with("-mac") {
+                        .ends_with("-mac")
+                {
                     return Some(path);
                 }
                 None

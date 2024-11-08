@@ -1,7 +1,7 @@
 use crate::renutil::{Instance, Local, Remote};
 use anyhow::Result;
 use reqwest::Url;
-use std::path::PathBuf;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
@@ -40,11 +40,12 @@ impl Version {
         }
     }
 
-    #[must_use] pub fn is_installed(&self, registry: &PathBuf) -> bool {
+    #[must_use]
+    pub fn is_installed(&self, registry: &Path) -> bool {
         registry.join(self.to_string()).exists()
     }
 
-    pub fn to_local(&self, registry: &PathBuf) -> Result<Instance<Local>, std::io::Error> {
+    pub fn to_local(&self, registry: &Path) -> Result<Instance<Local>, std::io::Error> {
         if self.is_installed(registry) {
             Ok(Instance::new(self.clone()))
         } else {
@@ -55,7 +56,7 @@ impl Version {
         }
     }
 
-    pub fn to_remote(&self, registry: &PathBuf) -> Result<Instance<Remote>, std::io::Error> {
+    pub fn to_remote(&self, registry: &Path) -> Result<Instance<Remote>, std::io::Error> {
         if self.is_installed(registry) {
             Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
@@ -69,31 +70,28 @@ impl Version {
     pub fn sdk_url(&self) -> Result<Url> {
         let supports_arm = self >= &Version::from_str("7.5.0").unwrap();
 
-        match self.nightly {
-            true => {
-                if supports_arm {
-                    return Url::parse(&format!(
-                        "https://nightly.renpy.org/{self}/renpy-{self}-sdkarm.tar.bz2"
-                    ))
-                    .map_err(|e| anyhow::anyhow!(e));
-                }
-                Url::parse(&format!(
-                    "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
+        if self.nightly {
+            if supports_arm {
+                return Url::parse(&format!(
+                    "https://nightly.renpy.org/{self}/renpy-{self}-sdkarm.tar.bz2"
                 ))
-                .map_err(|e| anyhow::anyhow!(e))
+                .map_err(|e| anyhow::anyhow!(e));
             }
-            false => {
-                if supports_arm {
-                    return Url::parse(&format!(
-                        "https://www.renpy.org/dl/{self}/renpy-{self}-sdkarm.tar.bz2"
-                    ))
-                    .map_err(|e| anyhow::anyhow!(e));
-                }
-                Url::parse(&format!(
-                    "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
+            Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        } else {
+            if supports_arm {
+                return Url::parse(&format!(
+                    "https://www.renpy.org/dl/{self}/renpy-{self}-sdkarm.tar.bz2"
                 ))
-                .map_err(|e| anyhow::anyhow!(e))
+                .map_err(|e| anyhow::anyhow!(e));
             }
+            Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
         }
     }
 

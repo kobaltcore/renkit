@@ -15,10 +15,10 @@ use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
 use rustpython_vm::builtins::PyDict;
-use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, VirtualMachine};
+use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine};
 use std::collections::HashSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -65,7 +65,7 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
 #[tokio::main]
 async fn build(
     vm: &VirtualMachine,
-    input_dir: &PathBuf,
+    input_dir: &Path,
     output_dir: &PathBuf,
     config_path: Option<PathBuf>,
     cli_registry: Option<PathBuf>,
@@ -118,14 +118,10 @@ async fn build(
             .get(&BuildOption::Known(KnownBuildOption::AndroidAab))
             .unwrap_or(&false)
     {
-        let has_keystore_task = config
-            .tasks
-            .iter()
-            .find(|(_, v)| match v.options {
-                TaskOptions::Keystore { .. } => v.enabled,
-                _ => false,
-            })
-            .is_some();
+        let has_keystore_task = config.tasks.iter().any(|(_, v)| match v.options {
+            TaskOptions::Keystore { .. } => v.enabled,
+            _ => false,
+        });
 
         if !has_keystore_task {
             return Err(anyhow!(
@@ -255,8 +251,7 @@ async fn build(
                 .to_string();
             let class = val.get_item("class", vm).unwrap();
 
-            if let Some((_, opts)) = tasks
-                .iter_mut().find(|(name, _)| **name == name_slug) {
+            if let Some((_, opts)) = tasks.iter_mut().find(|(name, _)| **name == name_slug) {
                 let options = match &opts.options {
                     TaskOptions::Custom(opts) => {
                         let py_dict = PyDict::new_ref(&vm.ctx);
@@ -321,7 +316,7 @@ async fn build(
             TaskOptions::Lint(opts) => {
                 let ctx = TaskContext {
                     version: config.renutil.version.clone(),
-                    input_dir: input_dir.clone(),
+                    input_dir: input_dir.to_path_buf(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
@@ -332,7 +327,7 @@ async fn build(
                 println!("[Pre] Running task: {}", task.name);
                 let ctx = TaskContext {
                     version: config.renutil.version.clone(),
-                    input_dir: input_dir.clone(),
+                    input_dir: input_dir.to_path_buf(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
@@ -343,7 +338,7 @@ async fn build(
                 println!("[Pre] Running task: {}", task.name);
                 let ctx = TaskContext {
                     version: config.renutil.version.clone(),
-                    input_dir: input_dir.clone(),
+                    input_dir: input_dir.to_path_buf(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
@@ -499,7 +494,6 @@ async fn build(
                     args.push("--package".into());
                     args.push("mac".into());
                 }
-                BuildOption::Known(KnownBuildOption::Web) => continue,
                 BuildOption::Known(KnownBuildOption::Steam) => {
                     args.push("--package".into());
                     args.push("steam".into());
@@ -508,12 +502,15 @@ async fn build(
                     args.push("--package".into());
                     args.push("market".into());
                 }
-                BuildOption::Known(KnownBuildOption::AndroidApk) => continue,
-                BuildOption::Known(KnownBuildOption::AndroidAab) => continue,
                 BuildOption::Custom(s) => {
                     args.push("--package".into());
                     args.push(s);
                 }
+                BuildOption::Known(
+                    KnownBuildOption::AndroidApk
+                    | KnownBuildOption::AndroidAab
+                    | KnownBuildOption::Web,
+                ) => continue,
             };
         }
 
@@ -541,7 +538,7 @@ async fn build(
                 println!("[Post] Running task: {}", task.name);
                 let ctx = TaskContext {
                     version: config.renutil.version.clone(),
-                    input_dir: input_dir.clone(),
+                    input_dir: input_dir.to_path_buf(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
@@ -552,7 +549,7 @@ async fn build(
                 println!("[Post] Running task: {}", task.name);
                 let ctx = TaskContext {
                     version: config.renutil.version.clone(),
-                    input_dir: input_dir.clone(),
+                    input_dir: input_dir.to_path_buf(),
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
@@ -575,7 +572,7 @@ async fn build(
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    Interpreter::with_init(Default::default(), |vm| {
+    Interpreter::with_init(Settings::default(), |vm| {
         vm.add_native_modules(rustpython_stdlib::get_module_inits());
         vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
         vm.add_frozen(rustpython_vm::py_freeze!(dir = "./py"));
