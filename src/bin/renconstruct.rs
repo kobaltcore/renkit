@@ -255,48 +255,42 @@ async fn build(
                 .to_string();
             let class = val.get_item("class", vm).unwrap();
 
-            match tasks
-                .iter_mut()
-                .filter(|(name, _)| **name == name_slug)
-                .next()
-            {
-                Some((_, opts)) => {
-                    let options = match &opts.options {
-                        TaskOptions::Custom(opts) => {
-                            let py_dict = PyDict::new_ref(&vm.ctx);
-                            for (k, v) in &opts.options {
-                                py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
-                            }
-                            py_dict.to_pyobject(vm)
+            if let Some((_, opts)) = tasks
+                .iter_mut().find(|(name, _)| **name == name_slug) {
+                let options = match &opts.options {
+                    TaskOptions::Custom(opts) => {
+                        let py_dict = PyDict::new_ref(&vm.ctx);
+                        for (k, v) in &opts.options {
+                            py_dict.set_item(k, to_pyobject(v, vm), vm).unwrap()
                         }
-                        _ => panic!("Task type mismatch."),
-                    };
-
-                    let class_new = class.get_attr("__new__", vm).unwrap();
-                    let instance = class_new.call((class,), vm).unwrap();
-                    let instance_init = instance.get_attr("__init__", vm).unwrap();
-                    let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
-                    let output_dir_py = PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
-                    if let Err(e) = instance_init.call((options, input_dir_py, output_dir_py), vm) {
-                        vm.print_exception(e);
-                        panic!();
+                        py_dict.to_pyobject(vm)
                     }
+                    _ => panic!("Task type mismatch."),
+                };
 
-                    match &mut opts.options {
-                        TaskOptions::Custom(opts) => {
-                            if instance.has_attr("pre_build", vm).unwrap() {
-                                opts.task_handle_pre =
-                                    Some(instance.get_attr("pre_build", vm).unwrap());
-                            }
-                            if instance.has_attr("post_build", vm).unwrap() {
-                                opts.task_handle_post =
-                                    Some(instance.get_attr("post_build", vm).unwrap());
-                            }
-                        }
-                        _ => panic!("Task type mismatch."),
-                    };
+                let class_new = class.get_attr("__new__", vm).unwrap();
+                let instance = class_new.call((class,), vm).unwrap();
+                let instance_init = instance.get_attr("__init__", vm).unwrap();
+                let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
+                let output_dir_py = PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
+                if let Err(e) = instance_init.call((options, input_dir_py, output_dir_py), vm) {
+                    vm.print_exception(e);
+                    panic!();
                 }
-                None => {}
+
+                match &mut opts.options {
+                    TaskOptions::Custom(opts) => {
+                        if instance.has_attr("pre_build", vm).unwrap() {
+                            opts.task_handle_pre =
+                                Some(instance.get_attr("pre_build", vm).unwrap());
+                        }
+                        if instance.has_attr("post_build", vm).unwrap() {
+                            opts.task_handle_post =
+                                Some(instance.get_attr("post_build", vm).unwrap());
+                        }
+                    }
+                    _ => panic!("Task type mismatch."),
+                };
             }
         }
     }
@@ -308,10 +302,10 @@ async fn build(
         .map(|(k, v)| {
             // TODO: handle python object instantiation here so the instance lives
             // for the entire duration of the build.
-            return Task {
+            Task {
                 name: k.clone(),
                 kind: v.clone(),
-            };
+            }
         })
         .collect::<Vec<_>>();
 
@@ -329,7 +323,7 @@ async fn build(
                     version: config.renutil.version.clone(),
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
-                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
                 task_lint_pre(&ctx, opts)?
@@ -340,10 +334,10 @@ async fn build(
                     version: config.renutil.version.clone(),
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
-                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_keystore_pre(&ctx, &opts)?
+                task_keystore_pre(&ctx, opts)?
             }
             TaskOptions::ConvertImages(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -351,10 +345,10 @@ async fn build(
                     version: config.renutil.version.clone(),
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
-                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_convert_images_pre(&ctx, &opts)?
+                task_convert_images_pre(&ctx, opts)?
             }
             TaskOptions::Custom(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -475,7 +469,7 @@ async fn build(
         fs::remove_dir_all(web_dir)?;
     }
 
-    if active_builds.len() > 0 {
+    if !active_builds.is_empty() {
         println!("Building other packages.");
         let mut args = vec![
             "distribute".into(),
@@ -549,10 +543,10 @@ async fn build(
                     version: config.renutil.version.clone(),
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
-                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_keystore_post(&ctx, &opts)?
+                task_keystore_post(&ctx, opts)?
             }
             TaskOptions::Notarize(opts) => {
                 println!("[Post] Running task: {}", task.name);
@@ -560,10 +554,10 @@ async fn build(
                     version: config.renutil.version.clone(),
                     input_dir: input_dir.clone(),
                     output_dir: output_dir.clone(),
-                    renpy_path: registry.join(&config.renutil.version.to_string()),
+                    renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_notarize_post(&ctx, &opts)?
+                task_notarize_post(&ctx, opts)?
             }
             TaskOptions::Custom(opts) => {
                 println!("[Post] Running task: {}", task.name);

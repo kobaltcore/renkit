@@ -77,10 +77,10 @@ impl Version {
                     ))
                     .map_err(|e| anyhow::anyhow!(e));
                 }
-                return Url::parse(&format!(
+                Url::parse(&format!(
                     "https://nightly.renpy.org/{self}/renpy-{self}-sdk.zip"
                 ))
-                .map_err(|e| anyhow::anyhow!(e));
+                .map_err(|e| anyhow::anyhow!(e))
             }
             false => {
                 if supports_arm {
@@ -89,10 +89,10 @@ impl Version {
                     ))
                     .map_err(|e| anyhow::anyhow!(e));
                 }
-                return Url::parse(&format!(
+                Url::parse(&format!(
                     "https://www.renpy.org/dl/{self}/renpy-{self}-sdk.zip"
                 ))
-                .map_err(|e| anyhow::anyhow!(e));
+                .map_err(|e| anyhow::anyhow!(e))
             }
         }
     }
@@ -201,14 +201,14 @@ mod tests {
         assert_eq!(v.minor, 4);
         assert_eq!(v.patch, 0);
         assert_eq!(v.hotfix, 0);
-        assert_eq!(v.nightly, false);
+        assert!(!v.nightly);
 
         let v = super::Version::from_str("8.3.0.24041601+nightly").unwrap();
         assert_eq!(v.major, 8);
         assert_eq!(v.minor, 3);
         assert_eq!(v.patch, 0);
         assert_eq!(v.hotfix, 24041601);
-        assert_eq!(v.nightly, true);
+        assert!(v.nightly);
 
         assert!(
             super::Version::from_str("999999999999999999999999999999.3.0.24041601+nightly")

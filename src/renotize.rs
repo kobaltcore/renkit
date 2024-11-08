@@ -33,10 +33,10 @@ fn notarize_file(
     app_store_key_file: &PathBuf,
     staple_file: Option<&PathBuf>,
 ) -> Result<()> {
-    let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
+    let notarizer = Notarizer::from_api_key(app_store_key_file)?;
 
     println!("Uploading file to notarization service");
-    let upload = notarizer.notarize_path(&input_file, None)?;
+    let upload = notarizer.notarize_path(input_file, None)?;
 
     match upload {
         NotarizationUpload::UploadId(id) => {
@@ -121,8 +121,8 @@ pub fn unpack_app(
     }
     std::fs::create_dir_all(output_dir)?;
 
-    let app_zip = fs::read(&input_file)?;
-    zip_extract::extract(Cursor::new(app_zip), &output_dir, false)?;
+    let app_zip = fs::read(input_file)?;
+    zip_extract::extract(Cursor::new(app_zip), output_dir, false)?;
 
     let mut app_path = None;
     for entry in fs::read_dir(output_dir)? {
@@ -303,9 +303,9 @@ pub fn notarize_zip(
 }
 
 pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
-    let notarizer = Notarizer::from_api_key(&app_store_key_file)?;
+    let notarizer = Notarizer::from_api_key(app_store_key_file)?;
 
-    let log = match notarizer.fetch_notarization_log(&uuid) {
+    let log = match notarizer.fetch_notarization_log(uuid) {
         Ok(log) => log,
         Err(_) => {
             println!("Status not available yet.");
@@ -319,31 +319,25 @@ pub fn status(uuid: &String, app_store_key_file: &PathBuf) -> Result<()> {
     };
     println!("Status: {status}");
 
-    match log.get("issues") {
-        Some(issues) => match issues {
-            serde_json::Value::Array(_) => {
-                let issues = issues.as_array().unwrap().iter().map(|issue| {
-                    let issue = issue.as_object().unwrap();
-                    let message = issue.get("message").unwrap().as_str().unwrap();
-                    let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
-                    let path = issue.get("path").unwrap().as_str().unwrap();
-                    (message, doc_url, path)
-                });
+    if let Some(issues) = log.get("issues") { if let serde_json::Value::Array(_) = issues {
+        let issues = issues.as_array().unwrap().iter().map(|issue| {
+            let issue = issue.as_object().unwrap();
+            let message = issue.get("message").unwrap().as_str().unwrap();
+            let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
+            let path = issue.get("path").unwrap().as_str().unwrap();
+            (message, doc_url, path)
+        });
 
-                for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
-                    println!("Error: {}", key);
-                    for (i, (_, doc_url, path)) in group.enumerate() {
-                        if i == 0 {
-                            println!("Documentation: {}\nAffected files:", doc_url);
-                        }
-                        println!("  - {}", path);
-                    }
+        for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
+            println!("Error: {}", key);
+            for (i, (_, doc_url, path)) in group.enumerate() {
+                if i == 0 {
+                    println!("Documentation: {}\nAffected files:", doc_url);
                 }
+                println!("  - {}", path);
             }
-            _ => {}
-        },
-        None => {}
-    };
+        }
+    } };
 
     Ok(())
 }
@@ -374,8 +368,8 @@ pub fn full_run(
     println!("Packing ZIP to {:?}", input_file);
     pack_zip(&app_path, &zip_path)?;
 
-    fs::remove_file(&input_file)?;
-    fs::rename(&zip_path, &input_file)?;
+    fs::remove_file(input_file)?;
+    fs::rename(&zip_path, input_file)?;
 
     if std::env::consts::OS == "macos" {
         let dmg_path = input_file.with_extension("dmg");

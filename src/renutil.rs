@@ -238,11 +238,8 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
                                 .ok_or(anyhow!("Unable to strip suffix."))?,
                         };
 
-                        match Version::from_str(href) {
-                            Ok(version) => {
-                                versions.push(version);
-                            }
-                            Err(_) => {}
+                        if let Ok(version) = Version::from_str(href) {
+                            versions.push(version);
                         }
 
                         Ok(())
@@ -264,11 +261,8 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
                 .to_str()
                 .ok_or(anyhow!("Unable to get file name."))?;
 
-            match Version::from_str(path) {
-                Ok(version) => {
-                    versions.push(version);
-                }
-                Err(_) => {}
+            if let Ok(version) = Version::from_str(path) {
+                versions.push(version);
             }
         }
     }
@@ -883,11 +877,11 @@ pub async fn install(
 
     let re = regex::Regex::new(r"org\.gradle\.jvmargs=-Xmx(\d+)g").unwrap();
     for path in paths.iter().filter(|p| p.exists()) {
-        let content = fs::read_to_string(&path)?;
+        let content = fs::read_to_string(path)?;
         let content = re
             .replace_all(&content, "org.gradle.jvmargs=-Xmx8g")
             .to_string();
-        fs::write(&path, content)?;
+        fs::write(path, content)?;
     }
 
     println!("Installing Android SDK");

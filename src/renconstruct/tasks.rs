@@ -171,7 +171,7 @@ fn encode_webp(path: &PathBuf, quality: f32, lossless: bool) -> Result<()> {
         }
     };
 
-    fs::write(path, &result.as_bytes())?;
+    fs::write(path, result.as_bytes())?;
 
     Ok(())
 }
@@ -228,7 +228,7 @@ pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
         &ctx.version,
         true,
         true,
-        &vec![ctx.input_dir.to_string_lossy().to_string(), "lint".into()],
+        &[ctx.input_dir.to_string_lossy().to_string(), "lint".into()],
         false,
         false,
         None,
@@ -352,7 +352,7 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
     fs::write(&local_properties_path, &property_contents)?;
     fs::write(
         &bundle_properties_path,
-        &property_contents.replace("android.keystore", "bundle.keystore"),
+        property_contents.replace("android.keystore", "bundle.keystore"),
     )?;
 
     Ok(())
@@ -511,20 +511,17 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
         let path = entry.path();
         match path.extension() {
             Some(ext) => {
-                if ext == "zip" {
-                    if path
+                if ext == "zip" && path
                         .file_stem()
                         .unwrap()
                         .to_str()
                         .unwrap()
-                        .ends_with("-mac")
-                    {
-                        return Some(path);
-                    }
+                        .ends_with("-mac") {
+                    return Some(path);
                 }
-                return None;
+                None
             }
-            None => return None,
+            None => None,
         }
     });
 
