@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(v.major, 8);
         assert_eq!(v.minor, 3);
         assert_eq!(v.patch, 0);
-        assert_eq!(v.hotfix, 24041601);
+        assert_eq!(v.hotfix, 24_04_16_01);
         assert!(v.nightly);
 
         assert!(
