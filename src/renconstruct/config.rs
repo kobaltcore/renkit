@@ -93,6 +93,8 @@ pub struct NotarizeOptions {
     pub key_file: PathBuf,
     pub cert_file: PathBuf,
     pub app_store_key_file: PathBuf,
+    pub no_zip: bool,
+    pub no_dmg: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

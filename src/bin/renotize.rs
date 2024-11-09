@@ -64,6 +64,12 @@ enum Commands {
         key_file: PathBuf,
         cert_file: PathBuf,
         app_store_key_file: PathBuf,
+        /// Do not create a notarized ZIP bundle of the app.
+        #[arg(long = "no-zip")]
+        no_zip: bool,
+        /// Do not create a notarized DMG image of the app.
+        #[arg(long = "no-dmg")]
+        no_dmg: bool,
     },
 }
 
@@ -112,12 +118,16 @@ fn main() -> Result<()> {
             key_file,
             cert_file,
             app_store_key_file,
+            no_zip,
+            no_dmg,
         } => full_run(
             input_file,
             bundle_id,
             key_file,
             cert_file,
             app_store_key_file,
+            !no_zip,
+            !no_dmg,
         )?,
     }
 

@@ -21,7 +21,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
-use std::{env, fs, thread};
+use std::{env, fs};
 use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 
 #[derive(Debug)]
@@ -505,7 +505,47 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
 }
 
 pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Result<()> {
-    // find path ending in '-mac.zip'
+    // Scan for .app bundles that we can notarize.
+    // These can occur when using custom distributions.
+    let mut app_bundles = vec![];
+    for entry in WalkDir::new(&ctx.output_dir) {
+        match entry {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() {
+                    continue;
+                }
+                match path.extension() {
+                    Some(ext) => {
+                        if ext == "app" {
+                            app_bundles.push(path);
+                        }
+                    }
+                    None => continue,
+                }
+            }
+            Err(err) => {
+                println!("Error: {err}");
+                continue;
+            }
+        }
+    }
+
+    for bundle in app_bundles {
+        println!("{bundle:?}");
+        full_run(
+            &bundle,
+            &options.bundle_id,
+            &options.key_file,
+            &options.cert_file,
+            &options.app_store_key_file,
+            false,
+            false,
+        )?;
+    }
+
+    // Find path ending in '-mac.zip'
+    // This is the default mac distribution output.
     let zip_path = fs::read_dir(&ctx.output_dir)?.find_map(|entry| {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -527,25 +567,18 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
         }
     });
 
-    match zip_path {
-        Some(path) => {
-            let options = options.clone();
-            thread::spawn(move || {
-                full_run(
-                    &path,
-                    &options.bundle_id,
-                    &options.key_file,
-                    &options.cert_file,
-                    &options.app_store_key_file,
-                )
-            })
-            .join()
-            .unwrap()?;
-        }
-        None => {
-            return Err(anyhow!("Could not find mac zip file."));
-        }
-    }
+    if let Some(path) = zip_path {
+        println!("{path:?}");
+        full_run(
+            &path,
+            &options.bundle_id,
+            &options.key_file,
+            &options.cert_file,
+            &options.app_store_key_file,
+            true,
+            true,
+        )?;
+    };
 
     Ok(())
 }
