@@ -166,7 +166,8 @@ pub enum KnownBuildOption {
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub build: HashMap<BuildOption, bool>,
+    #[serde(alias = "build")]
+    pub builds: HashMap<BuildOption, bool>,
     #[serde(default)]
     pub options: RenconstructOptions,
     pub renutil: RenutilOptions,
