@@ -516,8 +516,8 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                 &options.key_file,
                 &options.cert_file,
                 &options.app_store_key_file,
-                true,
-                true,
+                !options.no_zip,
+                !options.no_dmg,
             )?;
         } else if path.is_dir() && path.extension().unwrap_or_default() == "app" {
             full_run(
@@ -526,8 +526,8 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                 &options.key_file,
                 &options.cert_file,
                 &options.app_store_key_file,
-                false,
-                false,
+                !options.no_zip,
+                !options.no_dmg,
             )?;
         } else {
             let mut app_bundles = vec![];
@@ -561,8 +561,8 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                     &options.key_file,
                     &options.cert_file,
                     &options.app_store_key_file,
-                    false,
-                    false,
+                    !options.no_zip,
+                    !options.no_dmg,
                 )?;
             }
         }
