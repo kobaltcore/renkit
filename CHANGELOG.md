@@ -4,6 +4,10 @@ This release introduces several new features, some of which include breaking cha
 
 ## `renconstruct` Task System Rework
 
+Two new init args: renpy_path, registry
+new arg to pre and post build methods: on_builds (dict of build name to build path in output dir)
+output dirs will be None on pre_build because nothing has been built at that point
+
 # Version 4.5.0-alpha.1
 
 This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:

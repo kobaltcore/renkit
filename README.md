@@ -208,21 +208,23 @@ Options to pass to `renutil`.
 
 To make itself extendable, `renconstruct` uses Python to allow users to create their own custom tasks. `renconstruct` ships with its own embedded Python interpreter, so it is not reliant on any kind of external Python installation to make things as hassle-free as possible.
 
-The optional path given via `options.tasks` will be used to scan that directory for `.py` files. All tasks in all Python files within this directory and any of its subdirectories will be loaded into `renconstruct` and will be available to configure via the config file. Multiple tasks may be present in a single Python file. The tasks directory will also be added to the syspath, so imports between tasks (should these be required) are also possible.
+The optional path given via `options.task_dir` will be used to scan that directory for `.py` files. All tasks in all Python files within this directory and any of its subdirectories will be loaded into `renconstruct` and will be available to configure via the config file. Multiple tasks may be present in a single Python file. The tasks directory will also be added to the syspath, so imports between tasks (should these be required) are also possible.
 
 To create a custom task, create a class with the suffix `Task` (case sensitive):
 
 ```python
 class ChangeFileTask:
-    def __init__(self, config, input_dir, output_dir):
+    def __init__(self, config, input_dir, output_dir, renpy_path, registry):
         self.config = config
         self.input_dir = input_dir
         self.output_dir = output_dir
+        self.renpy_path = renpy_path
+        self.registry = registry
 
-    def pre_build(self):
+    def pre_build(self, on_builds):
         print("pre-build")
 
-    def post_build(self):
+    def post_build(self, on_builds):
         print("post-build")
 ```
 

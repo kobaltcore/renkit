@@ -5,10 +5,12 @@ class YetAnotherTask:
     in the config section: The nested directories have no effect on its internal name.
     """
 
-    def __init__(self, config, input_dir, output_dir):
+    def __init__(self, config, input_dir, output_dir, renpy_path, registry):
         self.config = config
         self.input_dir = input_dir
         self.output_dir = output_dir
+        self.renpy_path = renpy_path
+        self.registry = registry
 
-    def post_build(self):
+    def post_build(self, on_builds):
         print("yet_another_task post build")

@@ -14,9 +14,9 @@ use renkit::version::Version;
 use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
-use rustpython_vm::builtins::PyDict;
+use rustpython_vm::builtins::{PyDict, PyNone};
 use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -60,6 +60,65 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
             dict.to_pyobject(vm)
         }
     }
+}
+
+fn get_on_builds(
+    active_builds: &[String],
+    task_on_builds: &HashSet<String>,
+    output_dir: &PathBuf,
+) -> HashMap<String, Option<String>> {
+    let mut builds: Vec<String> = if task_on_builds.is_empty() {
+        active_builds.to_owned()
+    } else {
+        task_on_builds.clone().into_iter().collect()
+    };
+    builds.sort_by_key(|b| std::cmp::Reverse(b.len()));
+
+    let output_dirs: Vec<_> = fs::read_dir(output_dir)
+        .unwrap()
+        .filter(|path| {
+            let path = path.as_ref().unwrap();
+            !path.path().starts_with(".")
+        })
+        .map(|path| path.unwrap().path())
+        .sorted_by(|a, b| {
+            let a = if a.is_file() {
+                a.file_stem().unwrap().to_str().unwrap()
+            } else {
+                a.file_name().unwrap().to_str().unwrap()
+            };
+            let b = if b.is_file() {
+                b.file_stem().unwrap().to_str().unwrap()
+            } else {
+                b.file_name().unwrap().to_str().unwrap()
+            };
+            b.cmp(a)
+        })
+        .collect();
+
+    let mut on_builds = HashMap::new();
+    for build in builds {
+        let mut idxs_to_skip = vec![];
+        for (i, dir) in output_dirs.iter().enumerate() {
+            if idxs_to_skip.contains(&i) {
+                continue;
+            }
+            let dir_name = if dir.is_file() {
+                dir.file_stem().unwrap().to_str().unwrap()
+            } else {
+                dir.file_name().unwrap().to_str().unwrap()
+            };
+            if dir_name.ends_with(&build) {
+                on_builds.insert(build.clone(), Some(dir.to_string_lossy().to_string()));
+                idxs_to_skip.push(i);
+                break;
+            }
+        }
+
+        on_builds.entry(build).or_insert(None);
+    }
+
+    on_builds
 }
 
 #[tokio::main]
@@ -268,7 +327,22 @@ async fn build(
                 let instance_init = instance.get_attr("__init__", vm).unwrap();
                 let input_dir_py = PyStr::from(input_dir.to_string_lossy()).to_pyobject(vm);
                 let output_dir_py = PyStr::from(output_dir.to_string_lossy()).to_pyobject(vm);
-                if let Err(e) = instance_init.call((options, input_dir_py, output_dir_py), vm) {
+                let renpy_path_py = PyStr::from(
+                    registry
+                        .join(config.renutil.version.to_string())
+                        .to_string_lossy(),
+                );
+                let registry_py = PyStr::from(registry.to_string_lossy()).to_pyobject(vm);
+                if let Err(e) = instance_init.call(
+                    (
+                        options,
+                        input_dir_py,
+                        output_dir_py,
+                        renpy_path_py,
+                        registry_py,
+                    ),
+                    vm,
+                ) {
                     vm.print_exception(e);
                     panic!();
                 }
@@ -304,6 +378,16 @@ async fn build(
         })
         .collect::<Vec<_>>();
 
+    let all_active_builds: Vec<String> = config
+        .builds
+        .iter()
+        .filter(|(_, v)| **v)
+        .map(|(k, _)| match k {
+            BuildOption::Known(k) => k.to_string(),
+            BuildOption::Custom(c) => c.to_owned(),
+        })
+        .collect();
+
     for task in active_tasks.iter().sorted_by(|a, b| {
         a.kind
             .priorities
@@ -311,6 +395,9 @@ async fn build(
             .cmp(&b.kind.priorities.pre_build)
     }) {
         let registry = registry.clone();
+
+        let on_builds = get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+
         match &task.kind.options {
             TaskOptions::Notarize(_) => {}
             TaskOptions::Lint(opts) => {
@@ -320,6 +407,7 @@ async fn build(
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
+                    on_builds,
                 };
                 task_lint_pre(&ctx, opts)?;
             }
@@ -331,6 +419,7 @@ async fn build(
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
+                    on_builds,
                 };
                 task_keystore_pre(&ctx, opts)?;
             }
@@ -342,13 +431,27 @@ async fn build(
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
+                    on_builds,
                 };
                 task_convert_images_pre(&ctx, opts)?;
             }
             TaskOptions::Custom(opts) => {
                 println!("[Pre] Running task: {}", task.name);
+                let py_dict = PyDict::new_ref(&vm.ctx);
+                for (k, v) in on_builds {
+                    match v {
+                        Some(value) => {
+                            py_dict
+                                .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
+                                .unwrap();
+                        }
+                        None => {
+                            py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                        }
+                    }
+                }
                 if let Some(handler) = &opts.task_handle_pre {
-                    handler.call((), vm).unwrap();
+                    handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
                 }
             }
         };
@@ -533,6 +636,9 @@ async fn build(
             .cmp(&b.kind.priorities.post_build)
     }) {
         let registry = registry.clone();
+
+        let on_builds = get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+
         match &task.kind.options {
             TaskOptions::Keystore(opts) => {
                 println!("[Post] Running task: {}", task.name);
@@ -542,6 +648,7 @@ async fn build(
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
+                    on_builds,
                 };
                 task_keystore_post(&ctx, opts)?;
             }
@@ -553,13 +660,27 @@ async fn build(
                     output_dir: output_dir.clone(),
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
+                    on_builds,
                 };
                 task_notarize_post(&ctx, opts)?;
             }
             TaskOptions::Custom(opts) => {
                 println!("[Post] Running task: {}", task.name);
+                let py_dict = PyDict::new_ref(&vm.ctx);
+                for (k, v) in on_builds {
+                    match v {
+                        Some(value) => {
+                            py_dict
+                                .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
+                                .unwrap();
+                        }
+                        None => {
+                            py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                        }
+                    }
+                }
                 if let Some(handler) = &opts.task_handle_post {
-                    handler.call((), vm).unwrap();
+                    handler.call((py_dict,), vm).unwrap();
                 }
             }
             _ => {}
