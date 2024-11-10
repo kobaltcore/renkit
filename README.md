@@ -230,11 +230,13 @@ class ChangeFileTask:
 
 Tasks are duck-typed, meaning that they do not need to inherit from a base class, so long as they conform to `renconstruct`'s interface.
 
-This interface consists of two methods and the constructor. The `__init__` method _must_ take these three arguments:
+This interface consists of two methods and the constructor. The `__init__` method _must_ take these five arguments:
 
 - `config`: A dict of config values which represents the task's parsed (but NOT validated!) subsection of the `renconstruct.toml` file.
 - `input_dir`: A string representing the path to the input directory of the build process.
 - `output_dir`: A string representing the path to the output directory of the build process.
+- `renpy_path`: A string representing the path to the Ren'Py installation that is being used for the build process.
+- `registry`: A string representing the path to the registry directory used by `renutil`.
 
 You may do any kind of additional setup work in the constructor that your task requires, such as validating the task's configuration parameters.
 
@@ -256,10 +258,12 @@ Such a section may look like this:
 #### `pre_build`
 
 This is an optional method that, if given, will cause `renconstruct` to execute it during the pre-build stage.
+It takes a single argument, `on_builds`, which is a dictionary of strings mapping to strings. The keys are the names of the distributions that are being built (as in the `build` section), and the values will be `None` as the distributions have not been built at this stage.
 
 #### `post_build`
 
 This is an optional method that, if given, will cause `renconstruct` to execute it during the post-build stage.
+It takes a single argument, `on_builds`, which is a dictionary of strings mapping to strings. The keys are the names of the distributions that are being built (as in the `build` section), and the values are the paths to the directories where the distributions have been built.
 
 ### Build a set of distributions
 
