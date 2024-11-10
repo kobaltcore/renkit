@@ -371,7 +371,7 @@ async fn build(
 
             launch(
                 &registry,
-                &config.renutil.version,
+                Some(&config.renutil.version),
                 false,
                 false,
                 &args,
@@ -390,7 +390,7 @@ async fn build(
 
             launch(
                 &registry,
-                &config.renutil.version,
+                Some(&config.renutil.version),
                 false,
                 false,
                 &args,
@@ -419,7 +419,7 @@ async fn build(
 
             launch(
                 &registry,
-                &config.renutil.version,
+                Some(&config.renutil.version),
                 false,
                 false,
                 &args,
@@ -452,7 +452,7 @@ async fn build(
 
         launch(
             &registry,
-            &config.renutil.version,
+            Some(&config.renutil.version),
             false,
             false,
             &args,
@@ -516,7 +516,7 @@ async fn build(
 
         launch(
             &registry,
-            &config.renutil.version,
+            Some(&config.renutil.version),
             false,
             false,
             &args,
