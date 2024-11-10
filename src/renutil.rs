@@ -370,7 +370,7 @@ fn exec_py(base_dir: &Path, code: &String) -> Result<()> {
 
 pub fn launch(
     registry: &PathBuf,
-    version: &Version,
+    version: Option<&Version>,
     headless: bool,
     direct: bool,
     args: &[String],
@@ -378,9 +378,46 @@ pub fn launch(
     interactive: bool,
     code: Option<&String>,
 ) -> Result<(ExitStatus, String, String)> {
+    if !direct && version.is_none() {
+        anyhow::bail!("Launcher mode requires a version to be specified via '-v <version>'.");
+    }
+
+    let version = match version {
+        Some(version) => Some(version.clone()),
+        None => {
+            if args.len() > 0 {
+                let path = PathBuf::from(&args[0]);
+                if path.exists() {
+                    let renpy_version_path = path.join(".renpy-version");
+                    if renpy_version_path.exists() {
+                        let file_content = fs::read_to_string(renpy_version_path)?;
+                        Some(Version::from_str(file_content.trim())?)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+
+    let version = match version {
+        Some(version) => version,
+        None => {
+            anyhow::bail!(
+                "Could not determine Ren'Py version to launch with, supply it via '-v <version>'."
+            );
+        }
+    };
+
+    println!("Ren'Py Version: {version}");
+
     let instance = version.to_local(registry)?;
 
-    if interactive && version < &Version::from_str("8.3.0.24041102+nightly").unwrap() {
+    if interactive && version < Version::from_str("8.3.0.24041102+nightly").unwrap() {
         anyhow::bail!("Interactive mode is only available in Ren'Py 8.3.1 and later.");
     }
 

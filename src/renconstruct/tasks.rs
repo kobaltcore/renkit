@@ -225,7 +225,7 @@ impl Command for ProcessingCommand {
 pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
     let (status, _stdout, _stderr) = launch(
         &ctx.registry,
-        &ctx.version,
+        Some(&ctx.version),
         true,
         true,
         &[ctx.input_dir.to_string_lossy().to_string(), "lint".into()],

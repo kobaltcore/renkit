@@ -1,4 +1,14 @@
-# Version 4.5.0
+# Version 5.0.0-alpha.1
+
+This release introduces several breaking changes caused by the addition of new features:
+
+## Introduction of `.renpy-version`
+
+`renutil launch` now supports reading a `.renpy-version` file in the project directory to determine the Ren'Py version to use when launching a project in `--direct` mode. This file should contain a single line with the Ren'Py version to use (optionally containing trailing newline). If the file is not present, `renutil` will require the version to be specified as an argument.
+
+This breaks the CLI API as `renutil launch` now doesn't require a version anymore. It can still be specified as an optional argument via the new `-v <version>` flag. If it is specified, the version given in the `.renpy-version` file will be ignored.
+
+# Version 4.5.0-alpha.1
 
 This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:
 

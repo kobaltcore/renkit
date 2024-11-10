@@ -40,8 +40,8 @@ enum Commands {
     },
     /// Launch the given version of Ren'Py.
     Launch {
-        #[clap(value_parser = clap::builder::ValueParser::new(parse_version))]
-        version: Version,
+        #[clap(short, long, value_parser = clap::builder::ValueParser::new(parse_version))]
+        version: Option<Version>,
         args: Vec<String>,
         #[arg(long)]
         headless: bool,
@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
             let code: Option<&String> = code.as_ref();
             let (status, _stdout, _stderr) = launch(
                 &registry,
-                version,
+                version.as_ref(),
                 *headless,
                 *direct,
                 args,
