@@ -368,7 +368,7 @@ fn exec_py(base_dir: &Path, code: &String) -> Result<()> {
     Ok(())
 }
 
-pub fn launch(
+pub async fn launch(
     registry: &PathBuf,
     version: Option<&Version>,
     headless: bool,
@@ -377,7 +377,20 @@ pub fn launch(
     check_status: bool,
     interactive: bool,
     code: Option<&String>,
+    auto_install: bool,
 ) -> Result<(ExitStatus, String, String)> {
+    let auto_install = match std::env::var("RENUTIL_AUTOINSTALL") {
+        Ok(val) => {
+            let val = val.to_lowercase();
+            if val == "true" || val == "1" {
+                true && auto_install
+            } else {
+                false
+            }
+        }
+        Err(_) => auto_install,
+    };
+
     if !direct && version.is_none() {
         anyhow::bail!("Launcher mode requires a version to be specified via '-v <version>'.");
     }
@@ -414,6 +427,10 @@ pub fn launch(
     };
 
     println!("Ren'Py Version: {version}");
+
+    if !version.is_installed(registry) && auto_install {
+        install(registry, &version, false, false, false).await?;
+    }
 
     let instance = version.to_local(registry)?;
 

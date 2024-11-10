@@ -1,12 +1,16 @@
 # Version 5.0.0-alpha.1
 
-This release introduces several breaking changes caused by the addition of new features:
+This release introduces several new features, some of which include breaking changes.
 
 ## Introduction of `.renpy-version`
 
 `renutil launch` now supports reading a `.renpy-version` file in the project directory to determine the Ren'Py version to use when launching a project in `--direct` mode. This file should contain a single line with the Ren'Py version to use (optionally containing trailing newline). If the file is not present, `renutil` will require the version to be specified as an argument.
 
 This breaks the CLI API as `renutil launch` now doesn't require a version anymore. It can still be specified as an optional argument via the new `-v <version>` flag. If it is specified, the version given in the `.renpy-version` file will be ignored.
+
+## Auto-installation of Ren'Py when using `renutil launch`
+
+If the Ren'Py version requested when invoking `renutil launch` is not installed, `renutil` will now automatically download and install it by default. This feature can be disabled either by supplying the `--no-auto-install` flag or setting the `RENUTIL_AUTOINSTALL` environment variable to `false` or `0`. The `--no-auto-install` flag will override `RENUTIL_AUTOINSTALL=true` for that specific invocation.
 
 # Version 4.5.0-alpha.1
 

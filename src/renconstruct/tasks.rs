@@ -222,7 +222,7 @@ impl Command for ProcessingCommand {
     }
 }
 
-pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
+pub async fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
     let (status, _stdout, _stderr) = launch(
         &ctx.registry,
         Some(&ctx.version),
@@ -232,7 +232,9 @@ pub fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<()> {
         false,
         false,
         None,
-    )?;
+        false,
+    )
+    .await?;
 
     if !status.success() {
         bail!("Lint failed with status code: {}", status);

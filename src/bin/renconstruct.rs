@@ -321,7 +321,7 @@ async fn build(
                     renpy_path: registry.join(config.renutil.version.to_string()),
                     registry,
                 };
-                task_lint_pre(&ctx, opts)?;
+                task_lint_pre(&ctx, opts).await?;
             }
             TaskOptions::Keystore(opts) => {
                 println!("[Pre] Running task: {}", task.name);
@@ -378,7 +378,9 @@ async fn build(
                 true,
                 false,
                 None,
-            )?;
+                false,
+            )
+            .await?;
         } else {
             let args = vec![
                 "android_build".into(),
@@ -397,7 +399,9 @@ async fn build(
                 true,
                 false,
                 None,
-            )?;
+                false,
+            )
+            .await?;
         }
     }
 
@@ -426,7 +430,9 @@ async fn build(
                 true,
                 false,
                 None,
-            )?;
+                false,
+            )
+            .await?;
         }
     }
 
@@ -459,7 +465,9 @@ async fn build(
             true,
             false,
             None,
-        )?;
+            false,
+        )
+        .await?;
 
         fs::remove_dir_all(web_dir)?;
     }
@@ -523,7 +531,9 @@ async fn build(
             true,
             false,
             None,
-        )?;
+            false,
+        )
+        .await?;
     }
 
     for task in active_tasks.iter().sorted_by(|a, b| {
