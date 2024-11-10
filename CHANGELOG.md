@@ -1,4 +1,10 @@
-# Version 4.5.0
+# Version 5.0.0
+
+This release introduces several new features, some of which include breaking changes.
+
+## `renconstruct` Task System Rework
+
+# Version 4.5.0-alpha.1
 
 This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:
 
