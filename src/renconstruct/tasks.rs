@@ -519,16 +519,6 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                 !options.no_zip,
                 !options.no_dmg,
             )?;
-        } else if path.is_dir() && path.extension().unwrap_or_default() == "app" {
-            full_run(
-                path,
-                &options.bundle_id,
-                &options.key_file,
-                &options.cert_file,
-                &options.app_store_key_file,
-                !options.no_zip,
-                !options.no_dmg,
-            )?;
         } else {
             let mut app_bundles = vec![];
             for entry in WalkDir::new(path) {
