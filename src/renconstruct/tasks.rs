@@ -21,7 +21,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::{env, fs};
+use std::{env, fs, thread};
 use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 
 #[derive(Debug)]
@@ -510,15 +510,22 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
         let path = Path::new(path.as_ref().expect("Build path not found"));
 
         if path.is_file() && path.extension().unwrap() == "zip" {
-            full_run(
-                path,
-                &options.bundle_id,
-                &options.key_file,
-                &options.cert_file,
-                &options.app_store_key_file,
-                !options.no_zip,
-                !options.no_dmg,
-            )?;
+            thread::scope(|s| {
+                s.spawn(move || {
+                    full_run(
+                        path,
+                        &options.bundle_id,
+                        &options.key_file,
+                        &options.cert_file,
+                        &options.app_store_key_file,
+                        !options.no_zip,
+                        !options.no_dmg,
+                    )
+                })
+                .join()
+                .unwrap()
+                .unwrap();
+            });
         } else {
             let mut app_bundles = vec![];
             for entry in WalkDir::new(path) {
@@ -545,15 +552,22 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
             }
 
             for bundle in app_bundles {
-                full_run(
-                    &bundle,
-                    &options.bundle_id,
-                    &options.key_file,
-                    &options.cert_file,
-                    &options.app_store_key_file,
-                    !options.no_zip,
-                    !options.no_dmg,
-                )?;
+                thread::scope(|s| {
+                    s.spawn(move || {
+                        full_run(
+                            &bundle,
+                            &options.bundle_id,
+                            &options.key_file,
+                            &options.cert_file,
+                            &options.app_store_key_file,
+                            !options.no_zip,
+                            !options.no_dmg,
+                        )
+                    })
+                    .join()
+                    .unwrap()
+                    .unwrap();
+                });
             }
         }
     }
