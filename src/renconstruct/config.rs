@@ -94,7 +94,9 @@ pub struct NotarizeOptions {
     pub key_file: PathBuf,
     pub cert_file: PathBuf,
     pub app_store_key_file: PathBuf,
+    #[serde(default)]
     pub no_zip: bool,
+    #[serde(default)]
     pub no_dmg: bool,
 }
 
