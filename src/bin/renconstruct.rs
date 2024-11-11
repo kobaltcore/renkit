@@ -108,7 +108,7 @@ fn get_on_builds(
             } else {
                 dir.file_name().unwrap().to_str().unwrap()
             };
-            if dir_name.ends_with(&build) {
+            if dir_name.contains(&build) {
                 on_builds.insert(build.clone(), Some(dir.to_string_lossy().to_string()));
                 idxs_to_skip.push(i);
                 break;
