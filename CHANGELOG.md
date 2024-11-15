@@ -14,7 +14,7 @@ If the Ren'Py version requested when invoking `renutil launch` is not installed,
 
 ## `renconstruct` Task System Rework
 
-The task system in `renconstruct` has been reworked to allow for more flexibility in defining tasks. WHile this is mostly backwards-compatible, there are some breaking changes:
+The task system in `renconstruct` has been reworked to allow for more flexibility in defining tasks. While this is mostly backwards-compatible, there are some breaking changes:
 
 - Custom tasks must now accept two additional parameters in their `__init__` method:
 
