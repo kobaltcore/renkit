@@ -40,8 +40,8 @@ enum Commands {
     },
     /// Launch the given version of Ren'Py.
     Launch {
-        #[clap(value_parser = clap::builder::ValueParser::new(parse_version))]
-        version: Version,
+        #[clap(short, long, value_parser = clap::builder::ValueParser::new(parse_version))]
+        version: Option<Version>,
         args: Vec<String>,
         #[arg(long)]
         headless: bool,
@@ -53,6 +53,8 @@ enum Commands {
         interactive: bool,
         #[arg(long)]
         code: Option<String>,
+        #[arg(long)]
+        no_auto_install: bool,
     },
     /// Install the given version of Ren'Py.
     Install {
@@ -99,18 +101,20 @@ async fn main() -> Result<()> {
             check_status,
             interactive,
             code,
+            no_auto_install,
         } => {
-            let code: Option<&String> = code.as_ref();
             let (status, _stdout, _stderr) = launch(
                 &registry,
-                version,
+                version.as_ref(),
                 *headless,
                 *direct,
                 args,
                 *check_status,
                 *interactive,
-                code,
-            )?;
+                code.as_ref(),
+                !no_auto_install,
+            )
+            .await?;
             if !status.success() {
                 std::process::exit(status.code().unwrap_or(1));
             }
