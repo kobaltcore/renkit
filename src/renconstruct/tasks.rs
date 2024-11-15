@@ -20,7 +20,7 @@ use rgb::FromSlice;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{env, fs, thread};
 use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 
@@ -38,6 +38,7 @@ pub struct TaskContext {
     pub output_dir: PathBuf,
     pub renpy_path: PathBuf,
     pub registry: PathBuf,
+    pub on_builds: HashMap<String, Option<String>>,
 }
 
 pub struct ProcessingCommand {
@@ -505,45 +506,69 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
 }
 
 pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Result<()> {
-    // find path ending in '-mac.zip'
-    let zip_path = fs::read_dir(&ctx.output_dir)?.find_map(|entry| {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        match path.extension() {
-            Some(ext) => {
-                if ext == "zip"
-                    && path
-                        .file_stem()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .ends_with("-mac")
-                {
-                    return Some(path);
-                }
-                None
-            }
-            None => None,
-        }
-    });
+    for path in ctx.on_builds.values() {
+        let path = Path::new(path.as_ref().expect("Build path not found"));
 
-    match zip_path {
-        Some(path) => {
-            let options = options.clone();
-            thread::spawn(move || {
-                full_run(
-                    &path,
-                    &options.bundle_id,
-                    &options.key_file,
-                    &options.cert_file,
-                    &options.app_store_key_file,
-                )
-            })
-            .join()
-            .unwrap()?;
-        }
-        None => {
-            return Err(anyhow!("Could not find mac zip file."));
+        if path.is_file() && path.extension().unwrap() == "zip" {
+            thread::scope(|s| {
+                s.spawn(move || {
+                    full_run(
+                        path,
+                        &options.bundle_id,
+                        &options.key_file,
+                        &options.cert_file,
+                        &options.app_store_key_file,
+                        !options.no_zip,
+                        !options.no_dmg,
+                    )
+                })
+                .join()
+                .unwrap()
+                .unwrap();
+            });
+        } else {
+            let mut app_bundles = vec![];
+            for entry in WalkDir::new(path) {
+                match entry {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path.is_file() {
+                            continue;
+                        }
+                        match path.extension() {
+                            Some(ext) => {
+                                if ext == "app" {
+                                    app_bundles.push(path);
+                                }
+                            }
+                            None => continue,
+                        }
+                    }
+                    Err(err) => {
+                        println!("Error: {err}");
+                        continue;
+                    }
+                }
+            }
+
+            for bundle in app_bundles {
+                thread::scope(|s| {
+                    s.spawn(move || {
+                        full_run(
+                            &bundle,
+                            &options.bundle_id,
+                            &options.key_file,
+                            &options.cert_file,
+                            &options.app_store_key_file,
+                            !options.no_zip,
+                            !options.no_dmg,
+                        )
+                    })
+                    .join()
+                    .unwrap()
+                    .unwrap();
+                });
+            }
         }
     }
 

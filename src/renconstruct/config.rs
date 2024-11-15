@@ -3,6 +3,7 @@ use rustpython_vm::PyObjectRef;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Display,
     path::PathBuf,
 };
 
@@ -93,6 +94,10 @@ pub struct NotarizeOptions {
     pub key_file: PathBuf,
     pub cert_file: PathBuf,
     pub app_store_key_file: PathBuf,
+    #[serde(default)]
+    pub no_zip: bool,
+    #[serde(default)]
+    pub no_dmg: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,6 +167,22 @@ pub enum KnownBuildOption {
     Market,
     AndroidApk,
     AndroidAab,
+}
+
+impl Display for KnownBuildOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KnownBuildOption::Pc => write!(f, "pc"),
+            KnownBuildOption::Win => write!(f, "win"),
+            KnownBuildOption::Linux => write!(f, "linux"),
+            KnownBuildOption::Mac => write!(f, "mac"),
+            KnownBuildOption::Web => write!(f, "web"),
+            KnownBuildOption::Steam => write!(f, "steam"),
+            KnownBuildOption::Market => write!(f, "market"),
+            KnownBuildOption::AndroidApk => write!(f, "android_apk"),
+            KnownBuildOption::AndroidAab => write!(f, "android_aab"),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

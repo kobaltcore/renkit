@@ -333,39 +333,58 @@ pub fn full_run(
     key_file: &Path,
     cert_file: &Path,
     app_store_key_file: &Path,
+    create_zip: bool,
+    create_dmg: bool,
 ) -> Result<()> {
-    let output_dir = input_file.with_extension("");
-    println!("Unpacking app to {output_dir:?}");
-    let app_path = unpack_app(input_file, &output_dir, bundle_id)?;
+    let is_zip = input_file.extension().unwrap() == "zip";
+
+    let app_path = if is_zip {
+        let output_dir = input_file.with_extension("");
+        println!("Unpacking app to {output_dir:?}");
+        unpack_app(input_file, &output_dir, bundle_id)?
+    } else {
+        input_file.to_path_buf()
+    };
+
     println!("Signing app at {app_path:?}");
     sign_app(&app_path, key_file, cert_file)?;
+
     println!("Notarizing app at {app_path:?}");
     notarize_app(&app_path, app_store_key_file)?;
 
-    let zip_path = app_path
-        .parent()
-        .unwrap()
-        .with_file_name(format!(
-            "{}-notarized",
-            input_file.file_stem().unwrap().to_string_lossy()
-        ))
-        .with_extension("zip");
-    println!("Packing ZIP to {input_file:?}");
-    pack_zip(&app_path, &zip_path)?;
+    if create_zip {
+        let zip_path = app_path
+            .parent()
+            .unwrap()
+            .with_file_name(format!(
+                "{}-notarized",
+                input_file.file_stem().unwrap().to_string_lossy()
+            ))
+            .with_extension("zip");
+        println!("Packing ZIP to {input_file:?}");
+        pack_zip(&app_path, &zip_path)?;
 
-    fs::remove_file(input_file)?;
-    fs::rename(&zip_path, input_file)?;
+        if is_zip {
+            fs::remove_file(input_file)?;
+        }
+        fs::rename(&zip_path, input_file.with_extension("zip"))?;
+
+        println!("Notarizing ZIP at {input_file:?}");
+        notarize_zip(input_file, app_store_key_file, &app_path)?;
+    }
 
     if std::env::consts::OS == "macos" {
-        let dmg_path = input_file.with_extension("dmg");
-        println!("Packing DMG to {dmg_path:?}");
-        pack_dmg(&app_path, &dmg_path, &None)?;
-        println!("Signing DMG at {dmg_path:?}");
-        sign_dmg(&dmg_path, key_file, cert_file)?;
-        println!("Notarizing DMG at {dmg_path:?}");
-        notarize_dmg(&dmg_path, app_store_key_file)?;
+        if create_dmg {
+            let dmg_path = input_file.with_extension("dmg");
+            println!("Packing DMG to {dmg_path:?}");
+            pack_dmg(&app_path, &dmg_path, &None)?;
+            println!("Signing DMG at {dmg_path:?}");
+            sign_dmg(&dmg_path, key_file, cert_file)?;
+            println!("Notarizing DMG at {dmg_path:?}");
+            notarize_dmg(&dmg_path, app_store_key_file)?;
 
-        fs::remove_dir_all(app_path.parent().unwrap())?;
+            fs::remove_dir_all(app_path.parent().unwrap())?;
+        }
     } else {
         println!("Skipping DMG creation and signing: Only supported on macOS.");
     }

@@ -1,4 +1,21 @@
-# Version 4.5.0
+# Version 5.0.0
+
+This release introduces several new features, some of which include breaking changes.
+
+## `renconstruct` Task System Rework
+
+The task system in `renconstruct` has been reworked to allow for more flexibility in defining tasks. WHile this is mostly backwards-compatible, there are some breaking changes:
+
+- Custom tasks must now accept two additional parameters in their `__init__` method:
+
+  1. `renpy_path`: Path to the Ren'Py installation used to build the distributions.
+  2. `registry`: Path to the registry directory containing the Ren'Py installation(s).
+
+- The `pre_build` and `post_build` methods of custom tasks must now accept an additional parameter:
+
+  1. `on_builds`: A dictionary mapping build names to the paths of the built distributions. The values of this dictionary will be `None` during `pre_build` because nothing has been built at that point. Example: `{ "mac": "output/mygame-1.0-mac.zip" }`. Tasks can then opt to either do processing per build artifact or globally, allowing them to -for example- handle ZIP files differently than directory outputs.
+
+# Version 4.5.0-alpha.1
 
 This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:
 
