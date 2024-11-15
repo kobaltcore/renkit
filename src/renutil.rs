@@ -383,7 +383,7 @@ pub async fn launch(
         Ok(val) => {
             let val = val.to_lowercase();
             if val == "true" || val == "1" {
-                true && auto_install
+                auto_install
             } else {
                 false
             }
@@ -398,7 +398,9 @@ pub async fn launch(
     let version = match version {
         Some(version) => Some(version.clone()),
         None => {
-            if args.len() > 0 {
+            if args.is_empty() {
+                None
+            } else {
                 let path = PathBuf::from(&args[0]);
                 if path.exists() {
                     let renpy_version_path = path.join(".renpy-version");
@@ -411,19 +413,14 @@ pub async fn launch(
                 } else {
                     None
                 }
-            } else {
-                None
             }
         }
     };
 
-    let version = match version {
-        Some(version) => version,
-        None => {
-            anyhow::bail!(
-                "Could not determine Ren'Py version to launch with, supply it via '-v <version>'."
-            );
-        }
+    let Some(version) = version else {
+        anyhow::bail!(
+            "Could not determine Ren'Py version to launch with, supply it via '-v <version>'."
+        );
     };
 
     println!("Ren'Py Version: {version}");
