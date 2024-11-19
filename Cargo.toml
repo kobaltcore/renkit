@@ -25,7 +25,7 @@ winapi = { version = "0.3.9", features = ["profileapi"] }
 toml = "0.8.19"
 plist = "1.7.0"
 lol_html = "2.0.0"
-serde_json = "1.0.132"
+serde_json = "1.0.133"
 serde = { version = "1.0.215", features = ["derive"] }
 # Filesystem
 home = "0.5.9"
