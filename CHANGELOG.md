@@ -25,7 +25,7 @@ The task system in `renconstruct` has been reworked to allow for more flexibilit
 
   1. `on_builds`: A dictionary mapping build names to the paths of the built distributions. The values of this dictionary will be `None` during `pre_build` because nothing has been built at that point. Example: `{ "mac": "output/mygame-1.0-mac.zip" }`. Tasks can then opt to either do processing per build artifact or globally, allowing them to -for example- handle ZIP files differently than directory outputs.
 
-# Version 4.5.0-alpha.1
+## Support for nested values in config files
 
 This release adds support for nested dict-like values for custom tasks (see #24), allowing for properties like:
 
@@ -44,7 +44,9 @@ This will result in the following config structure:
 { "dict_config_val": { "key": "value" } }
 ```
 
-It also brings support for [custom packages](https://www.renpy.org/doc/html/build.html#build.package) which can now be built like any other package (provided they exist for the target game that is being built). They can be specified by name like any other package:
+## Support for building custom distributions
+
+[Custom packages](https://www.renpy.org/doc/html/build.html#build.package) are now supported, which can now be built like any other package (provided they exist for the target game that is being built). They can be specified by name like any other package:
 
 ```toml
 [builds]
