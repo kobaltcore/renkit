@@ -55,19 +55,19 @@ renutil list -o
 ### Show information about a specific version
 
 ```bash
-renutil show 8.2.0
+renutil show 8.3.4
 ```
 
 ### Launch the Ren'Py Launcher
 
 ```bash
-renutil launch 8.2.0
+renutil launch 8.3.4
 ```
 
 ### Launch a Ren'Py project directly
 
 ```bash
-renutil launch 8.2.0 -d -- ~/my-project
+renutil launch 8.3.4 -d -- ~/my-project
 ```
 
 We use the double dash (`--`) to separate the arguments for Ren'Py from `renutil`'s. This way, you can even pass things like `--help` through to the underlying program without `renutil` interfering.
@@ -75,31 +75,31 @@ We use the double dash (`--`) to separate the arguments for Ren'Py from `renutil
 ### Launch a Ren'Py project with an interactive Terminal REPL
 
 ```bash
-renutil launch 8.3.1 -di -- ~/my-project
+renutil launch 8.3.4 -di -- ~/my-project
 ```
 
 ### Launch a Ren'Py project with custom code to run after startup
 
 ```bash
-renutil launch 8.3.1 -di --code 'print("Hello World!")' -- ~/my-project
+renutil launch 8.3.4 -di --code 'print("Hello World!")' -- ~/my-project
 ```
 
 ### Install a specific version
 
 ```bash
-renutil install 8.2.0
+renutil install 8.3.4
 ```
 
 ### Remove a specific version
 
 ```bash
-renutil uninstall 8.2.0
+renutil uninstall 8.3.4
 ```
 
 ### Clean up an instance after use
 
 ```bash
-renutil clean 8.2.0
+renutil clean 8.3.4
 ```
 
 ## renconstruct
