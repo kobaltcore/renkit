@@ -1,4 +1,4 @@
-# Version 5.0.0-alpha.1
+# Version 5.0.0
 
 This release introduces several new features, some of which include breaking changes.
 
