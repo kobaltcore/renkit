@@ -8,27 +8,27 @@ homepage = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
 # System
-zip = "2.2.1"
+zip = "2.2.2"
 rsa = "0.9.7"
 rand = "0.8.5"
 regex = "1.11.1"
 base64 = "0.22.1"
-anyhow = "1.0.94"
+anyhow = "1.0.95"
 num_cpus = "1.16.0"
-itertools = "0.13.0"
+itertools = "0.14.0"
 command-executor = "0.1.1"
-tokio = { version = "1.42.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
 toml = "0.8.19"
 plist = "1.7.0"
-lol_html = "2.1.0"
-serde_json = "1.0.133"
-serde = { version = "1.0.216", features = ["derive"] }
+lol_html = "2.2.0"
+serde_json = "1.0.135"
+serde = { version = "1.0.217", features = ["derive"] }
 # Filesystem
-home = "0.5.9"
+home = "0.5.11"
 tar = "0.4.43"
 bzip2 = "0.5.0"
 jwalk = "0.8.1"
@@ -36,7 +36,7 @@ zip-extract = "0.2.1"
 # Internet
 trauma = "2"
 webbrowser = "1.0.3"
-reqwest = { version = "^0.12.9", default-features = false, features = [
+reqwest = { version = "^0.12.12", default-features = false, features = [
     "native-tls-vendored",
 ] }
 # Apple
@@ -50,7 +50,7 @@ crossterm = "0.28.1"
 wait-timeout = "0.2.0"
 tui-textarea = "0.7.0"
 tui-scrollview = "0.5.1"
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.5.26", features = ["derive"] }
 indicatif = { version = "0.17.9", features = ["improved_unicode", "rayon"] }
 # Images
 image = "0.25.5"
