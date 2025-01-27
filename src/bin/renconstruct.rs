@@ -437,20 +437,20 @@ async fn build(
             }
             TaskOptions::Custom(opts) => {
                 println!("[Pre] Running task: {}", task.name);
-                let py_dict = PyDict::new_ref(&vm.ctx);
-                for (k, v) in on_builds {
-                    match v {
-                        Some(value) => {
-                            py_dict
-                                .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
-                                .unwrap();
-                        }
-                        None => {
-                            py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                if let Some(handler) = &opts.task_handle_pre {
+                    let py_dict = PyDict::new_ref(&vm.ctx);
+                    for (k, v) in on_builds {
+                        match v {
+                            Some(value) => {
+                                py_dict
+                                    .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
+                                    .unwrap();
+                            }
+                            None => {
+                                py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                            }
                         }
                     }
-                }
-                if let Some(handler) = &opts.task_handle_pre {
                     handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
                 }
             }
@@ -676,20 +676,20 @@ async fn build(
             }
             TaskOptions::Custom(opts) => {
                 println!("[Post] Running task: {}", task.name);
-                let py_dict = PyDict::new_ref(&vm.ctx);
-                for (k, v) in on_builds {
-                    match v {
-                        Some(value) => {
-                            py_dict
-                                .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
-                                .unwrap();
-                        }
-                        None => {
-                            py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                if let Some(handler) = &opts.task_handle_post {
+                    let py_dict = PyDict::new_ref(&vm.ctx);
+                    for (k, v) in on_builds {
+                        match v {
+                            Some(value) => {
+                                py_dict
+                                    .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
+                                    .unwrap();
+                            }
+                            None => {
+                                py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
+                            }
                         }
                     }
-                }
-                if let Some(handler) = &opts.task_handle_post {
                     handler.call((py_dict,), vm).unwrap();
                 }
             }
