@@ -12,3 +12,4 @@ __pycache__/
 *.dmg
 *.app
 renconstruct.toml
+.aider*

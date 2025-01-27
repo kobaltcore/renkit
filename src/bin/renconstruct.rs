@@ -17,8 +17,8 @@ use rustpython::vm::function::FuncArgs;
 use rustpython_vm::builtins::{PyDict, PyNone};
 use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine};
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::path::{Path, PathBuf};
+use std::{fs, thread};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -309,6 +309,7 @@ async fn build(
                 .unwrap()
                 .to_string();
             let class = val.get_item("class", vm).unwrap();
+            println!("Loaded custom task: {name_slug}");
 
             if let Some((_, opts)) = tasks.iter_mut().find(|(name, _)| **name == name_slug) {
                 let options = match &opts.options {
@@ -349,13 +350,19 @@ async fn build(
 
                 match &mut opts.options {
                     TaskOptions::Custom(opts) => {
-                        if instance.has_attr("pre_build", vm).unwrap() {
-                            opts.task_handle_pre =
-                                Some(instance.get_attr("pre_build", vm).unwrap());
+                        match instance.has_attr("pre_build", vm) {
+                            Ok(true) => {
+                                opts.task_handle_pre =
+                                    Some(instance.get_attr("pre_build", vm).unwrap());
+                            }
+                            _ => {}
                         }
-                        if instance.has_attr("post_build", vm).unwrap() {
-                            opts.task_handle_post =
-                                Some(instance.get_attr("post_build", vm).unwrap());
+                        match instance.has_attr("post_build", vm) {
+                            Ok(true) => {
+                                opts.task_handle_post =
+                                    Some(instance.get_attr("post_build", vm).unwrap());
+                            }
+                            _ => {}
                         }
                     }
                     _ => panic!("Task type mismatch."),
@@ -388,6 +395,8 @@ async fn build(
         })
         .collect();
 
+    let active_tasks = active_tasks.leak();
+
     let grouped_pre_build_tasks = active_tasks
         .iter()
         .filter(|task| task.kind.priorities.pre_build > 0)
@@ -400,69 +409,158 @@ async fn build(
         .chunk_by(|task| task.kind.priorities.pre_build);
 
     for (priority, tasks) in &grouped_pre_build_tasks {
-        println!("Executing pre-build tasks at priority level {}", priority);
-        for task in tasks {
-            let registry = registry.clone();
+        println!("Executing pre-build tasks at priority level {priority}");
+        let c = tasks.chunk_by(|task| task.kind.sandboxed);
+        for (sandboxed, tasks) in &c {
+            let tasks = tasks.collect::<Vec<_>>();
+            if sandboxed && tasks.len() > 1 {
+                println!("Multiple sandboxed tasks at the same priority level detected, running in parallel.");
+                let mut handles = vec![];
+                for task in tasks {
+                    let registry = registry.clone();
 
-            let on_builds = get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+                    let on_builds =
+                        get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
 
-            match &task.kind.options {
-                TaskOptions::Notarize(_) => {}
-                TaskOptions::Lint(opts) => {
-                    let ctx = TaskContext {
-                        version: config.renutil.version.clone(),
-                        input_dir: input_dir.to_path_buf(),
-                        output_dir: output_dir.clone(),
-                        renpy_path: registry.join(config.renutil.version.to_string()),
-                        registry,
-                        on_builds,
-                    };
-                    task_lint_pre(&ctx, opts).await?;
-                }
-                TaskOptions::Keystore(opts) => {
-                    println!("[Pre] Running task: {}", task.name);
-                    let ctx = TaskContext {
-                        version: config.renutil.version.clone(),
-                        input_dir: input_dir.to_path_buf(),
-                        output_dir: output_dir.clone(),
-                        renpy_path: registry.join(config.renutil.version.to_string()),
-                        registry,
-                        on_builds,
-                    };
-                    task_keystore_pre(&ctx, opts)?;
-                }
-                TaskOptions::ConvertImages(opts) => {
-                    println!("[Pre] Running task: {}", task.name);
-                    let ctx = TaskContext {
-                        version: config.renutil.version.clone(),
-                        input_dir: input_dir.to_path_buf(),
-                        output_dir: output_dir.clone(),
-                        renpy_path: registry.join(config.renutil.version.to_string()),
-                        registry,
-                        on_builds,
-                    };
-                    task_convert_images_pre(&ctx, opts)?;
-                }
-                TaskOptions::Custom(opts) => {
-                    println!("[Pre] Running task: {}", task.name);
-                    if let Some(handler) = &opts.task_handle_pre {
-                        let py_dict = PyDict::new_ref(&vm.ctx);
-                        for (k, v) in on_builds {
-                            match v {
-                                Some(value) => {
-                                    py_dict
-                                        .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
-                                        .unwrap();
+                    match &task.kind.options {
+                        TaskOptions::Notarize(_) => {}
+                        TaskOptions::Lint(_) => {
+                            panic!("Lint tasks can not be sandboxed.");
+                        }
+                        TaskOptions::Keystore(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            handles.push(thread::spawn(move || {
+                                task_keystore_pre(&ctx, opts).unwrap();
+                            }));
+                        }
+                        TaskOptions::ConvertImages(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            handles.push(thread::spawn(move || {
+                                task_convert_images_pre(&ctx, opts).unwrap();
+                            }));
+                        }
+                        TaskOptions::Custom(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            if let Some(handler) = &opts.task_handle_pre {
+                                let py_dict = PyDict::new_ref(&vm.ctx);
+                                for (k, v) in on_builds {
+                                    match v {
+                                        Some(value) => {
+                                            py_dict
+                                                .set_item(
+                                                    &k,
+                                                    PyStr::from(value).to_pyobject(vm),
+                                                    vm,
+                                                )
+                                                .unwrap();
+                                        }
+                                        None => {
+                                            py_dict
+                                                .set_item(&k, PyNone.to_pyobject(vm), vm)
+                                                .unwrap();
+                                        }
+                                    }
                                 }
-                                None => {
-                                    py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
-                                }
+                                handles.push(vm.start_thread(|vm| {
+                                    handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
+                                }));
                             }
                         }
-                        handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
-                    }
+                    };
                 }
-            };
+
+                println!("Joining handles");
+                for handle in handles {
+                    handle.join().unwrap();
+                }
+            } else {
+                for task in tasks {
+                    let registry = registry.clone();
+
+                    let on_builds =
+                        get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+
+                    match &task.kind.options {
+                        TaskOptions::Notarize(_) => {}
+                        TaskOptions::Lint(opts) => {
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            task_lint_pre(&ctx, opts).await?;
+                        }
+                        TaskOptions::Keystore(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            task_keystore_pre(&ctx, opts)?;
+                        }
+                        TaskOptions::ConvertImages(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            task_convert_images_pre(&ctx, opts)?;
+                        }
+                        TaskOptions::Custom(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
+                            if let Some(handler) = &opts.task_handle_pre {
+                                let py_dict = PyDict::new_ref(&vm.ctx);
+                                for (k, v) in on_builds {
+                                    match v {
+                                        Some(value) => {
+                                            py_dict
+                                                .set_item(
+                                                    &k,
+                                                    PyStr::from(value).to_pyobject(vm),
+                                                    vm,
+                                                )
+                                                .unwrap();
+                                        }
+                                        None => {
+                                            py_dict
+                                                .set_item(&k, PyNone.to_pyobject(vm), vm)
+                                                .unwrap();
+                                        }
+                                    }
+                                }
+                                handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
+                            }
+                        }
+                    };
+                }
+            }
         }
     }
 
@@ -660,58 +758,148 @@ async fn build(
         .chunk_by(|task| task.kind.priorities.post_build);
 
     for (priority, tasks) in &grouped_post_build_tasks {
-        println!("Executing post-build tasks at priority level {}", priority);
-        for task in tasks {
-            let registry = registry.clone();
+        println!("Executing post-build tasks at priority level {priority}");
+        let c = tasks.chunk_by(|task| task.kind.sandboxed);
+        for (sandboxed, tasks) in &c {
+            let tasks = tasks.collect::<Vec<_>>();
+            if sandboxed && tasks.len() > 1 {
+                println!("Multiple sandboxed tasks at the same priority level detected, running in parallel.");
+                let mut handles = vec![];
+                for task in tasks {
+                    let registry = registry.clone();
 
-            let on_builds = get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+                    let on_builds =
+                        get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
 
-            match &task.kind.options {
-                TaskOptions::Keystore(opts) => {
-                    println!("[Post] Running task: {}", task.name);
-                    let ctx = TaskContext {
-                        version: config.renutil.version.clone(),
-                        input_dir: input_dir.to_path_buf(),
-                        output_dir: output_dir.clone(),
-                        renpy_path: registry.join(config.renutil.version.to_string()),
-                        registry,
-                        on_builds,
-                    };
-                    task_keystore_post(&ctx, opts)?;
-                }
-                TaskOptions::Notarize(opts) => {
-                    println!("[Post] Running task: {}", task.name);
-                    let ctx = TaskContext {
-                        version: config.renutil.version.clone(),
-                        input_dir: input_dir.to_path_buf(),
-                        output_dir: output_dir.clone(),
-                        renpy_path: registry.join(config.renutil.version.to_string()),
-                        registry,
-                        on_builds,
-                    };
-                    task_notarize_post(&ctx, opts)?;
-                }
-                TaskOptions::Custom(opts) => {
-                    println!("[Post] Running task: {}", task.name);
-                    if let Some(handler) = &opts.task_handle_post {
-                        let py_dict = PyDict::new_ref(&vm.ctx);
-                        for (k, v) in on_builds {
-                            match v {
-                                Some(value) => {
-                                    py_dict
-                                        .set_item(&k, PyStr::from(value).to_pyobject(vm), vm)
-                                        .unwrap();
+                    match &task.kind.options {
+                        TaskOptions::Lint(_) => {
+                            panic!("Lint tasks can not be sandboxed.");
+                        }
+                        TaskOptions::ConvertImages(_) => {}
+                        TaskOptions::Keystore(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            handles.push(thread::spawn(move || {
+                                task_keystore_post(&ctx, opts).unwrap();
+                            }));
+                        }
+                        TaskOptions::Notarize(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            handles.push(thread::spawn(move || {
+                                task_notarize_post(&ctx, opts).unwrap();
+                            }));
+                        }
+                        TaskOptions::Custom(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            if let Some(handler) = &opts.task_handle_post {
+                                let py_dict = PyDict::new_ref(&vm.ctx);
+                                for (k, v) in on_builds {
+                                    match v {
+                                        Some(value) => {
+                                            py_dict
+                                                .set_item(
+                                                    &k,
+                                                    PyStr::from(value).to_pyobject(vm),
+                                                    vm,
+                                                )
+                                                .unwrap();
+                                        }
+                                        None => {
+                                            py_dict
+                                                .set_item(&k, PyNone.to_pyobject(vm), vm)
+                                                .unwrap();
+                                        }
+                                    }
                                 }
-                                None => {
-                                    py_dict.set_item(&k, PyNone.to_pyobject(vm), vm).unwrap();
-                                }
+                                handles.push(vm.start_thread(|vm| {
+                                    handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
+                                }));
                             }
                         }
-                        handler.call((py_dict,), vm).unwrap();
-                    }
+                    };
                 }
-                _ => {}
-            };
+
+                println!("Joining handles");
+                for handle in handles {
+                    handle.join().unwrap();
+                }
+            } else {
+                for task in tasks {
+                    let registry = registry.clone();
+
+                    let on_builds =
+                        get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
+
+                    match &task.kind.options {
+                        TaskOptions::Lint(_) => {}
+                        TaskOptions::ConvertImages(_) => {}
+                        TaskOptions::Keystore(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            task_keystore_post(&ctx, opts)?;
+                        }
+                        TaskOptions::Notarize(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            let ctx = TaskContext {
+                                version: config.renutil.version.clone(),
+                                input_dir: input_dir.to_path_buf(),
+                                output_dir: output_dir.clone(),
+                                renpy_path: registry.join(config.renutil.version.to_string()),
+                                registry,
+                                on_builds,
+                            };
+                            task_notarize_post(&ctx, opts)?;
+                        }
+                        TaskOptions::Custom(opts) => {
+                            println!("[Post] Running task: {}", task.name);
+                            if let Some(handler) = &opts.task_handle_post {
+                                let py_dict = PyDict::new_ref(&vm.ctx);
+                                for (k, v) in on_builds {
+                                    match v {
+                                        Some(value) => {
+                                            py_dict
+                                                .set_item(
+                                                    &k,
+                                                    PyStr::from(value).to_pyobject(vm),
+                                                    vm,
+                                                )
+                                                .unwrap();
+                                        }
+                                        None => {
+                                            py_dict
+                                                .set_item(&k, PyNone.to_pyobject(vm), vm)
+                                                .unwrap();
+                                        }
+                                    }
+                                }
+                                handler.call((py_dict,), vm).unwrap();
+                            }
+                        }
+                    };
+                }
+            }
         }
     }
 
