@@ -146,6 +146,8 @@ pub struct GeneralTaskOptions {
     pub priorities: PriorityOptions,
     #[serde(flatten)]
     pub options: TaskOptions,
+    #[serde(default)]
+    pub sandboxed: bool,
 }
 
 #[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
