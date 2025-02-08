@@ -140,6 +140,7 @@ pub enum TaskOptions {
 #[serde(tag = "type")]
 pub struct GeneralTaskOptions {
     pub enabled: bool,
+    pub name: Option<String>,
     #[serde(default)]
     pub on_builds: HashSet<String>,
     #[serde(default)]

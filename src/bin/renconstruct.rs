@@ -301,17 +301,29 @@ async fn build(
             .unwrap();
         let result = result.to_sequence().list(vm).unwrap();
 
-        for val in result.borrow_vec().iter() {
-            let name_slug = val
-                .get_item("name_slug", vm)
-                .unwrap()
-                .str(vm)
-                .unwrap()
-                .to_string();
-            let class = val.get_item("class", vm).unwrap();
-            println!("Loaded custom task: {name_slug}");
+        for (name, opts) in tasks.iter_mut().filter(|(_, opts)| match opts.options {
+            TaskOptions::Custom(_) => true,
+            _ => false,
+        }) {
+            let mut class = None;
+            for val in result.borrow_vec().iter() {
+                let name_slug = val
+                    .get_item("name_slug", vm)
+                    .unwrap()
+                    .str(vm)
+                    .unwrap()
+                    .to_string();
 
-            if let Some((_, opts)) = tasks.iter_mut().find(|(name, _)| **name == name_slug) {
+                if opts.name != Some(name_slug) {
+                    continue;
+                }
+
+                class = Some(val.get_item("class", vm).unwrap());
+            }
+
+            if let Some(class) = class {
+                println!("Loading custom task: {name}");
+
                 let options = match &opts.options {
                     TaskOptions::Custom(opts) => {
                         let py_dict = PyDict::new_ref(&vm.ctx);
@@ -367,6 +379,8 @@ async fn build(
                     }
                     _ => panic!("Task type mismatch."),
                 };
+            } else {
+                panic!("Custom task not found: {name}");
             }
         }
     }
@@ -399,7 +413,10 @@ async fn build(
 
     let grouped_pre_build_tasks = active_tasks
         .iter()
-        .filter(|task| task.kind.priorities.pre_build > 0)
+        .filter(|t| match t.kind.options {
+            TaskOptions::Custom(ref opts) => opts.task_handle_pre.is_some(),
+            _ => true,
+        })
         .sorted_by(|a, b| {
             a.kind
                 .priorities
@@ -427,19 +444,8 @@ async fn build(
                         TaskOptions::Lint(_) => {
                             panic!("Lint tasks can not be sandboxed.");
                         }
-                        TaskOptions::Keystore(opts) => {
-                            println!("[Pre] Running task: {}", task.name);
-                            let ctx = TaskContext {
-                                version: config.renutil.version.clone(),
-                                input_dir: input_dir.to_path_buf(),
-                                output_dir: output_dir.clone(),
-                                renpy_path: registry.join(config.renutil.version.to_string()),
-                                registry,
-                                on_builds,
-                            };
-                            handles.push(thread::spawn(move || {
-                                task_keystore_pre(&ctx, opts).unwrap();
-                            }));
+                        TaskOptions::Keystore(_) => {
+                            panic!("Keystore tasks can not be sandboxed.");
                         }
                         TaskOptions::ConvertImages(opts) => {
                             println!("[Pre] Running task: {}", task.name);
@@ -499,6 +505,7 @@ async fn build(
                     match &task.kind.options {
                         TaskOptions::Notarize(_) => {}
                         TaskOptions::Lint(opts) => {
+                            println!("[Pre] Running task: {}", task.name);
                             let ctx = TaskContext {
                                 version: config.renutil.version.clone(),
                                 input_dir: input_dir.to_path_buf(),
@@ -748,7 +755,10 @@ async fn build(
 
     let grouped_post_build_tasks = active_tasks
         .iter()
-        .filter(|task| task.kind.priorities.post_build > 0)
+        .filter(|t| match t.kind.options {
+            TaskOptions::Custom(ref opts) => opts.task_handle_post.is_some(),
+            _ => true,
+        })
         .sorted_by(|a, b| {
             a.kind
                 .priorities
@@ -772,23 +782,12 @@ async fn build(
                         get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
 
                     match &task.kind.options {
+                        TaskOptions::ConvertImages(_) => {}
                         TaskOptions::Lint(_) => {
                             panic!("Lint tasks can not be sandboxed.");
                         }
-                        TaskOptions::ConvertImages(_) => {}
-                        TaskOptions::Keystore(opts) => {
-                            println!("[Post] Running task: {}", task.name);
-                            let ctx = TaskContext {
-                                version: config.renutil.version.clone(),
-                                input_dir: input_dir.to_path_buf(),
-                                output_dir: output_dir.clone(),
-                                renpy_path: registry.join(config.renutil.version.to_string()),
-                                registry,
-                                on_builds,
-                            };
-                            handles.push(thread::spawn(move || {
-                                task_keystore_post(&ctx, opts).unwrap();
-                            }));
+                        TaskOptions::Keystore(_) => {
+                            panic!("Keystore tasks can not be sandboxed.");
                         }
                         TaskOptions::Notarize(opts) => {
                             println!("[Post] Running task: {}", task.name);
