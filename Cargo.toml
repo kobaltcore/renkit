@@ -8,29 +8,29 @@ homepage = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
 # System
-zip = "2.2.2"
+zip = "2.2.3"
 rsa = "0.9.7"
-rand = "0.8.5"
+rand = "0.8"
 regex = "1.11.1"
 base64 = "0.22.1"
-anyhow = "1.0.95"
+anyhow = "1.0.97"
 num_cpus = "1.16.0"
 itertools = "0.14.0"
 command-executor = "0.1.1"
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.44.0", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
-toml = "0.8.19"
+toml = "0.8.20"
 plist = "1.7.0"
 lol_html = "2.2.0"
-serde_json = "1.0.135"
-serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.140"
+serde = { version = "1.0.218", features = ["derive"] }
 # Filesystem
 home = "0.5.11"
-tar = "0.4.43"
-bzip2 = "0.5.0"
+tar = "0.4.44"
+bzip2 = "0.5.2"
 jwalk = "0.8.1"
 zip-extract = "0.2.1"
 # Internet
@@ -47,11 +47,11 @@ app-store-connect = "0.7.0"
 # CLI
 ratatui = "0.29.0"
 crossterm = "0.28.1"
-wait-timeout = "0.2.0"
+wait-timeout = "0.2.1"
 tui-textarea = "0.7.0"
 tui-scrollview = "0.5.1"
-clap = { version = "4.5.26", features = ["derive"] }
-indicatif = { version = "0.17.9", features = ["improved_unicode", "rayon"] }
+clap = { version = "4.5.31", features = ["derive"] }
+indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 # Images
 image = "0.25.5"
 rgb = "0.8.50"
@@ -65,8 +65,9 @@ rustpython-vm = "0.4.0"
 rustpython-stdlib = "0.4.0"
 rustpython = { version = "0.4.0", features = ["freeze-stdlib"] }
 rustpython-pylib = { version = "0.4.0", features = ["freeze-stdlib"] }
-# Testing
-test-context = "0.3.0"
+
+[dev-dependencies]
+test-context = "0.4.1"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
