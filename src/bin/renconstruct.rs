@@ -389,13 +389,9 @@ async fn build(
         .iter()
         .filter(|(_, v)| v.enabled)
         .filter(|(_, v)| (!v.on_builds.is_disjoint(&active_builds)) || v.on_builds.is_empty())
-        .map(|(k, v)| {
-            // TODO: handle python object instantiation here so the instance lives
-            // for the entire duration of the build.
-            Task {
-                name: k.clone(),
-                kind: v.clone(),
-            }
+        .map(|(k, v)| Task {
+            name: k.clone(),
+            kind: v.clone(),
         })
         .collect::<Vec<_>>();
 

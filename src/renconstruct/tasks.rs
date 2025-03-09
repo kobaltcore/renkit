@@ -28,7 +28,6 @@ use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 pub struct Task {
     pub name: String,
     pub kind: GeneralTaskOptions,
-    // TODO: add some kind of handle to call custom tasks here
 }
 
 #[derive(Debug, Clone)]
