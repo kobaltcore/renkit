@@ -23,12 +23,12 @@ The ability to run tasks in parallel also made it more sensible for tasks to be 
 As such, tasks now take a new, optional parameter `name` which is used to identify the task instance and takes over the duty of the section title in the configuration file.
 
 ```toml
-[tasks.example] <== This previously determined the task that would run
+[tasks.example]  # <== This previously determined the task that would run
 type = "custom"
 
-[tasks.my_random_identifier] <== Tasks can now have arbitrary names, allowing multi-instancing
+[tasks.my_random_identifier]  # <== Tasks can now have arbitrary names, allowing multi-instancing
 type = "custom"
-name = "example" <== This is now a task parameter
+name = "example"  # <== This is now a task parameter
 ```
 
 Before this change, the names of task sections in the config file were a limiting factor as only one section could be named `tasks.example` and could thus refer to that specific custom task. Now tasks can be named arbitrarily, allowing for multiple instances of the same task to be run in parallel. The following invokes the task `ExamleTask` twice, with different names:
