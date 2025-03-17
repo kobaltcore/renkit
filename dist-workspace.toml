@@ -4,6 +4,9 @@ members = ["cargo:."]
 [dist.dependencies.homebrew]
 "openjdk@21" = { stage = ["run"] }
 
+[dist.dependencies.apt]
+gcc-10 = '*'
+
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
