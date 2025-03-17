@@ -321,6 +321,30 @@ async fn build(
                 class = Some(val.get_item("class", vm).unwrap());
             }
 
+            if class.is_none() && opts.name.is_none() {
+                println!(
+                    "The task '{name}' does not specify a task name. Please update it like below:"
+                );
+                println!(
+                    "  [tasks.{name}]\n  type = \"custom\"\n  name = \"{name}\" <== New property"
+                );
+                println!("You may then rename the section title to an arbitrary string.");
+                for val in result.borrow_vec().iter() {
+                    let name_slug = val
+                        .get_item("name_slug", vm)
+                        .unwrap()
+                        .str(vm)
+                        .unwrap()
+                        .to_string();
+
+                    if *name != name_slug {
+                        continue;
+                    }
+
+                    class = Some(val.get_item("class", vm).unwrap());
+                }
+            }
+
             if let Some(class) = class {
                 println!("Loading custom task: {name}");
 
