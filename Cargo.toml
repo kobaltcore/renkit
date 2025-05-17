@@ -8,23 +8,23 @@ homepage = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
 # System
-zip = "2.4.1"
+zip = "3.0.0"
 rsa = "0.9.8"
 rand = "0.8"
 regex = "1.11.1"
 base64 = "0.22.1"
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 num_cpus = "1.16.0"
 itertools = "0.14.0"
 command-executor = "0.1.1"
-tokio = { version = "1.44.1", features = ["full"] }
+tokio = { version = "1.45.0", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
-toml = "0.8.20"
-plist = "1.7.0"
-lol_html = "2.2.0"
+toml = "0.8.22"
+plist = "1.7.1"
+lol_html = "2.3.0"
 serde_json = "1.0.140"
 serde = { version = "1.0.219", features = ["derive"] }
 # Filesystem
@@ -32,11 +32,11 @@ home = "0.5.11"
 tar = "0.4.44"
 bzip2 = "0.5.2"
 jwalk = "0.8.1"
-zip-extract = "0.2.1"
+zip-extract = "0.3.0"
 # Internet
 trauma = "2"
 webbrowser = "1.0.4"
-reqwest = { version = "^0.12.14", default-features = false, features = [
+reqwest = { version = "^0.12.15", default-features = false, features = [
     "native-tls-vendored",
 ] }
 # Apple
@@ -46,19 +46,19 @@ x509-certificate = "0.24.0"
 app-store-connect = "0.7.0"
 # CLI
 ratatui = "0.29.0"
-crossterm = "0.28.1"
+crossterm = "0.28"
 wait-timeout = "0.2.1"
 tui-textarea = "0.7.0"
 tui-scrollview = "0.5.1"
-clap = { version = "4.5.32", features = ["derive"] }
+clap = { version = "4.5.38", features = ["derive"] }
 indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 # Images
-image = "0.25.5"
+image = "0.25.6"
 rgb = "0.8.50"
 imgref = "1.11.0"
-ravif = "0.11.11"
+ravif = "0.11.12"
 webp = "0.3.0"
-libwebp-sys = { version = "0.9", features = ["avx2", "sse41"] }
+libwebp-sys = { version = "0.9.6", features = ["avx2", "sse41"] }
 # jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
 # RustPython
 rustpython-vm = "0.4.0"
