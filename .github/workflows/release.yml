@@ -125,8 +125,6 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
-      - name: "Instal NASM dependency"
-        uses: "ilammy/setup-nasm@v1"
       - name: "Force xwin to use clang instead of clang-CL"
         run: "echo \"XWIN_CROSS_COMPILER=clang\" >> \"$GITHUB_ENV\""
       - name: Install dist

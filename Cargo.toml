@@ -56,7 +56,9 @@ indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 image = "0.25.6"
 rgb = "0.8.50"
 imgref = "1.11.0"
-ravif = "0.11.12"
+ravif = { version = "0.11.12", features = [
+    "threading",
+], default-features = false }
 webp = "0.3.0"
 libwebp-sys = { version = "0.9.6", features = ["avx2", "sse41"] }
 # jpegxl-rs = { version = "0.8.3", features = ["vendored"] }

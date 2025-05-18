@@ -1,4 +1,2 @@
-- name: Instal NASM dependency
-  uses: ilammy/setup-nasm@v1
 - name: Force xwin to use clang instead of clang-CL
   run: echo "XWIN_CROSS_COMPILER=clang" >> "$GITHUB_ENV"
