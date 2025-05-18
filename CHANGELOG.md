@@ -2,6 +2,10 @@
 
 This release adds support for task parallelization, automatically executing tasks in parallel where possible. It additionally enables optional task multi-instancing, enabling duplicate invocations of tasks with different parameters.
 
+## Improvements
+
+Better output when keystores fail to generate: `renconstruct` will now print the command it used to generate the keystore, making it easier to debug issues.
+
 ## Task Parallelization
 
 By default, nothing about the execution order of tasks will change. They will execute sequentially exactly as they did before. However, tasks can now be marked as `sandboxed` to enable parallel execution:
