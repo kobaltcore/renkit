@@ -877,6 +877,7 @@ pub async fn install(
         ]);
         let status = cmd.status()?;
         if !status.success() {
+            println!("Command: {cmd:?}");
             anyhow::bail!("Unable to generate Android keystore.");
         }
     }
