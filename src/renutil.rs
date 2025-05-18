@@ -875,9 +875,9 @@ pub async fn install(
             "-validity",
             "20000",
         ]);
+        println!("Command: {cmd:?}");
         let status = cmd.status()?;
         if !status.success() {
-            println!("Command: {cmd:?}");
             anyhow::bail!("Unable to generate Android keystore.");
         }
     }
