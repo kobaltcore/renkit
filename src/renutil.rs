@@ -875,11 +875,25 @@ pub async fn install(
             "-validity",
             "20000",
         ]);
-        println!("Command: {cmd:?}");
-        let status = cmd.status()?;
-        if !status.success() {
-            anyhow::bail!("Unable to generate Android keystore.");
-        }
+        match cmd.status() {
+            Ok(status) => {
+                if !status.success() {
+                    match status.code() {
+                        Some(code) => {
+                            anyhow::bail!(
+                                "Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}"
+                            )
+                        }
+                        None => anyhow::bail!(
+                            "Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}"
+                        ),
+                    }
+                };
+            }
+            Err(e) => {
+                anyhow::bail!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}");
+            }
+        };
     }
 
     let bundle_keystore = Path::new("bundle.keystore");
