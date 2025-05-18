@@ -849,7 +849,7 @@ pub async fn install(
     let original_dir = env::current_dir()?;
     env::set_current_dir(base_path.join("rapt"))?;
 
-    let keytool = java_home.join("bin/keytool");
+    let keytool = java_home.join("bin").join("keytool");
 
     let android_keystore = Path::new("android.keystore");
     if !android_keystore.exists() {
