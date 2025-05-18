@@ -4,7 +4,7 @@
 # docker run --rm -it --volume /local/project/path:/project renpy:8.2.0 renutil launch 8.2.0 -d -- "/project compile"
 
 FROM ubuntu:22.04
-ARG renpy_version=8.2.0
+ARG renpy_version=8.3.7
 ARG renkit_version=latest
 
 ENV DEBIAN_FRONTEND=noninteractive
