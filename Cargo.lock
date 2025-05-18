@@ -5128,7 +5128,7 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "renkit"
-version = "5.1.0-alpha.2"
+version = "5.1.0-alpha.3"
 dependencies = [
  "anyhow",
  "app-store-connect",
