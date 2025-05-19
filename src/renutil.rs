@@ -26,6 +26,7 @@ use std::io::stdout;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Cursor;
+use std::io::Write;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -46,6 +47,15 @@ use tui_textarea::Input;
 use tui_textarea::Key;
 use tui_textarea::TextArea;
 use wait_timeout::ChildExt;
+
+// default keystore created with the usual settings (as defined below) on 2025-05-19
+const DEFAULT_KEYSTORE: &'static [u8] = include_bytes!("default.keystore");
+
+fn write_default_keystore(path: &Path) -> Result<()> {
+    let mut file = fs::File::create(path)?;
+    file.write_all(DEFAULT_KEYSTORE)?;
+    Ok(())
+}
 
 pub trait InstanceState {}
 
@@ -880,18 +890,19 @@ pub async fn install(
                 if !status.success() {
                     match status.code() {
                         Some(code) => {
-                            anyhow::bail!(
-                                "Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}"
-                            )
+                            println!("Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}\nWriting default keystore.");
+                            write_default_keystore(android_keystore)?;
                         }
-                        None => anyhow::bail!(
-                            "Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}"
-                        ),
+                        None => {
+                            println!("Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}\nWriting default keystore.");
+                            write_default_keystore(android_keystore)?;
+                        }
                     }
                 };
             }
             Err(e) => {
-                anyhow::bail!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}");
+                println!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}\nWriting default keystore.");
+                write_default_keystore(android_keystore)?;
             }
         };
     }
