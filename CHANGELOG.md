@@ -6,6 +6,8 @@ This release adds support for task parallelization, automatically executing task
 
 The `keytool` path for generating Android keystores is now properly joined on Windows systems, fixing a bug where the keystore generation could fail on Windows due to incorrect pathing.
 
+In the case of a keystore generation failure, `renconstruct` will now write a default, pre-generated keystore (with the same settings as it would otherwise use) to continue the installation. Since this keystores are generally overwritten by the `keystore` task, this won't affect the final build.
+
 ## Improvements
 
 Better output when keystores fail to generate: `renconstruct` will now print the command it used to generate the keystore, making it easier to debug issues.
