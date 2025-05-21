@@ -614,8 +614,6 @@ async fn build(
                 &args,
                 true,
                 false,
-                None,
-                false,
             )
             .await?;
         } else {
@@ -634,8 +632,6 @@ async fn build(
                 false,
                 &args,
                 true,
-                false,
-                None,
                 false,
             )
             .await?;
@@ -665,8 +661,6 @@ async fn build(
                 false,
                 &args,
                 true,
-                false,
-                None,
                 false,
             )
             .await?;
@@ -700,8 +694,6 @@ async fn build(
             false,
             &args,
             true,
-            false,
-            None,
             false,
         )
         .await?;
@@ -766,8 +758,6 @@ async fn build(
             false,
             &args,
             true,
-            false,
-            None,
             false,
         )
         .await?;

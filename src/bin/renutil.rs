@@ -49,10 +49,6 @@ enum Commands {
         direct: bool,
         #[arg(short = 'c', long, default_value_t = false)]
         check_status: bool,
-        #[arg(short = 'i', long, default_value_t = false)]
-        interactive: bool,
-        #[arg(long)]
-        code: Option<String>,
         #[arg(long)]
         no_auto_install: bool,
     },
@@ -99,8 +95,6 @@ async fn main() -> Result<()> {
             direct,
             args,
             check_status,
-            interactive,
-            code,
             no_auto_install,
         } => {
             let (status, _stdout, _stderr) = launch(
@@ -110,8 +104,6 @@ async fn main() -> Result<()> {
                 *direct,
                 args,
                 *check_status,
-                *interactive,
-                code.as_ref(),
                 !no_auto_install,
             )
             .await?;

@@ -231,8 +231,6 @@ pub async fn task_lint_pre(ctx: &TaskContext, _options: &LintOptions) -> Result<
         &[ctx.input_dir.to_string_lossy().to_string(), "lint".into()],
         false,
         false,
-        None,
-        false,
     )
     .await?;
 

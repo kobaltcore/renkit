@@ -45,11 +45,6 @@ apple-codesign = "0.29.0"
 x509-certificate = "0.24.0"
 app-store-connect = "0.7.0"
 # CLI
-ratatui = "0.29.0"
-crossterm = "0.28"
-wait-timeout = "0.2.1"
-tui-textarea = "0.7.0"
-tui-scrollview = "0.5.1"
 clap = { version = "4.5.38", features = ["derive"] }
 indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 # Images

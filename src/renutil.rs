@@ -2,27 +2,8 @@ use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;
 use bzip2::read::BzDecoder;
-use crossterm::{
-    event,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
-};
 use lol_html::{element, HtmlRewriter, Settings};
-use ratatui::layout::Constraint;
-use ratatui::layout::Direction;
-use ratatui::layout::Layout;
-use ratatui::layout::Rect;
-use ratatui::layout::Size;
-use ratatui::style::Modifier;
-use ratatui::style::Style;
-use ratatui::widgets::Block;
-use ratatui::widgets::Borders;
-use ratatui::{
-    prelude::{CrosstermBackend, Terminal},
-    widgets::Paragraph,
-};
 use std::env;
-use std::io::stdout;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Cursor;
@@ -36,17 +17,10 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
 use std::{fs, marker::PhantomData, path::PathBuf};
 use tar::Archive;
 use trauma::download::Download;
 use trauma::downloader::DownloaderBuilder;
-use tui_scrollview::ScrollView;
-use tui_scrollview::ScrollViewState;
-use tui_textarea::Input;
-use tui_textarea::Key;
-use tui_textarea::TextArea;
-use wait_timeout::ChildExt;
 
 // default keystore created with the usual settings (as defined below) on 2025-05-19
 const DEFAULT_KEYSTORE: &'static [u8] = include_bytes!("default.keystore");
@@ -352,31 +326,9 @@ fn deactivate(textarea: &mut TextArea<'_>) {
 }
 */
 
-fn activate(textarea: &mut TextArea<'_>) {
-    textarea.set_cursor_line_style(Style::default().add_modifier(Modifier::UNDERLINED));
-    textarea.set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
-    textarea.set_block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default())
-            .title("Ren'Py REPL"),
-    );
-}
 
-fn exec_py(base_dir: &Path, code: &String) -> Result<()> {
-    fs::write(base_dir.join("exec.py"), code).unwrap();
 
-    let mut wait_time = 0;
-    while !base_dir.join("exec.py").exists() {
-        thread::sleep(Duration::from_millis(25));
-        wait_time += 25;
-        if wait_time > 200 {
-            return Err(anyhow!("Timeout waiting for code to execute."));
-        }
-    }
 
-    Ok(())
-}
 
 pub async fn launch(
     registry: &PathBuf,
@@ -385,8 +337,6 @@ pub async fn launch(
     direct: bool,
     args: &[String],
     check_status: bool,
-    interactive: bool,
-    code: Option<&String>,
     auto_install: bool,
 ) -> Result<(ExitStatus, String, String)> {
     let auto_install = match std::env::var("RENUTIL_AUTOINSTALL") {
@@ -441,9 +391,7 @@ pub async fn launch(
 
     let instance = version.to_local(registry)?;
 
-    if interactive && version < Version::from_str("8.3.0.24041102+nightly").unwrap() {
-        anyhow::bail!("Interactive mode is only available in Ren'Py 8.3.1 and later.");
-    }
+
 
     let python = instance.python(registry)?;
     let python = python.to_str().unwrap();
@@ -476,14 +424,7 @@ pub async fn launch(
         std::env::set_var("SDL_VIDEODRIVER", "dummy");
     }
 
-    let mut terminal = None;
-    if interactive && code.is_none() {
-        stdout().execute(EnterAlternateScreen)?;
-        enable_raw_mode()?;
-        let mut t = Terminal::new(CrosstermBackend::new(stdout()))?;
-        t.clear()?;
-        terminal = Some(t);
-    }
+
 
     let mut child = cmd.spawn()?;
 
@@ -495,17 +436,12 @@ pub async fn launch(
 
     let bufread_stdout = BufReader::new(child_stdout);
     let bufread_stderr = BufReader::new(child_stderr);
-
-    let has_code = code.is_some();
-
     let result_stdout = Arc::new(Mutex::new(vec![]));
     let result_stdout_clone = result_stdout.clone();
     let h_stdout = thread::spawn(move || {
         for line in bufread_stdout.lines() {
             let line = line.unwrap();
-            if !interactive || has_code {
-                println!("{line}");
-            }
+            println!("{line}");
             let mut handle = result_stdout_clone.lock().unwrap();
             handle.push(line);
         }
@@ -516,174 +452,16 @@ pub async fn launch(
     let h_stderr = thread::spawn(move || {
         for line in bufread_stderr.lines() {
             let line = line.unwrap();
-            if !interactive || has_code {
-                eprintln!("{line}");
-            }
+            eprintln!("{line}");
             let mut handle = result_stderr_clone.lock().unwrap();
             handle.push(line);
         }
     });
 
-    if interactive {
-        if let Some(code) = &code {
-            match exec_py(Path::new(&args[0]), code) {
-                Ok(()) => {}
-                Err(e) => {
-                    eprintln!("{e}");
-                }
-            }
-        } else {
-            let mut terminal = terminal.unwrap();
-
-            let mut textarea = TextArea::default();
-            activate(&mut textarea);
-
-            let mut state_stdout = ScrollViewState::default();
-            let mut state_stderr = ScrollViewState::default();
-
-            let mut last_stdout_delta = 0;
-            let mut last_stderr_delta = 0;
-
-            loop {
-                let stdout_logs = result_stdout.lock().unwrap().join("\n");
-                let stderr_logs = result_stderr.lock().unwrap().join("\n");
-
-                let stdout_len = result_stdout.lock().unwrap().len();
-                let stderr_len = result_stderr.lock().unwrap().len();
-
-                terminal.draw(|frame| {
-                let area = frame.area();
-
-                let outer_layout = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints(vec![
-                        Constraint::Percentage(70),
-                        Constraint::Percentage(30),
-                        Constraint::Length(3),
-                    ])
-                    .split(area);
-
-                let inner_layout = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-                    .split(outer_layout[0]);
-
-                frame.render_widget(
-                    Paragraph::new("Ctrl-X: Execute | PageUp/PageDown: Scroll by page | Home/End: Scroll by line").block(Block::new().borders(Borders::ALL)),
-                    outer_layout[2],
-                );
-
-                frame.render_widget(&textarea, outer_layout[1]);
-
-                let mut scroll_view_stdout = ScrollView::new(Size::new(100, stdout_len as u16));
-
-                scroll_view_stdout.render_widget(
-                    Paragraph::new(stdout_logs),
-                    Rect::new(0, 0, 100, stdout_len as u16),
-                );
-
-                frame.render_stateful_widget(
-                    scroll_view_stdout,
-                    inner_layout[0],
-                    &mut state_stdout,
-                );
-
-                let mut scroll_view_stderr = ScrollView::new(Size::new(100, stderr_len as u16));
-
-                scroll_view_stderr.render_widget(
-                    Paragraph::new(stderr_logs),
-                    Rect::new(0, 0, 100, stderr_len as u16),
-                );
-
-                frame.render_stateful_widget(
-                    scroll_view_stderr,
-                    inner_layout[1],
-                    &mut state_stderr,
-                );
-
-                let stdout_delta = stdout_len.saturating_sub(inner_layout[0].height as usize);
-                if stdout_delta > 0 {
-                    for _ in last_stdout_delta..stdout_delta {
-                        state_stdout.scroll_down();
-                    }
-                }
-                last_stdout_delta = stdout_delta;
-
-                let stderr_delta = stderr_len.saturating_sub(inner_layout[1].height as usize);
-                if stderr_delta > 0 {
-                    for _ in last_stderr_delta..stderr_delta {
-                        state_stderr.scroll_down();
-                    }
-                }
-                last_stderr_delta = stderr_delta;
-            })?;
-
-                if event::poll(std::time::Duration::from_millis(8))? {
-                    match crossterm::event::read()?.into() {
-                        Input {
-                            key: Key::Char('c'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            child.kill()?;
-                            break;
-                        }
-                        Input {
-                            key: Key::Char('x'),
-                            ctrl: true,
-                            ..
-                        } => match exec_py(Path::new(&args[0]), &textarea.lines().join("\n")) {
-                            Ok(()) => {}
-                            Err(e) => {
-                                eprintln!("{e}");
-                                break;
-                            }
-                        },
-                        Input {
-                            key: Key::PageUp, ..
-                        } => {
-                            state_stdout.scroll_page_up();
-                            state_stderr.scroll_page_up();
-                        }
-                        Input {
-                            key: Key::PageDown, ..
-                        } => {
-                            state_stdout.scroll_page_down();
-                            state_stderr.scroll_page_down();
-                        }
-                        Input { key: Key::Home, .. } => {
-                            state_stdout.scroll_up();
-                            state_stderr.scroll_up();
-                        }
-                        Input { key: Key::End, .. } => {
-                            state_stdout.scroll_down();
-                            state_stderr.scroll_down();
-                        }
-                        input => {
-                            textarea.input(input);
-                        }
-                    }
-                }
-
-                match child.wait_timeout(Duration::from_millis(8)) {
-                    Ok(Some(_)) => break,
-                    Ok(None) => {}
-                    Err(_) => {
-                        println!("Error waiting for child process.");
-                        break;
-                    }
-                };
-            }
-        }
-    }
-
     h_stdout.join().unwrap();
     h_stderr.join().unwrap();
 
-    if interactive && code.is_none() {
-        stdout().execute(LeaveAlternateScreen)?;
-        disable_raw_mode()?;
-    }
+
 
     let status = child.wait()?;
 
