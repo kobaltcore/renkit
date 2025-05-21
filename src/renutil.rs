@@ -326,10 +326,6 @@ fn deactivate(textarea: &mut TextArea<'_>) {
 }
 */
 
-
-
-
-
 pub async fn launch(
     registry: &PathBuf,
     version: Option<&Version>,
@@ -391,8 +387,6 @@ pub async fn launch(
 
     let instance = version.to_local(registry)?;
 
-
-
     let python = instance.python(registry)?;
     let python = python.to_str().unwrap();
 
@@ -423,8 +417,6 @@ pub async fn launch(
         std::env::set_var("SDL_AUDIODRIVER", "dummy");
         std::env::set_var("SDL_VIDEODRIVER", "dummy");
     }
-
-
 
     let mut child = cmd.spawn()?;
 
@@ -460,8 +452,6 @@ pub async fn launch(
 
     h_stdout.join().unwrap();
     h_stderr.join().unwrap();
-
-
 
     let status = child.wait()?;
 
