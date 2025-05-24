@@ -1,10 +1,10 @@
-# Version 5.1.0
+# Version 6.0.0
 
 This release adds support for task parallelization, automatically executing tasks in parallel where possible. It additionally enables optional task multi-instancing, enabling duplicate invocations of tasks with different parameters.
 
 ## Removal of Interactive Mode
 
-This was added to Ren'Py as an experimental feature but [subsequently removed](https://github.com/renpy/renpy/issues/5607#issuecomment-2201742647). It is now relegated to a custom extension, which is not in the scope of this project.
+This was added to Ren'Py as an experimental feature but [subsequently removed](https://github.com/renpy/renpy/issues/5607#issuecomment-2201742647). It is now relegated to a custom extension, which is not in the scope of this project. Due to changing the public-facing API of `renutil`, this is a breaking change.
 
 ## Bug Fixes
 
