@@ -703,6 +703,21 @@ pub async fn install(
     );
     fs::write(&interface_path, lines.join("\n"))?;
 
+    #[cfg(target_family = "windows")]
+    {
+        println!("Patching extended path issue in RAPT on Windows");
+        // On Windows, the RAPT plat.py file has an issue with using extended paths by default.
+        // This is a problem because Java's classpath does not support them.
+        // This leads to it not finding the CheckJDK class, leading to an installation failure.
+        // We crudely patch this by replacing the __file__ variable with a version that removes the extended path prefix.
+        let plat_path = base_path.join("rapt/buildlib/rapt/plat.py");
+        let content = fs::read_to_string(&plat_path)?;
+        fs::write(
+            &plat_path,
+            content.replace("__file__", "__file__.replace('\\\\?\\', '')"),
+        )?;
+    }
+
     println!("Installing RAPT");
     // in versions above 7.5.0, the RAPT installer tries to import renpy.compat
     // this is not in the path by default, and since PYTHONPATH is ignored, we
