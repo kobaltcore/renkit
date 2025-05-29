@@ -22,15 +22,6 @@ use tar::Archive;
 use trauma::download::Download;
 use trauma::downloader::DownloaderBuilder;
 
-// default keystore created with the usual settings (as defined below) on 2025-05-19
-const DEFAULT_KEYSTORE: &'static [u8] = include_bytes!("default.keystore");
-
-fn write_default_keystore(path: &Path) -> Result<()> {
-    let mut file = fs::File::create(path)?;
-    file.write_all(DEFAULT_KEYSTORE)?;
-    Ok(())
-}
-
 pub trait InstanceState {}
 
 pub struct Local;
@@ -628,12 +619,10 @@ pub async fn install(
         }
     }
 
-    let original_dir = env::current_dir()?;
-    env::set_current_dir(base_path.join("rapt"))?;
-
     let keytool = java_home.join("bin").join("keytool");
 
-    let android_keystore = Path::new("android.keystore");
+    let android_keystore = base_path.join("rapt").join("android.keystore");
+    let android_keystore_str = android_keystore.to_str().unwrap();
     if !android_keystore.exists() {
         println!("Generating Android keystore");
 
@@ -641,7 +630,7 @@ pub async fn install(
         cmd.args([
             "-genkey",
             "-keystore",
-            "android.keystore",
+            android_keystore_str,
             "-alias",
             "android",
             "-keyalg",
@@ -662,34 +651,29 @@ pub async fn install(
                 if !status.success() {
                     match status.code() {
                         Some(code) => {
-                            println!(
-                                "Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}\nWriting default keystore."
+                            anyhow::bail!(
+                                "Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}"
                             );
-                            write_default_keystore(android_keystore)?;
                         }
                         None => {
-                            println!(
-                                "Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}\nWriting default keystore."
+                            anyhow::bail!(
+                                "Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}"
                             );
-                            write_default_keystore(android_keystore)?;
                         }
                     }
                 };
             }
             Err(e) => {
-                println!(
-                    "Unable to generate Android keystore: {e}\nCommand: {cmd:?}\nWriting default keystore."
-                );
-                write_default_keystore(android_keystore)?;
+                anyhow::bail!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}");
             }
         };
     }
 
-    let bundle_keystore = Path::new("bundle.keystore");
+    let bundle_keystore = base_path.join("rapt").join("android.keystore");
     if !bundle_keystore.exists() {
         println!("Generating Bundle keystore (reusing Android keystore)");
 
-        fs::copy("android.keystore", "bundle.keystore")?;
+        fs::copy(android_keystore, bundle_keystore)?;
     }
 
     println!("Patching SSL issue in RAPT");
@@ -731,22 +715,14 @@ pub async fn install(
 
     unsafe { env::set_var("RAPT_NO_TERMS", "1") };
 
+    let android_py = base_path.join("rapt/android.py");
     let mut cmd = Command::new(&python);
-    cmd.args(["-EO", "android.py", "installsdk"]);
-
-    println!("Command: {cmd:?}");
-
-    println!("Environment");
-    for (k, v) in std::env::vars() {
-        println!("{k} = {v}");
-    }
+    cmd.args(["-EO", android_py.to_str().unwrap(), "installsdk"]);
 
     let status = cmd.status()?;
     if !status.success() {
         anyhow::bail!("Unable to install Android SDK.");
     }
-
-    env::set_current_dir(original_dir)?;
 
     println!("Increasing Gradle RAM limit to 8Gb");
     let paths = [
