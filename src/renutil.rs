@@ -302,19 +302,6 @@ pub async fn show(registry: &PathBuf, version: &Version) -> Result<()> {
     Ok(())
 }
 
-/*
-fn deactivate(textarea: &mut TextArea<'_>) {
-    textarea.set_cursor_line_style(Style::default());
-    textarea.set_cursor_style(Style::default());
-    textarea.set_block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::DarkGray))
-            .title("Executing..."),
-    );
-}
-*/
-
 pub async fn launch(
     registry: &PathBuf,
     version: Option<&Version>,
