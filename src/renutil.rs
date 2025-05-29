@@ -683,7 +683,7 @@ pub async fn install(
         let content = fs::read_to_string(&plat_path)?;
         fs::write(
             &plat_path,
-            content.replace("__file__", "__file__.replace('\\\\?\\', '')"),
+            content.replace("__file__", r"__file__.replace('\\\\?\\', '')"),
         )?;
     }
 
