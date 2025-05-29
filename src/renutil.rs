@@ -730,6 +730,14 @@ pub async fn install(
     println!("Installing Android SDK");
     #[cfg(target_family = "windows")]
     let mut sdkmanager = base_path.join("rapt/Sdk/cmdline-tools/latest/bin/sdkmanager.exe");
+    #[cfg(target_family = "windows")]
+    {
+        if !sdkmanager.exists() {
+            // This can be a batch file now, for some reason.
+            let new_sdkmanager = base_path.join("rapt/Sdk/cmdline-tools/latest/bin/sdkmanager.bat");
+            sdkmanager = new_sdkmanager;
+        }
+    }
     #[cfg(target_family = "unix")]
     let mut sdkmanager = base_path.join("rapt/Sdk/cmdline-tools/latest/bin/sdkmanager");
 
