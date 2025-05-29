@@ -608,6 +608,8 @@ pub async fn install(
 
     let android_keystore = base_path.join("rapt").join("android.keystore");
     let android_keystore_str = android_keystore.to_str().unwrap();
+    #[cfg(target_family = "windows")]
+    let android_keystore_str = android_keystore_str.replace("\\\\?\\", "");
     if !android_keystore.exists() {
         println!("Generating Android keystore");
 
@@ -615,7 +617,7 @@ pub async fn install(
         cmd.args([
             "-genkey",
             "-keystore",
-            android_keystore_str,
+            &android_keystore_str,
             "-alias",
             "android",
             "-keyalg",
