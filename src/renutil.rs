@@ -1,8 +1,8 @@
 use crate::version::Version;
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use bzip2::read::BzDecoder;
-use lol_html::{element, HtmlRewriter, Settings};
+use lol_html::{HtmlRewriter, Settings, element};
 use std::env;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -397,7 +397,7 @@ pub async fn launch(
         Ok(val) => Some(val),
         Err(_) => None,
     };
-    std::env::set_var("RENPY_LOG_TO_STDOUT", "1");
+    unsafe { std::env::set_var("RENPY_LOG_TO_STDOUT", "1") };
 
     let mut cmd = Command::new(python);
 
@@ -414,8 +414,10 @@ pub async fn launch(
     };
 
     if headless {
-        std::env::set_var("SDL_AUDIODRIVER", "dummy");
-        std::env::set_var("SDL_VIDEODRIVER", "dummy");
+        unsafe {
+            std::env::set_var("SDL_AUDIODRIVER", "dummy");
+            std::env::set_var("SDL_VIDEODRIVER", "dummy");
+        };
     }
 
     let mut child = cmd.spawn()?;
@@ -462,9 +464,11 @@ pub async fn launch(
         );
     }
 
-    match rpy_log_val_orig {
-        Some(val) => std::env::set_var("RENPY_LOG_TO_STDOUT", val),
-        None => std::env::remove_var("RENPY_LOG_TO_STDOUT"),
+    unsafe {
+        match rpy_log_val_orig {
+            Some(val) => std::env::set_var("RENPY_LOG_TO_STDOUT", val),
+            None => std::env::remove_var("RENPY_LOG_TO_STDOUT"),
+        }
     }
 
     let out_stdout = result_stdout.lock().unwrap().join("\n");
@@ -658,18 +662,24 @@ pub async fn install(
                 if !status.success() {
                     match status.code() {
                         Some(code) => {
-                            println!("Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}\nWriting default keystore.");
+                            println!(
+                                "Unable to generate Android keystore: Exit code {code}\nCommand: {cmd:?}\nWriting default keystore."
+                            );
                             write_default_keystore(android_keystore)?;
                         }
                         None => {
-                            println!("Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}\nWriting default keystore.");
+                            println!(
+                                "Unable to generate Android keystore: Terminated by signal\nCommand: {cmd:?}\nWriting default keystore."
+                            );
                             write_default_keystore(android_keystore)?;
                         }
                     }
                 };
             }
             Err(e) => {
-                println!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}\nWriting default keystore.");
+                println!(
+                    "Unable to generate Android keystore: {e}\nCommand: {cmd:?}\nWriting default keystore."
+                );
                 write_default_keystore(android_keystore)?;
             }
         };
@@ -704,7 +714,7 @@ pub async fn install(
         std::os::unix::fs::symlink(base_path.join("renpy"), base_path.join("rapt/renpy"))?;
     }
 
-    env::set_var("RAPT_NO_TERMS", "1");
+    unsafe { env::set_var("RAPT_NO_TERMS", "1") };
 
     let mut cmd = Command::new(&python);
     cmd.args(["-EO", "android.py", "installsdk"]);
