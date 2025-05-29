@@ -708,6 +708,12 @@ pub async fn install(
 
     let mut cmd = Command::new(&python);
     cmd.args(["-EO", "android.py", "installsdk"]);
+
+    println!("Environment");
+    for (k, v) in std::env::vars() {
+        println!("{k} = {v}");
+    }
+
     let status = cmd.status()?;
     if !status.success() {
         anyhow::bail!("Unable to install Android SDK.");
