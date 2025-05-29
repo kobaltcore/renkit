@@ -705,6 +705,7 @@ pub async fn install(
     let android_py = base_path.join("rapt/android.py");
     let mut cmd = Command::new(&python);
     cmd.args(["-EO", android_py.to_str().unwrap(), "installsdk"]);
+    cmd.current_dir(base_path.join("rapt"));
 
     let status = cmd.status()?;
     if !status.success() {
