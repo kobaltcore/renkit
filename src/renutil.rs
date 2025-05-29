@@ -709,6 +709,8 @@ pub async fn install(
     let mut cmd = Command::new(&python);
     cmd.args(["-EO", "android.py", "installsdk"]);
 
+    println!("Command: {cmd:?}");
+
     println!("Environment");
     for (k, v) in std::env::vars() {
         println!("{k} = {v}");
