@@ -7,10 +7,8 @@ use std::env;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Cursor;
-use std::io::Write;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Stdio;
