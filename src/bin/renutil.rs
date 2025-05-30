@@ -1,5 +1,5 @@
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use renkit::renutil::{cleanup, get_registry, install, launch, list, show, uninstall};
 use renkit::version::Version;

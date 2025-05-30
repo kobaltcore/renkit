@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use jwalk::WalkDir;
@@ -6,8 +6,8 @@ use renkit::renconstruct::config::{
     BuildOption, Config, CustomOptionValue, KnownBuildOption, TaskOptions,
 };
 use renkit::renconstruct::tasks::{
-    task_convert_images_pre, task_keystore_post, task_keystore_pre, task_lint_pre,
-    task_notarize_post, Task, TaskContext,
+    Task, TaskContext, task_convert_images_pre, task_keystore_post, task_keystore_pre,
+    task_lint_pre, task_notarize_post,
 };
 use renkit::renutil::{get_registry, install, launch};
 use renkit::version::Version;
@@ -15,7 +15,7 @@ use rustpython::vm::builtins::{PyList, PyStr};
 use rustpython::vm::convert::ToPyObject;
 use rustpython::vm::function::FuncArgs;
 use rustpython_vm::builtins::{PyDict, PyNone};
-use rustpython_vm::{import, Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine};
+use rustpython_vm::{Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine, import};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::{fs, thread};
@@ -451,7 +451,9 @@ async fn build(
         for (sandboxed, tasks) in &c {
             let tasks = tasks.collect::<Vec<_>>();
             if sandboxed && tasks.len() > 1 {
-                println!("Multiple sandboxed tasks at the same priority level detected, running in parallel.");
+                println!(
+                    "Multiple sandboxed tasks at the same priority level detected, running in parallel."
+                );
                 let mut handles = vec![];
                 for task in tasks {
                     let registry = registry.clone();
@@ -783,7 +785,9 @@ async fn build(
         for (sandboxed, tasks) in &c {
             let tasks = tasks.collect::<Vec<_>>();
             if sandboxed && tasks.len() > 1 {
-                println!("Multiple sandboxed tasks at the same priority level detected, running in parallel.");
+                println!(
+                    "Multiple sandboxed tasks at the same priority level detected, running in parallel."
+                );
                 let mut handles = vec![];
                 for task in tasks {
                     let registry = registry.clone();

@@ -5,7 +5,7 @@ use super::config::{
 use crate::renotize::full_run;
 use crate::renutil::launch;
 use crate::version::Version;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use base64::prelude::*;
 use command_executor::command::Command;
 use command_executor::shutdown_mode::ShutdownMode;

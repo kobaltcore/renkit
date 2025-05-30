@@ -1,20 +1,20 @@
 use crate::common::zip_dir;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use app_store_connect::notary_api::{self, SubmissionResponseStatus};
 use apple_codesign::{
+    AppleCodesignError, CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope,
+    SigningSettings, UnifiedSigner,
     cli::{
         certificate_source::{CertificateDerSigningKey, CertificateSource, PemSigningKey},
         config::SignConfig,
     },
     stapling::Stapler,
-    AppleCodesignError, CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope,
-    SigningSettings, UnifiedSigner,
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use jwalk::WalkDir;
 use plist::Value;
-use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey};
 use std::{
     fs::{self, File},
     io::Cursor,
@@ -463,7 +463,9 @@ pub fn provision() -> Result<()> {
             break;
         }
         println!("Certificate not found. Press 'Enter' when you have saved the certificate.");
-        println!("Make sure to name the file 'developerID_application.cer' and save it next to the private-key.pem and csr.pem files.");
+        println!(
+            "Make sure to name the file 'developerID_application.cer' and save it next to the private-key.pem and csr.pem files."
+        );
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
     }
