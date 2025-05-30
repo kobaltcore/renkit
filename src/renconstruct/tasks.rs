@@ -2,6 +2,7 @@ use super::config::{
     ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, LintOptions,
     NotarizeOptions,
 };
+use crate::common::canonicalize_normalized;
 use crate::renotize::full_run;
 use crate::renutil::launch;
 use crate::version::Version;
@@ -346,7 +347,7 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         options.alias.clone().unwrap_or("android".to_string()),
         password,
         password,
-        fs::canonicalize(android_path)?.to_string_lossy(),
+        canonicalize_normalized(android_path)?.to_string_lossy(),
         ctx.renpy_path.to_string_lossy()
     );
     fs::write(&local_properties_path, &property_contents)?;
