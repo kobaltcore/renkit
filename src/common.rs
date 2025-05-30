@@ -1,11 +1,32 @@
 use anyhow::Result;
 use jwalk::{ClientState, DirEntry};
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{Read, Seek, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
-use zip::{write::SimpleFileOptions, ZipWriter};
+use zip::{ZipWriter, write::SimpleFileOptions};
+
+pub fn canonicalize_normalized<P: AsRef<Path>>(input: P) -> std::io::Result<PathBuf> {
+    let path = fs::canonicalize(input)?;
+    Ok(strip_extended_prefix(&path))
+}
+
+pub fn strip_extended_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        // Preserve UNC paths like \\?\UNC\server\share
+        if let Some(stripped) = s.strip_prefix(r"\\?\UNC\") {
+            PathBuf::from(format!(r"\\{}", stripped))
+        } else if let Some(stripped) = s.strip_prefix(r"\\?\") {
+            PathBuf::from(stripped)
+        } else {
+            path.to_path_buf()
+        }
+    } else {
+        path.to_path_buf()
+    }
+}
 
 /// # Panics
 ///

@@ -1,3 +1,4 @@
+use crate::common::canonicalize_normalized;
 use crate::version::Version;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -44,7 +45,7 @@ impl<S: InstanceState> Instance<S> {
 
     #[must_use]
     pub fn path(&self, registry: &PathBuf) -> PathBuf {
-        let base_path = fs::canonicalize(registry).expect("Unable to canonicalize path.");
+        let base_path = canonicalize_normalized(registry).expect("Unable to canonicalize path.");
         base_path.join(self.version.to_string())
     }
 }
