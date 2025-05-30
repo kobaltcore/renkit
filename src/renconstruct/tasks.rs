@@ -347,7 +347,9 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         options.alias.clone().unwrap_or("android".to_string()),
         password,
         password,
-        canonicalize_normalized(android_path)?.to_string_lossy(),
+        canonicalize_normalized(android_path)?
+            .to_string_lossy()
+            .replace("\\", "/"),
         ctx.renpy_path.to_string_lossy()
     );
     fs::write(&local_properties_path, &property_contents)?;
