@@ -10,8 +10,6 @@ This was added to Ren'Py as an experimental feature but [subsequently removed](h
 
 The `keytool` path for generating Android keystores is now properly joined on Windows systems, fixing a bug where the keystore generation could fail on Windows due to incorrect pathing.
 
-In the case of a keystore generation failure, `renconstruct` will now write a default, pre-generated keystore (with the same settings as it would otherwise use) to continue the installation. Since this keystores are generally overwritten by the `keystore` task, this won't affect the final build.
-
 ## Improvements
 
 Better output when keystores fail to generate: `renconstruct` will now print the command it used to generate the keystore, making it easier to debug issues.
@@ -26,7 +24,7 @@ type = "custom"
 sandboxed = true
 ```
 
-`sandboxed` in the context of `renconstruct` is a _promise_ from the user that the task will not modify any global state or have any side effects outside of the task's own scope. For example, a task that creates a file will do so in a way that does not affect itself if it were run with different parameters.
+`sandboxed` in the context of `renconstruct` is a _promise_ from the user that the task will not modify any global state or have any side effects outside of the task's own scope. For example, a task that creates a file will do so in a way that does not affect itself or others if it were run with different parameters.
 
 Under this guarantee, `reconstruct` will execute tasks in parallel if they are marked as `sandboxed`, occur in the same build stage and have the same priority level. Thus, if task A runs pre-build and task B runs post-build, they can _not_ be executed in parallel.
 However, if task A and task B are both marked as `sandboxed` and occur in the same stage with the same priority level, they _can_ be executed in parallel. `renconstruct` will automatically detect parallelism opportunities and inform you of this in the logs.
