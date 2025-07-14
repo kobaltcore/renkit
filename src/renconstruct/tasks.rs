@@ -431,7 +431,11 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
             continue;
         }
 
-        for entry in if opts.recursive { WalkDir::new(path) } else { WalkDir::new(path).max_depth(1) } {
+        for entry in if opts.recursive {
+            WalkDir::new(path)
+        } else {
+            WalkDir::new(path).max_depth(1)
+        } {
             match entry {
                 Ok(entry) => {
                     if entry.path().is_dir() {
@@ -457,13 +461,10 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
                             }
                             files.push((entry.path(), opts.lossless));
                         }
-                        None => continue,
+                        None => {}
                     }
                 }
-                Err(err) => {
-                    println!("Error: {err}");
-                    continue;
-                }
+                Err(err) => println!("Error: {err}"),
             }
         }
     }
@@ -543,10 +544,7 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                             None => continue,
                         }
                     }
-                    Err(err) => {
-                        println!("Error: {err}");
-                        continue;
-                    }
+                    Err(err) => println!("Error: {err}"),
                 }
             }
 

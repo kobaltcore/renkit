@@ -277,10 +277,7 @@ async fn build(
                         None => continue,
                     }
                 }
-                Err(err) => {
-                    println!("Error: {err}");
-                    continue;
-                }
+                Err(err) => println!("Error: {err}"),
             }
         }
 
@@ -301,10 +298,10 @@ async fn build(
             .unwrap();
         let result = result.to_sequence().list(vm).unwrap();
 
-        for (name, opts) in tasks.iter_mut().filter(|(_, opts)| match opts.options {
-            TaskOptions::Custom(_) => true,
-            _ => false,
-        }) {
+        for (name, opts) in tasks
+            .iter_mut()
+            .filter(|(_, opts)| matches!(opts.options, TaskOptions::Custom(_)))
+        {
             let mut class = None;
             for val in result.borrow_vec().iter() {
                 let name_slug = val
@@ -743,7 +740,7 @@ async fn build(
                     KnownBuildOption::AndroidApk
                     | KnownBuildOption::AndroidAab
                     | KnownBuildOption::Web,
-                ) => continue,
+                ) => {}
             }
         }
 
@@ -853,8 +850,7 @@ async fn build(
                         get_on_builds(&all_active_builds, &task.kind.on_builds, output_dir);
 
                     match &task.kind.options {
-                        TaskOptions::Lint(_) => {}
-                        TaskOptions::ConvertImages(_) => {}
+                        TaskOptions::Lint(_) | TaskOptions::ConvertImages(_) => {}
                         TaskOptions::Keystore(opts) => {
                             println!("[Post] Running task: {}", task.name);
                             let ctx = TaskContext {

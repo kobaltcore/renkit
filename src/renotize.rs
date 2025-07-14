@@ -138,7 +138,7 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
                     Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
                 }
             }
-            None => continue,
+            None => {}
         }
     }
 
@@ -303,25 +303,26 @@ pub fn status(uuid: &str, app_store_key_file: &Path) -> Result<()> {
     println!("Status: {status}");
 
     if let Some(issues) = log.get("issues")
-        && let serde_json::Value::Array(_) = issues {
-            let issues = issues.as_array().unwrap().iter().map(|issue| {
-                let issue = issue.as_object().unwrap();
-                let message = issue.get("message").unwrap().as_str().unwrap();
-                let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
-                let path = issue.get("path").unwrap().as_str().unwrap();
-                (message, doc_url, path)
-            });
+        && let serde_json::Value::Array(_) = issues
+    {
+        let issues = issues.as_array().unwrap().iter().map(|issue| {
+            let issue = issue.as_object().unwrap();
+            let message = issue.get("message").unwrap().as_str().unwrap();
+            let doc_url = issue.get("docUrl").unwrap().as_str().unwrap();
+            let path = issue.get("path").unwrap().as_str().unwrap();
+            (message, doc_url, path)
+        });
 
-            for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
-                println!("Error: {key}");
-                for (i, (_, doc_url, path)) in group.enumerate() {
-                    if i == 0 {
-                        println!("Documentation: {doc_url}\nAffected files:");
-                    }
-                    println!("  - {path}");
+        for (key, group) in &issues.chunk_by(|(message, _, _)| *message) {
+            println!("Error: {key}");
+            for (i, (_, doc_url, path)) in group.enumerate() {
+                if i == 0 {
+                    println!("Documentation: {doc_url}\nAffected files:");
                 }
+                println!("  - {path}");
             }
         }
+    }
 
     Ok(())
 }
