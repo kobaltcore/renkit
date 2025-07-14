@@ -268,14 +268,11 @@ async fn build(
                     if path.is_dir() {
                         continue;
                     }
-                    match path.extension() {
-                        Some(ext) => {
-                            if ext != "py" {
-                                continue;
-                            }
-                            paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
+                    if let Some(ext) = path.extension() {
+                        if ext != "py" {
+                            continue;
                         }
-                        None => {}
+                        paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
                     }
                 }
                 Err(err) => println!("Error: {err}"),

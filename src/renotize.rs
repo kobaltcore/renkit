@@ -123,8 +123,8 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
     for entry in fs::read_dir(output_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if let Some(ext) = path.extension() {
-            if ext.to_string_lossy() == "app" {
+        if let Some(ext) = path.extension()
+            && ext.to_string_lossy() == "app" {
                 let info_plist_path = path.join("Contents/Info.plist");
                 app_path = Some(path);
                 let mut info_plist = Value::from_file(&info_plist_path)?
@@ -136,7 +136,6 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
                 );
                 Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
             }
-        }
     }
 
     Ok(app_path.unwrap())
