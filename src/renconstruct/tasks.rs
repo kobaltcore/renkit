@@ -531,14 +531,10 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                         if path.is_file() {
                             continue;
                         }
-                        match path.extension() {
-                            Some(ext) => {
-                                if ext == "app" {
-                                    app_bundles.push(path);
-                                }
+                        if let Some(ext) = path.extension()
+                            && ext == "app" {
+                                app_bundles.push(path);
                             }
-                            None => continue,
-                        }
                     }
                     Err(err) => println!("Error: {err}"),
                 }

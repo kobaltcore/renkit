@@ -124,18 +124,19 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
         let entry = entry?;
         let path = entry.path();
         if let Some(ext) = path.extension()
-            && ext.to_string_lossy() == "app" {
-                let info_plist_path = path.join("Contents/Info.plist");
-                app_path = Some(path);
-                let mut info_plist = Value::from_file(&info_plist_path)?
-                    .into_dictionary()
-                    .ok_or(anyhow!("Info.plist is not a dictionary"))?;
-                info_plist.insert(
-                    "CFBundleIdentifier".to_string(),
-                    plist::Value::String(bundle_id.to_owned()),
-                );
-                Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
-            }
+            && ext.to_string_lossy() == "app"
+        {
+            let info_plist_path = path.join("Contents/Info.plist");
+            app_path = Some(path);
+            let mut info_plist = Value::from_file(&info_plist_path)?
+                .into_dictionary()
+                .ok_or(anyhow!("Info.plist is not a dictionary"))?;
+            info_plist.insert(
+                "CFBundleIdentifier".to_string(),
+                plist::Value::String(bundle_id.to_owned()),
+            );
+            Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
+        }
     }
 
     Ok(app_path.unwrap())
@@ -183,7 +184,7 @@ pub fn sign_app(input_file: &Path, key_file: &Path, cert_file: &Path) -> Result<
 
     let signer = UnifiedSigner::new(settings);
 
-    println!("Signing bundle at {input_file:?}");
+    println!("Signing bundle at {}", input_file.display());
     signer.sign_path_in_place(input_file)?;
 
     Ok(())
@@ -336,16 +337,16 @@ pub fn full_run(
 
     let app_path = if is_zip {
         let output_dir = input_file.with_extension("");
-        println!("Unpacking app to {output_dir:?}");
+        println!("Unpacking app to {}", output_dir.display());
         unpack_app(input_file, &output_dir, bundle_id)?
     } else {
         input_file.to_path_buf()
     };
 
-    println!("Signing app at {app_path:?}");
+    println!("Signing app at {}", app_path.display());
     sign_app(&app_path, key_file, cert_file)?;
 
-    println!("Notarizing app at {app_path:?}");
+    println!("Notarizing app at {}", app_path.display());
     notarize_app(&app_path, app_store_key_file)?;
 
     if create_zip {
@@ -357,7 +358,7 @@ pub fn full_run(
                 input_file.file_stem().unwrap().to_string_lossy()
             ))
             .with_extension("zip");
-        println!("Packing ZIP to {input_file:?}");
+        println!("Packing ZIP to {}", input_file.display());
         pack_zip(&app_path, &zip_path)?;
 
         if is_zip {
@@ -365,18 +366,18 @@ pub fn full_run(
         }
         fs::rename(&zip_path, input_file.with_extension("zip"))?;
 
-        println!("Notarizing ZIP at {input_file:?}");
+        println!("Notarizing ZIP at {}", input_file.display());
         notarize_zip(input_file, app_store_key_file, &app_path)?;
     }
 
     if std::env::consts::OS == "macos" {
         if create_dmg {
             let dmg_path = input_file.with_extension("dmg");
-            println!("Packing DMG to {dmg_path:?}");
+            println!("Packing DMG to {}", dmg_path.display());
             pack_dmg(&app_path, &dmg_path, &None)?;
-            println!("Signing DMG at {dmg_path:?}");
+            println!("Signing DMG at {}", dmg_path.display());
             sign_dmg(&dmg_path, key_file, cert_file)?;
-            println!("Notarizing DMG at {dmg_path:?}");
+            println!("Notarizing DMG at {}", dmg_path.display());
             notarize_dmg(&dmg_path, app_store_key_file)?;
 
             fs::remove_dir_all(app_path.parent().unwrap())?;
