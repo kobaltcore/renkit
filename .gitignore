@@ -11,5 +11,5 @@ __pycache__/
 *.zip
 *.dmg
 *.app
-renconstruct.toml
+renconstruct*.toml
 .aider*
