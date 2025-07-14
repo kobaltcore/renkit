@@ -1,7 +1,7 @@
 use crate::renutil::{Instance, Local, Remote};
 use anyhow::Result;
 use reqwest::Url;
-use std::path::Path;
+use std::{path::Path, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
@@ -12,8 +12,10 @@ pub struct Version {
     pub nightly: bool,
 }
 
-impl Version {
-    pub fn from_str(s: &str) -> Result<Self> {
+impl FromStr for Version {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let reg = regex::Regex::new(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?(\+nightly)?$").unwrap();
         match reg.captures(s) {
             Some(caps) => {
@@ -39,7 +41,8 @@ impl Version {
             None => Err(anyhow::anyhow!("Invalid version string.")),
         }
     }
-
+}
+impl Version {
     #[must_use]
     pub fn is_installed(&self, registry: &Path) -> bool {
         registry.join(self.to_string()).exists()
@@ -96,38 +99,52 @@ impl Version {
     }
 
     pub fn rapt_url(&self) -> Result<Url> {
-        if self.nightly { Url::parse(&format!(
-            "https://nightly.renpy.org/{self}/renpy-{self}-rapt.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
-            "https://www.renpy.org/dl/{self}/renpy-{self}-rapt.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) }
+        if self.nightly {
+            Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-rapt.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        } else {
+            Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-rapt.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        }
     }
 
     pub fn steam_url(&self) -> Result<Url> {
-        if self.nightly { Url::parse(&format!(
-            "https://nightly.renpy.org/{self}/renpy-{self}-steam.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
-            "https://www.renpy.org/dl/{self}/renpy-{self}-steam.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) }
+        if self.nightly {
+            Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-steam.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        } else {
+            Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-steam.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        }
     }
 
     pub fn web_url(&self) -> Result<Url> {
-        if self.nightly { Url::parse(&format!(
-            "https://nightly.renpy.org/{self}/renpy-{self}-web.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
-            "https://www.renpy.org/dl/{self}/renpy-{self}-web.zip"
-        ))
-        .map_err(|e| anyhow::anyhow!(e)) }
+        if self.nightly {
+            Url::parse(&format!(
+                "https://nightly.renpy.org/{self}/renpy-{self}-web.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        } else {
+            Url::parse(&format!(
+                "https://www.renpy.org/dl/{self}/renpy-{self}-web.zip"
+            ))
+            .map_err(|e| anyhow::anyhow!(e))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     #[test]
     fn version_links() {
         let v = super::Version::from_str("8.3.0").unwrap();

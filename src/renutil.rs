@@ -13,6 +13,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Stdio;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -250,10 +251,14 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
 pub async fn list(registry: &PathBuf, online: bool, num: usize, nightly: bool) -> Result<()> {
     let versions = get_available_versions(registry, online).await?;
 
-    let mut versions = if online { versions
-    .iter()
-    .filter(|v| !v.nightly || nightly)
-    .collect::<Vec<&Version>>() } else { versions.iter().collect::<Vec<&Version>>() };
+    let mut versions = if online {
+        versions
+            .iter()
+            .filter(|v| !v.nightly || nightly)
+            .collect::<Vec<&Version>>()
+    } else {
+        versions.iter().collect::<Vec<&Version>>()
+    };
 
     versions.sort_by(|a, b| b.cmp(a));
 
@@ -463,7 +468,11 @@ pub async fn install(
     let java_home = if let Ok(val) = env::var("JAVA_HOME") {
         PathBuf::from(val)
     } else {
-        let jdk_version = if version >= &Version::from_str("8.2.0").unwrap() { "21" } else { "8" };
+        let jdk_version = if version >= &Version::from_str("8.2.0").unwrap() {
+            "21"
+        } else {
+            "8"
+        };
         anyhow::bail!(
             "JAVA_HOME is not set. Please check if you need to install OpenJDK {jdk_version}"
         );
@@ -493,13 +502,22 @@ pub async fn install(
 
     println!("Downloading Ren'Py {version}...");
     let downloads = vec![
-        Download::new(&sdk_url, sdk_url.path_segments().unwrap().next_back().unwrap()),
-        Download::new(&rapt_url, rapt_url.path_segments().unwrap().next_back().unwrap()),
+        Download::new(
+            &sdk_url,
+            sdk_url.path_segments().unwrap().next_back().unwrap(),
+        ),
+        Download::new(
+            &rapt_url,
+            rapt_url.path_segments().unwrap().next_back().unwrap(),
+        ),
         Download::new(
             &steam_url,
             steam_url.path_segments().unwrap().next_back().unwrap(),
         ),
-        Download::new(&web_url, web_url.path_segments().unwrap().next_back().unwrap()),
+        Download::new(
+            &web_url,
+            web_url.path_segments().unwrap().next_back().unwrap(),
+        ),
     ];
     let downloader = DownloaderBuilder::new().directory(registry.clone()).build();
     downloader.download(&downloads).await;

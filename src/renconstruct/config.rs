@@ -5,6 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
     path::PathBuf,
+    str::FromStr,
 };
 
 fn deserialize_version<'de, D>(deserializer: D) -> Result<Version, D::Error>

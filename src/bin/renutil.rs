@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 use renkit::renutil::{cleanup, get_registry, install, launch, list, show, uninstall};
 use renkit::version::Version;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

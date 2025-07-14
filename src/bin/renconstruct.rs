@@ -18,6 +18,7 @@ use rustpython_vm::builtins::{PyDict, PyNone};
 use rustpython_vm::{Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine, import};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::{fs, thread};
 
 #[derive(Parser)]
@@ -274,7 +275,7 @@ async fn build(
                             }
                             paths.push(PyStr::from(path.to_string_lossy()).to_pyobject(vm));
                         }
-                        None => continue,
+                        None => {}
                     }
                 }
                 Err(err) => println!("Error: {err}"),

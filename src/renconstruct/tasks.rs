@@ -22,6 +22,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::{env, fs, thread};
 use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
 
@@ -441,27 +442,22 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
                     if entry.path().is_dir() {
                         continue;
                     }
-                    match entry.path().extension() {
-                        Some(ext) => {
-                            if !opts.extensions.contains(&ext.to_string_lossy().to_string()) {
-                                continue;
-                            }
-                            // read first 16 bytes
-                            let mut buf = [0; 12];
-                            let mut file = fs::File::open(entry.path())?;
-                            file.read_exact(&mut buf)?;
-                            drop(file);
-                            if String::from_utf8_lossy(&buf[0..4]).to_string().as_str() == "RIFF" {
-                                continue;
-                            }
-                            if String::from_utf8_lossy(&buf[4..12]).to_string().as_str()
-                                == "ftypavif"
-                            {
-                                continue;
-                            }
-                            files.push((entry.path(), opts.lossless));
+                    if let Some(ext) = entry.path().extension() {
+                        if !opts.extensions.contains(&ext.to_string_lossy().to_string()) {
+                            continue;
                         }
-                        None => {}
+                        // read first 16 bytes
+                        let mut buf = [0; 12];
+                        let mut file = fs::File::open(entry.path())?;
+                        file.read_exact(&mut buf)?;
+                        drop(file);
+                        if String::from_utf8_lossy(&buf[0..4]).to_string().as_str() == "RIFF" {
+                            continue;
+                        }
+                        if String::from_utf8_lossy(&buf[4..12]).to_string().as_str() == "ftypavif" {
+                            continue;
+                        }
+                        files.push((entry.path(), opts.lossless));
                     }
                 }
                 Err(err) => println!("Error: {err}"),

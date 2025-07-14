@@ -123,22 +123,19 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
     for entry in fs::read_dir(output_dir)? {
         let entry = entry?;
         let path = entry.path();
-        match path.extension() {
-            Some(ext) => {
-                if ext.to_string_lossy() == "app" {
-                    let info_plist_path = path.join("Contents/Info.plist");
-                    app_path = Some(path);
-                    let mut info_plist = Value::from_file(&info_plist_path)?
-                        .into_dictionary()
-                        .ok_or(anyhow!("Info.plist is not a dictionary"))?;
-                    info_plist.insert(
-                        "CFBundleIdentifier".to_string(),
-                        plist::Value::String(bundle_id.to_owned()),
-                    );
-                    Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
-                }
+        if let Some(ext) = path.extension() {
+            if ext.to_string_lossy() == "app" {
+                let info_plist_path = path.join("Contents/Info.plist");
+                app_path = Some(path);
+                let mut info_plist = Value::from_file(&info_plist_path)?
+                    .into_dictionary()
+                    .ok_or(anyhow!("Info.plist is not a dictionary"))?;
+                info_plist.insert(
+                    "CFBundleIdentifier".to_string(),
+                    plist::Value::String(bundle_id.to_owned()),
+                );
+                Value::Dictionary(info_plist).to_file_xml(&info_plist_path)?;
             }
-            None => {}
         }
     }
 
