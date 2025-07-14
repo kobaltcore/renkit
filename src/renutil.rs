@@ -250,13 +250,10 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
 pub async fn list(registry: &PathBuf, online: bool, num: usize, nightly: bool) -> Result<()> {
     let versions = get_available_versions(registry, online).await?;
 
-    let mut versions = match online {
-        true => versions
-            .iter()
-            .filter(|v| !v.nightly || nightly)
-            .collect::<Vec<&Version>>(),
-        false => versions.iter().collect::<Vec<&Version>>(),
-    };
+    let mut versions = if online { versions
+    .iter()
+    .filter(|v| !v.nightly || nightly)
+    .collect::<Vec<&Version>>() } else { versions.iter().collect::<Vec<&Version>>() };
 
     versions.sort_by(|a, b| b.cmp(a));
 
@@ -370,10 +367,7 @@ pub async fn launch(
     let entrypoint = instance.entrypoint(registry);
     let entrypoint = entrypoint.to_str().unwrap();
 
-    let rpy_log_val_orig = match std::env::var("RENPY_LOG_TO_STDOUT") {
-        Ok(val) => Some(val),
-        Err(_) => None,
-    };
+    let rpy_log_val_orig = std::env::var("RENPY_LOG_TO_STDOUT").ok();
     unsafe { std::env::set_var("RENPY_LOG_TO_STDOUT", "1") };
 
     let mut cmd = Command::new(python);
@@ -388,7 +382,7 @@ pub async fn launch(
         let launcher_path = instance.path(registry).join("launcher");
         let launcher_path = launcher_path.to_str().unwrap();
         cmd.arg(launcher_path).args(args);
-    };
+    }
 
     if headless {
         unsafe {
@@ -469,10 +463,7 @@ pub async fn install(
     let java_home = if let Ok(val) = env::var("JAVA_HOME") {
         PathBuf::from(val)
     } else {
-        let jdk_version = match version >= &Version::from_str("8.2.0").unwrap() {
-            true => "21",
-            false => "8",
-        };
+        let jdk_version = if version >= &Version::from_str("8.2.0").unwrap() { "21" } else { "8" };
         anyhow::bail!(
             "JAVA_HOME is not set. Please check if you need to install OpenJDK {jdk_version}"
         );
@@ -502,20 +493,20 @@ pub async fn install(
 
     println!("Downloading Ren'Py {version}...");
     let downloads = vec![
-        Download::new(&sdk_url, sdk_url.path_segments().unwrap().last().unwrap()),
-        Download::new(&rapt_url, rapt_url.path_segments().unwrap().last().unwrap()),
+        Download::new(&sdk_url, sdk_url.path_segments().unwrap().next_back().unwrap()),
+        Download::new(&rapt_url, rapt_url.path_segments().unwrap().next_back().unwrap()),
         Download::new(
             &steam_url,
-            steam_url.path_segments().unwrap().last().unwrap(),
+            steam_url.path_segments().unwrap().next_back().unwrap(),
         ),
-        Download::new(&web_url, web_url.path_segments().unwrap().last().unwrap()),
+        Download::new(&web_url, web_url.path_segments().unwrap().next_back().unwrap()),
     ];
     let downloader = DownloaderBuilder::new().directory(registry.clone()).build();
     downloader.download(&downloads).await;
 
     println!("Extracting SDK");
 
-    let sdk_zip_path = registry.join(sdk_url.path_segments().unwrap().last().unwrap());
+    let sdk_zip_path = registry.join(sdk_url.path_segments().unwrap().next_back().unwrap());
 
     if sdk_zip_path.extension().unwrap() == "bz2" {
         let compressed_file = fs::File::open(&sdk_zip_path)?;
@@ -544,12 +535,12 @@ pub async fn install(
 
     println!("Extracting RAPT");
 
-    let rapt_zip_path = registry.join(rapt_url.path_segments().unwrap().last().unwrap());
+    let rapt_zip_path = registry.join(rapt_url.path_segments().unwrap().next_back().unwrap());
 
     let rapt_zip = fs::read(&rapt_zip_path)?;
     zip_extract::extract(Cursor::new(rapt_zip), &base_path.join("rapt"), true)?;
 
-    let steam_zip_path = registry.join(steam_url.path_segments().unwrap().last().unwrap());
+    let steam_zip_path = registry.join(steam_url.path_segments().unwrap().next_back().unwrap());
     if steam_zip_path.exists() {
         println!("Extracting Steam support");
 
@@ -557,7 +548,7 @@ pub async fn install(
         zip_extract::extract(Cursor::new(steam_zip), &base_path.join("lib"), true)?;
     }
 
-    let web_zip_path = registry.join(web_url.path_segments().unwrap().last().unwrap());
+    let web_zip_path = registry.join(web_url.path_segments().unwrap().next_back().unwrap());
     if web_zip_path.exists() {
         println!("Extracting Web support");
 
@@ -618,7 +609,7 @@ pub async fn install(
         cmd.args([
             "-genkey",
             "-keystore",
-            &android_keystore_str,
+            android_keystore_str,
             "-alias",
             "android",
             "-keyalg",
@@ -649,12 +640,12 @@ pub async fn install(
                             );
                         }
                     }
-                };
+                }
             }
             Err(e) => {
                 anyhow::bail!("Unable to generate Android keystore: {e}\nCommand: {cmd:?}");
             }
-        };
+        }
     }
 
     let bundle_keystore = base_path.join("rapt").join("android.keystore");

@@ -96,42 +96,33 @@ impl Version {
     }
 
     pub fn rapt_url(&self) -> Result<Url> {
-        match self.nightly {
-            true => Url::parse(&format!(
-                "https://nightly.renpy.org/{self}/renpy-{self}-rapt.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-            false => Url::parse(&format!(
-                "https://www.renpy.org/dl/{self}/renpy-{self}-rapt.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-        }
+        if self.nightly { Url::parse(&format!(
+            "https://nightly.renpy.org/{self}/renpy-{self}-rapt.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
+            "https://www.renpy.org/dl/{self}/renpy-{self}-rapt.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) }
     }
 
     pub fn steam_url(&self) -> Result<Url> {
-        match self.nightly {
-            true => Url::parse(&format!(
-                "https://nightly.renpy.org/{self}/renpy-{self}-steam.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-            false => Url::parse(&format!(
-                "https://www.renpy.org/dl/{self}/renpy-{self}-steam.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-        }
+        if self.nightly { Url::parse(&format!(
+            "https://nightly.renpy.org/{self}/renpy-{self}-steam.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
+            "https://www.renpy.org/dl/{self}/renpy-{self}-steam.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) }
     }
 
     pub fn web_url(&self) -> Result<Url> {
-        match self.nightly {
-            true => Url::parse(&format!(
-                "https://nightly.renpy.org/{self}/renpy-{self}-web.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-            false => Url::parse(&format!(
-                "https://www.renpy.org/dl/{self}/renpy-{self}-web.zip"
-            ))
-            .map_err(|e| anyhow::anyhow!(e)),
-        }
+        if self.nightly { Url::parse(&format!(
+            "https://nightly.renpy.org/{self}/renpy-{self}-web.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) } else { Url::parse(&format!(
+            "https://www.renpy.org/dl/{self}/renpy-{self}-web.zip"
+        ))
+        .map_err(|e| anyhow::anyhow!(e)) }
     }
 }
 

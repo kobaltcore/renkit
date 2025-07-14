@@ -386,23 +386,17 @@ async fn build(
 
                 match &mut opts.options {
                     TaskOptions::Custom(opts) => {
-                        match instance.has_attr("pre_build", vm) {
-                            Ok(true) => {
-                                opts.task_handle_pre =
-                                    Some(instance.get_attr("pre_build", vm).unwrap());
-                            }
-                            _ => {}
+                        if let Ok(true) = instance.has_attr("pre_build", vm) {
+                            opts.task_handle_pre =
+                                Some(instance.get_attr("pre_build", vm).unwrap());
                         }
-                        match instance.has_attr("post_build", vm) {
-                            Ok(true) => {
-                                opts.task_handle_post =
-                                    Some(instance.get_attr("post_build", vm).unwrap());
-                            }
-                            _ => {}
+                        if let Ok(true) = instance.has_attr("post_build", vm) {
+                            opts.task_handle_post =
+                                Some(instance.get_attr("post_build", vm).unwrap());
                         }
                     }
                     _ => panic!("Task type mismatch."),
-                };
+                }
             } else {
                 panic!("Custom task not found: {name}");
             }
@@ -510,7 +504,7 @@ async fn build(
                                 }));
                             }
                         }
-                    };
+                    }
                 }
 
                 println!("Joining handles");
@@ -587,7 +581,7 @@ async fn build(
                                 handler.call((py_dict.to_pyobject(vm),), vm).unwrap();
                             }
                         }
-                    };
+                    }
                 }
             }
         }
@@ -750,7 +744,7 @@ async fn build(
                     | KnownBuildOption::AndroidAab
                     | KnownBuildOption::Web,
                 ) => continue,
-            };
+            }
         }
 
         launch(
@@ -844,7 +838,7 @@ async fn build(
                                 }));
                             }
                         }
-                    };
+                    }
                 }
 
                 println!("Joining handles");
@@ -910,7 +904,7 @@ async fn build(
                                 handler.call((py_dict,), vm).unwrap();
                             }
                         }
-                    };
+                    }
                 }
             }
         }

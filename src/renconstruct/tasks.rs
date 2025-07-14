@@ -269,7 +269,7 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         android_path_backup = ctx.input_dir.join("android.keystore.original");
         bundle_path = ctx.input_dir.join("bundle.keystore");
         bundle_path_backup = ctx.input_dir.join("bundle.keystore.original");
-    };
+    }
 
     if android_path.exists() && !android_path_backup.exists() {
         fs::copy(&android_path, &android_path_backup)?;
@@ -349,7 +349,7 @@ pub fn task_keystore_pre(ctx: &TaskContext, options: &KeystoreOptions) -> Result
         password,
         canonicalize_normalized(android_path)?
             .to_string_lossy()
-            .replace("\\", "/"),
+            .replace('\\', "/"),
         ctx.renpy_path.to_string_lossy()
     );
     fs::write(&local_properties_path, &property_contents)?;
@@ -388,7 +388,7 @@ pub fn task_keystore_post(ctx: &TaskContext, _options: &KeystoreOptions) -> Resu
         android_path_backup = ctx.input_dir.join("android.keystore.original");
         bundle_path = ctx.input_dir.join("bundle.keystore");
         bundle_path_backup = ctx.input_dir.join("bundle.keystore.original");
-    };
+    }
 
     if android_path_backup.exists() {
         fs::copy(&android_path_backup, &android_path)?;
@@ -431,10 +431,7 @@ pub fn task_convert_images_pre(ctx: &TaskContext, options: &ConvertImagesOptions
             continue;
         }
 
-        for entry in match opts.recursive {
-            true => WalkDir::new(path),
-            false => WalkDir::new(path).max_depth(1),
-        } {
+        for entry in if opts.recursive { WalkDir::new(path) } else { WalkDir::new(path).max_depth(1) } {
             match entry {
                 Ok(entry) => {
                     if entry.path().is_dir() {

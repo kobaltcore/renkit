@@ -91,7 +91,7 @@ fn notarize_file(
                 match staple_file {
                     Some(sf) => stapler.staple_path(sf)?,
                     None => stapler.staple_path(input_file)?,
-                };
+                }
             } else {
                 println!("Notarization failed.");
 
@@ -100,12 +100,12 @@ fn notarize_file(
                 for line in serde_json::to_string_pretty(&log)?.lines() {
                     println!("notary log> {line}");
                 }
-            };
+            }
         }
         NotarizationUpload::NotaryResponse(_) => {
             unreachable!("NotarizationUpload::NotaryResponse should be returned")
         }
-    };
+    }
 
     Ok(())
 }
@@ -139,7 +139,7 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
                 }
             }
             None => continue,
-        };
+        }
     }
 
     Ok(app_path.unwrap())
@@ -302,8 +302,8 @@ pub fn status(uuid: &str, app_store_key_file: &Path) -> Result<()> {
     };
     println!("Status: {status}");
 
-    if let Some(issues) = log.get("issues") {
-        if let serde_json::Value::Array(_) = issues {
+    if let Some(issues) = log.get("issues")
+        && let serde_json::Value::Array(_) = issues {
             let issues = issues.as_array().unwrap().iter().map(|issue| {
                 let issue = issue.as_object().unwrap();
                 let message = issue.get("message").unwrap().as_str().unwrap();
@@ -322,7 +322,6 @@ pub fn status(uuid: &str, app_store_key_file: &Path) -> Result<()> {
                 }
             }
         }
-    };
 
     Ok(())
 }
