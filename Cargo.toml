@@ -17,15 +17,15 @@ anyhow = "1.0.98"
 num_cpus = "1.17.0"
 itertools = "0.14.0"
 command-executor = "0.1.1"
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.47.1", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
 toml = "0.8.23"
 plist = "1.7.4"
-lol_html = "2.5.0"
-serde_json = "1.0.140"
+lol_html = "2.6.0"
+serde_json = "1.0.142"
 serde = { version = "1.0.219", features = ["derive"] }
 # Filesystem
 home = "0.5.11"
@@ -45,7 +45,7 @@ apple-codesign = "0.29.0"
 x509-certificate = "0.24.0"
 app-store-connect = "0.7.0"
 # CLI
-clap = { version = "4.5.41", features = ["derive"] }
+clap = { version = "4.5.42", features = ["derive"] }
 indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 # Images
 image = "0.25.6"
