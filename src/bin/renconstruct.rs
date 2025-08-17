@@ -2,24 +2,34 @@ use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use jwalk::WalkDir;
-use renkit::renconstruct::config::{
-    BuildOption, Config, CustomOptionValue, KnownBuildOption, TaskOptions,
+use renkit::{
+    renconstruct::{
+        config::{BuildOption, Config, CustomOptionValue, KnownBuildOption, TaskOptions},
+        tasks::{
+            Task, TaskContext, task_convert_images_pre, task_keystore_post, task_keystore_pre,
+            task_lint_pre, task_notarize_post,
+        },
+    },
+    renutil::{get_registry, install, launch},
+    version::Version,
 };
-use renkit::renconstruct::tasks::{
-    Task, TaskContext, task_convert_images_pre, task_keystore_post, task_keystore_pre,
-    task_lint_pre, task_notarize_post,
+use rustpython::vm::{
+    builtins::{PyList, PyStr},
+    convert::ToPyObject,
+    function::FuncArgs,
 };
-use renkit::renutil::{get_registry, install, launch};
-use renkit::version::Version;
-use rustpython::vm::builtins::{PyList, PyStr};
-use rustpython::vm::convert::ToPyObject;
-use rustpython::vm::function::FuncArgs;
-use rustpython_vm::builtins::{PyDict, PyNone};
-use rustpython_vm::{Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine, import};
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::{fs, thread};
+use rustpython_vm::{
+    Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine,
+    builtins::{PyDict, PyNone},
+    import,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+    thread,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

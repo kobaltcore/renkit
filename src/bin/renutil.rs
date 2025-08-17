@@ -1,10 +1,10 @@
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
-use renkit::renutil::{cleanup, get_registry, install, launch, list, show, uninstall};
-use renkit::version::Version;
-use std::path::PathBuf;
-use std::str::FromStr;
+use renkit::{
+    renutil::{cleanup, get_registry, install, launch, list, show, uninstall},
+    version::Version,
+};
+use std::{path::PathBuf, str::FromStr};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

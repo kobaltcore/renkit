@@ -2,29 +2,31 @@ use super::config::{
     ConvertImagesOptions, GeneralTaskOptions, ImageFormat, KeystoreOptions, LintOptions,
     NotarizeOptions,
 };
-use crate::common::canonicalize_normalized;
-use crate::renotize::full_run;
-use crate::renutil::launch;
-use crate::version::Version;
-use anyhow::{Result, bail};
+use crate::{
+    common::canonicalize_normalized, renotize::full_run, renutil::launch, version::Version,
+};
+use anyhow::{Result, anyhow, bail};
 use base64::prelude::*;
-use command_executor::command::Command;
-use command_executor::shutdown_mode::ShutdownMode;
-use command_executor::thread_pool_builder::ThreadPoolBuilder;
+use command_executor::{
+    command::Command, shutdown_mode::ShutdownMode, thread_pool_builder::ThreadPoolBuilder,
+};
 use imgref::ImgRef;
 use indicatif::{ProgressBar, ProgressStyle};
 // use jpegxl_rs::encode::{EncoderFrame, EncoderResult, EncoderSpeed};
 // use jpegxl_rs::encoder_builder;
+use image::{EncodableLayout, ImageReader};
 use jwalk::WalkDir;
 use ravif::Encoder;
 use rgb::FromSlice;
 use serde_json::Value;
-use std::collections::HashMap;
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::{env, fs, thread};
-use {anyhow::anyhow, image::EncodableLayout, image::ImageReader};
+use std::{
+    collections::HashMap,
+    env, fs,
+    io::Read,
+    path::{Path, PathBuf},
+    str::FromStr,
+    thread,
+};
 
 #[derive(Debug)]
 pub struct Task {
@@ -532,9 +534,10 @@ pub fn task_notarize_post(ctx: &TaskContext, options: &NotarizeOptions) -> Resul
                             continue;
                         }
                         if let Some(ext) = path.extension()
-                            && ext == "app" {
-                                app_bundles.push(path);
-                            }
+                            && ext == "app"
+                        {
+                            app_bundles.push(path);
+                        }
                     }
                     Err(err) => println!("Error: {err}"),
                 }

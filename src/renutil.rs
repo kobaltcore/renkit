@@ -1,26 +1,22 @@
 use crate::common::canonicalize_normalized;
 use crate::version::Version;
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use bzip2::read::BzDecoder;
 use lol_html::{HtmlRewriter, Settings, element};
-use std::env;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::Cursor;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
-use std::process::ExitStatus;
-use std::process::Stdio;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::thread;
-use std::{fs, marker::PhantomData, path::PathBuf};
+use std::{
+    env, fs,
+    io::{BufRead, BufReader, Cursor},
+    marker::PhantomData,
+    path::PathBuf,
+    process::{Command, ExitStatus, Stdio},
+    str::FromStr,
+    sync::{Arc, Mutex},
+    thread,
+};
 use tar::Archive;
-use trauma::download::Download;
-use trauma::downloader::DownloaderBuilder;
+use trauma::{download::Download, downloader::DownloaderBuilder};
 
 pub trait InstanceState {}
 

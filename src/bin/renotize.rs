@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use renkit::renotize::{
     full_run, notarize_app, notarize_dmg, pack_dmg, provision, sign_app, sign_dmg, status,
     unpack_app,
 };
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
