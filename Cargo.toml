@@ -13,7 +13,7 @@ rsa = "0.9.8"
 rand = "0.8"
 regex = "1.11.1"
 base64 = "0.22.1"
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 num_cpus = "1.17.0"
 itertools = "0.14.0"
 command-executor = "0.1.1"
@@ -36,7 +36,7 @@ zip-extract = "0.3.0"
 # Internet
 trauma = "2"
 webbrowser = "1.0.5"
-reqwest = { version = "^0.12.22", default-features = false, features = [
+reqwest = { version = "^0.12.23", default-features = false, features = [
     "native-tls-vendored",
 ] }
 # Apple
@@ -45,7 +45,7 @@ apple-codesign = "0.29.0"
 x509-certificate = "0.24.0"
 app-store-connect = "0.7.0"
 # CLI
-clap = { version = "4.5.42", features = ["derive"] }
+clap = { version = "4.5.45", features = ["derive"] }
 indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
 # Images
 image = "0.25.6"
