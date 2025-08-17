@@ -31,6 +31,39 @@ use std::{
     thread,
 };
 
+const RC_DISPATCH_SRC: &str = r#"
+import inspect
+import pydoc
+
+
+def camel_to_snake(camel_case_str):
+    snake_case_str = ""
+    for char in camel_case_str:
+        if char.isupper():
+            snake_case_str += "_" + char.lower()
+        else:
+            snake_case_str += char
+    # Remove leading underscore, if any
+    snake_case_str = snake_case_str.lstrip("_")
+    return snake_case_str
+
+
+def dispatch(py_files: list[str]) -> list[dict[str, str]]:
+    tasks = []
+
+    for file in py_files:
+        mod = pydoc.importfile(file)
+        for info in inspect.getmembers(mod, inspect.isclass):
+            name = info[0]
+            class_ = info[1]
+            if not name.endswith("Task"):
+                continue
+            name_slug = camel_to_snake(name[:-4])
+            tasks.append({"name_slug": name_slug, "class": class_})
+
+    return tasks
+"#;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -291,7 +324,7 @@ async fn build(
 
         let paths = PyList::from(paths).to_pyobject(vm);
 
-        let rc_dispatch = match import::import_frozen(vm, "rc_dispatch") {
+        let rc_dispatch = match import::import_source(vm, "rc_dispatch", RC_DISPATCH_SRC) {
             Ok(res) => res,
             Err(e) => {
                 vm.print_exception(e);
