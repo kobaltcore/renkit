@@ -956,7 +956,6 @@ fn main() -> Result<()> {
     Interpreter::with_init(Settings::default(), |vm| {
         vm.add_native_modules(rustpython_stdlib::get_module_inits());
         vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
-        vm.add_frozen(rustpython_vm::py_freeze!(dir = "./py"));
     })
     .enter(|vm| match &cli.command {
         Commands::Build {
