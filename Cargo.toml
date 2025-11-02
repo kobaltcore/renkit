@@ -8,36 +8,35 @@ homepage = "https://github.com/kobaltcore/renkit"
 
 [dependencies]
 # System
-zip = "3.0.0"
+zip = "6.0.0"
 rsa = "0.9.8"
 rand = "0.8"
-regex = "1.11.1"
+regex = "1.12.2"
 base64 = "0.22.1"
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 num_cpus = "1.17.0"
 itertools = "0.14.0"
-command-executor = "0.1.1"
-tokio = { version = "1.47.1", features = ["full"] }
+command-executor = "0.2.0"
+tokio = { version = "1.48.0", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
 winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
-toml = "0.8.23"
-plist = "1.7.4"
-lol_html = "2.6.0"
-serde_json = "1.0.142"
-serde = { version = "1.0.219", features = ["derive"] }
+toml = "0.9.8"
+plist = "1.8.0"
+lol_html = "2.7.0"
+serde_json = "1.0.145"
+serde = { version = "1.0.228", features = ["derive"] }
 # Filesystem
-home = "0.5.11"
+home = "0.5.12"
 tar = "0.4.44"
-bzip2 = "0.5.2"
+bzip2 = "0.6.1"
 jwalk = "0.8.1"
-zip-extract = "0.3.0"
 # Internet
 trauma = "2"
-webbrowser = "1.0.5"
-reqwest = { version = "^0.12.23", default-features = false, features = [
-    "native-tls-vendored",
+webbrowser = "1.0.6"
+reqwest = { version = "^0.12.24", default-features = false, features = [
+    "rustls-tls",
 ] }
 # Apple
 apple-bundles = "0.21.0"
@@ -45,17 +44,17 @@ apple-codesign = "0.29.0"
 x509-certificate = "0.24.0"
 app-store-connect = "0.7.0"
 # CLI
-clap = { version = "4.5.45", features = ["derive"] }
-indicatif = { version = "0.17.11", features = ["improved_unicode", "rayon"] }
+clap = { version = "4.5.51", features = ["derive"] }
+indicatif = { version = "0.18.2", features = ["improved_unicode", "rayon"] }
 # Images
-image = "0.25.6"
+image = "0.25.8"
 rgb = "0.8.52"
-imgref = "1.11.0"
-ravif = { version = "0.11.20", features = [
+imgref = "1.12.0"
+ravif = { version = "0.12.0", features = [
     "threading",
 ], default-features = false }
-webp = "0.3.0"
-libwebp-sys = { version = "0.9.6", features = ["avx2", "sse41"] }
+webp = "0.3.1"
+libwebp-sys = { version = "0.9", features = ["avx2", "sse41"] }
 # jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
 # RustPython
 rustpython-vm = "0.4.0"
@@ -64,7 +63,7 @@ rustpython = { version = "0.4.0", features = ["freeze-stdlib"] }
 rustpython-pylib = { version = "0.4.0", features = ["freeze-stdlib"] }
 
 [dev-dependencies]
-test-context = "0.4.1"
+test-context = "0.5.0"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

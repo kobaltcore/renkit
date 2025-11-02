@@ -17,7 +17,6 @@ use plist::Value;
 use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey};
 use std::{
     fs::{self, File},
-    io::Cursor,
     path::{Path, PathBuf},
     process::Command,
     time::Duration,
@@ -116,8 +115,9 @@ pub fn unpack_app(input_file: &Path, output_dir: &Path, bundle_id: &str) -> Resu
     }
     std::fs::create_dir_all(output_dir)?;
 
-    let app_zip = fs::read(input_file)?;
-    zip_extract::extract(Cursor::new(app_zip), output_dir, false)?;
+    let zip_data = fs::File::open(input_file)?;
+    let mut zip = zip::ZipArchive::new(zip_data)?;
+    zip.extract(output_dir)?;
 
     let mut app_path = None;
     for entry in fs::read_dir(output_dir)? {

@@ -7,7 +7,7 @@ use lol_html::{HtmlRewriter, Settings, element};
 use std::os::unix::fs::PermissionsExt;
 use std::{
     env, fs,
-    io::{BufRead, BufReader, Cursor},
+    io::{BufRead, BufReader},
     marker::PhantomData,
     path::PathBuf,
     process::{Command, ExitStatus, Stdio},
@@ -17,6 +17,7 @@ use std::{
 };
 use tar::Archive;
 use trauma::{download::Download, downloader::DownloaderBuilder};
+use zip::read::root_dir_common_filter;
 
 pub trait InstanceState {}
 
@@ -543,32 +544,35 @@ pub async fn install(
 
         fs::remove_file(tar_path)?;
     } else {
-        let sdk_zip = fs::read(&sdk_zip_path)?;
-        zip_extract::extract(Cursor::new(sdk_zip), &base_path, true)?;
+        let zip_data = fs::File::open(&sdk_zip_path)?;
+        let mut zip = zip::ZipArchive::new(zip_data)?;
+        zip.extract_unwrapped_root_dir(&base_path, root_dir_common_filter)?;
     }
 
     println!("Extracting RAPT");
 
     let rapt_zip_path = registry.join(rapt_url.path_segments().unwrap().next_back().unwrap());
 
-    let rapt_zip = fs::read(&rapt_zip_path)?;
-    zip_extract::extract(Cursor::new(rapt_zip), &base_path.join("rapt"), true)?;
+    let zip_data = fs::File::open(&rapt_zip_path)?;
+    let mut zip = zip::ZipArchive::new(zip_data)?;
+    zip.extract_unwrapped_root_dir(&base_path.join("rapt"), root_dir_common_filter)?;
 
     let steam_zip_path = registry.join(steam_url.path_segments().unwrap().next_back().unwrap());
     if steam_zip_path.exists() {
         println!("Extracting Steam support");
 
-        let steam_zip = fs::read(&steam_zip_path)?;
-        zip_extract::extract(Cursor::new(steam_zip), &base_path.join("lib"), true)?;
+        let zip_data = fs::File::open(&steam_zip_path)?;
+        let mut zip = zip::ZipArchive::new(zip_data)?;
+        zip.extract_unwrapped_root_dir(&base_path.join("lib"), root_dir_common_filter)?;
     }
 
     let web_zip_path = registry.join(web_url.path_segments().unwrap().next_back().unwrap());
     if web_zip_path.exists() {
         println!("Extracting Web support");
 
-        let web_zip = fs::read(&web_zip_path)?;
-
-        zip_extract::extract(Cursor::new(web_zip), &base_path.join("web"), true)?;
+        let zip_data = fs::File::open(&web_zip_path)?;
+        let mut zip = zip::ZipArchive::new(zip_data)?;
+        zip.extract_unwrapped_root_dir(&base_path.join("web"), root_dir_common_filter)?;
     }
 
     if !no_cleanup {
