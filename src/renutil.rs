@@ -620,6 +620,8 @@ pub async fn install(
     let android_keystore_str = android_keystore.to_str().unwrap();
     #[cfg(target_family = "windows")]
     let android_keystore_str = android_keystore_str.replace("\\\\?\\", "");
+    #[cfg(target_family = "windows")]
+    let android_keystore_str = android_keystore_str.as_str();
     if !android_keystore.exists() {
         println!("Generating Android keystore");
 
