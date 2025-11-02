@@ -1,6 +1,6 @@
 [package]
 name = "renkit"
-version = "6.0.0"
+version = "6.1.0-alpha.1"
 edition = "2024"
 repository = "https://github.com/kobaltcore/renkit"
 description = "A collection of tools to help you organise and use Ren'Py instances from the command line."
@@ -20,7 +20,7 @@ command-executor = "0.2.0"
 tokio = { version = "1.48.0", features = ["full"] }
 # this is only here because it doesn't enable profileapi
 # as a feature by default, breaking the build on windows
-winapi = { version = "0.3.9", features = ["profileapi"] }
+# winapi = { version = "0.3.9", features = ["profileapi"] }
 # Parsing
 toml = "0.9.8"
 plist = "1.8.0"
