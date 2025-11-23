@@ -712,6 +712,16 @@ pub async fn install(
         std::os::unix::fs::symlink(base_path.join("renpy"), base_path.join("rapt/renpy"))?;
     }
 
+    println!("Patching import issue in android.py");
+    // it imports pygame_sdl2 but never uses it. it's not in sys.path by default, which makes it annoying to deal with
+    let interface_path = base_path.join("rapt/android.py");
+    let content = fs::read_to_string(&interface_path)?;
+    let lines: Vec<&str> = content
+        .split('\n')
+        .filter(|line| !line.contains("import pygame_sdl2"))
+        .collect();
+    fs::write(&interface_path, lines.join("\n"))?;
+
     unsafe { env::set_var("RAPT_NO_TERMS", "1") };
 
     let android_py = base_path.join("rapt/android.py");
