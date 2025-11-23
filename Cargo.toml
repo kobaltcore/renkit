@@ -1,6 +1,6 @@
 [package]
 name = "renkit"
-version = "6.1.0-alpha.1"
+version = "6.1.0-alpha.2"
 edition = "2024"
 repository = "https://github.com/kobaltcore/renkit"
 description = "A collection of tools to help you organise and use Ren'Py instances from the command line."
