@@ -51,14 +51,21 @@ imgref = "1.12.3"
 ravif = { version = "0.13.0", features = [
     "threading",
 ], default-features = false }
-webp = "0.3.1"
-# webp 0.3.1 exposes 0.9.x types; newer bindings are incompatible.
-libwebp-sys = { version = "0.9.6", features = ["avx2", "sse41"] }
+webpx = { version = "0.4.0", default-features = false, features = ["encode", "std"] }
+# Enable SIMD in the native encoder used by webpx.
+libwebp-sys = { version = "0.14.4", features = ["avx2", "sse41"] }
 # jpegxl-rs = { version = "0.8.3", features = ["vendored"] }
 # RustPython 0.6 has broken dependency ranges; 0.5 conflicts with Apple liblzma.
 # Stay on 0.4 so normal cargo updates resolve without transitive overrides.
 rustpython-vm = "0.4.0"
 rustpython = { version = "0.4.0", features = ["freeze-stdlib"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[package.metadata.cargo-machete]
+# This dependency only enables native encoder features.
+ignored = ["libwebp-sys"]
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

@@ -14,7 +14,7 @@ use imgref::ImgRef;
 use indicatif::{ProgressBar, ProgressStyle};
 // use jpegxl_rs::encode::{EncoderFrame, EncoderResult, EncoderSpeed};
 // use jpegxl_rs::encoder_builder;
-use image::{EncodableLayout, ImageReader};
+use image::ImageReader;
 use jwalk::WalkDir;
 use ravif::Encoder;
 use rgb::FromSlice;
@@ -100,81 +100,91 @@ fn encode_avif(path: &PathBuf, quality: f32) -> Result<()> {
 fn encode_webp(path: &PathBuf, quality: f32, lossless: bool) -> Result<()> {
     let image = ImageReader::open(path)?.decode()?.to_rgba8();
 
-    let enc = webp::Encoder::from_rgba(&image, image.width(), image.height());
+    // Preserve the existing libwebp settings; the remaining defaults match.
+    let config = webpx::EncoderConfig::new()
+        .lossless(lossless)
+        .quality(if lossless { 100.0 } else { quality })
+        .method(6)
+        .sns_strength(50)
+        .filter_strength(60)
+        .filter_sharpness(0)
+        .preprocessing(if lossless { 0 } else { 4 })
+        .sharp_yuv(!lossless);
+    let result = config
+        .encode_rgba(&image, image.width(), image.height(), webpx::Unstoppable)
+        .map_err(|err| anyhow!("Error encoding WebP image: {err}"))?;
 
-    let result = if lossless {
-        // -z 9 -m 6
-        enc.encode_advanced(&webp::WebPConfig {
-            lossless: 1,
-            quality: 100.0,
-            method: 6,
-            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-            target_size: 0,
-            target_PSNR: 0.0,
-            segments: 4,
-            sns_strength: 50,
-            filter_strength: 60,
-            filter_sharpness: 0,
-            filter_type: 1,
-            autofilter: 0,
-            alpha_compression: 1,
-            alpha_filtering: 1,
-            alpha_quality: 100,
-            pass: 1,
-            show_compressed: 0,
-            preprocessing: 0,
-            partitions: 0,
-            partition_limit: 0,
-            emulate_jpeg_size: 0,
-            thread_level: 0,
-            low_memory: 0,
-            near_lossless: 100,
-            exact: 0,
-            use_delta_palette: 0,
-            use_sharp_yuv: 0,
-            qmin: 0,
-            qmax: 100,
-        })
-        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-    } else {
-        // -q 90 -m 6 -sharp_yuv -pre 4
-        enc.encode_advanced(&webp::WebPConfig {
-            lossless: 0,
-            quality,
-            method: 6,
-            image_hint: libwebp_sys::WebPImageHint::WEBP_HINT_DEFAULT,
-            target_size: 0,
-            target_PSNR: 0.0,
-            segments: 4,
-            sns_strength: 50,
-            filter_strength: 60,
-            filter_sharpness: 0,
-            filter_type: 1,
-            autofilter: 0,
-            alpha_compression: 1,
-            alpha_filtering: 1,
-            alpha_quality: 100,
-            pass: 1,
-            show_compressed: 0,
-            preprocessing: 4,
-            partitions: 0,
-            partition_limit: 0,
-            emulate_jpeg_size: 0,
-            thread_level: 0,
-            low_memory: 0,
-            near_lossless: 100,
-            exact: 0,
-            use_delta_palette: 0,
-            use_sharp_yuv: 1,
-            qmin: 0,
-            qmax: 100,
-        })
-        .map_err(|err| anyhow!("Error encoding WebP image: {:?}", err))?
-    };
-
-    fs::write(path, result.as_bytes())?;
+    fs::write(path, result)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod webp_tests {
+    use super::*;
+    use image::{Rgba, RgbaImage};
+
+    fn fixture() -> RgbaImage {
+        RgbaImage::from_fn(48, 32, |x, y| {
+            Rgba([
+                (x * 5) as u8,
+                (y * 7) as u8,
+                ((x * 13 + y * 17) % 256) as u8,
+                [0, 64, 128, 255][(x % 4) as usize],
+            ])
+        })
+    }
+
+    #[test]
+    fn lossless_webp_preserves_visible_pixels_and_alpha() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("image.png");
+        let original = fixture();
+        original.save(&path)?;
+
+        encode_webp(&path, 90.0, true)?;
+        let decoded = image::load_from_memory(&fs::read(&path)?)?.to_rgba8();
+
+        assert_eq!(decoded.dimensions(), original.dimensions());
+        for (before, after) in original.pixels().zip(decoded.pixels()) {
+            assert_eq!(before[3], after[3]);
+            // The existing exact=false setting allows hidden RGB to change.
+            if before[3] != 0 {
+                assert_eq!(before, after);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn lossy_webp_preserves_alpha_and_applies_quality() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("image.png");
+        let original = fixture();
+        let mut outputs = Vec::new();
+
+        for quality in [10.0, 90.0] {
+            original.save(&path)?;
+            encode_webp(&path, quality, false)?;
+            let encoded = fs::read(&path)?;
+            let decoded = image::load_from_memory(&encoded)?.to_rgba8();
+
+            assert_eq!(decoded.dimensions(), original.dimensions());
+            for (before, after) in original.pixels().zip(decoded.pixels()) {
+                assert_eq!(before[3], after[3]);
+            }
+            assert!(
+                original
+                    .pixels()
+                    .zip(decoded.pixels())
+                    .any(|(before, after)| { before[3] != 0 && before.0[..3] != after.0[..3] })
+            );
+            outputs.push(encoded);
+        }
+
+        assert_ne!(outputs[0], outputs[1]);
+        Ok(())
+    }
 }
 
 impl Command for ProcessingCommand {
