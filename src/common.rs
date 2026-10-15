@@ -12,7 +12,8 @@ pub fn canonicalize_normalized<P: AsRef<Path>>(input: P) -> std::io::Result<Path
     Ok(strip_extended_prefix(&path))
 }
 
-#[must_use] pub fn strip_extended_prefix(path: &Path) -> PathBuf {
+#[must_use]
+pub fn strip_extended_prefix(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
     if s.starts_with(r"\\?\") {
         // Preserve UNC paths like \\?\UNC\server\share

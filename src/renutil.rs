@@ -16,7 +16,7 @@ use std::{
     thread,
 };
 use tar::Archive;
-use trauma::{download::Download, downloader::DownloaderBuilder};
+use trauma::{download::Download, downloader::Downloader};
 use zip::read::root_dir_common_filter;
 
 pub trait InstanceState {}
@@ -201,26 +201,23 @@ pub async fn get_available_versions(registry: &PathBuf, online: bool) -> Result<
             let body = reqwest::get(*url).await?.text().await?;
 
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("a[href]", |el| {
-                        let href = el
-                            .get_attribute("href")
-                            .ok_or(anyhow!("Unable to get attribute."))?;
-                        let href = match i {
-                            0 => &href,
-                            _ => href
-                                .strip_suffix("/")
-                                .ok_or(anyhow!("Unable to strip suffix."))?,
-                        };
+                Settings::new().append_element_content_handler(element!("a[href]", |el| {
+                    let href = el
+                        .get_attribute("href")
+                        .ok_or(anyhow!("Unable to get attribute."))?;
+                    let href = match i {
+                        0 => &href,
+                        _ => href
+                            .strip_suffix("/")
+                            .ok_or(anyhow!("Unable to strip suffix."))?,
+                    };
 
-                        if let Ok(version) = Version::from_str(href) {
-                            versions.push(version);
-                        }
+                    if let Ok(version) = Version::from_str(href) {
+                        versions.push(version);
+                    }
 
-                        Ok(())
-                    })],
-                    ..Settings::default()
-                },
+                    Ok(())
+                })),
                 |_: &[u8]| {},
             );
             rewriter.write(body.as_bytes())?;
@@ -498,25 +495,16 @@ pub async fn install(
     let web_url = version.web_url()?;
 
     println!("Downloading Ren'Py {version}...");
-    let downloads = vec![
-        Download::new(
-            &sdk_url,
-            sdk_url.path_segments().unwrap().next_back().unwrap(),
-        ),
-        Download::new(
-            &rapt_url,
-            rapt_url.path_segments().unwrap().next_back().unwrap(),
-        ),
-        Download::new(
-            &steam_url,
-            steam_url.path_segments().unwrap().next_back().unwrap(),
-        ),
-        Download::new(
-            &web_url,
-            web_url.path_segments().unwrap().next_back().unwrap(),
-        ),
-    ];
-    let downloader = DownloaderBuilder::new().directory(registry.clone()).build();
+    let downloads = [&sdk_url, &rapt_url, &steam_url, &web_url]
+        .into_iter()
+        .map(|url| {
+            Ok(Download::builder()
+                .url(url.clone())?
+                .filename_override(url.path_segments().unwrap().next_back().unwrap())
+                .build())
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let downloader = Downloader::builder().directory(registry.clone()).build();
     downloader.download(&downloads).await;
 
     println!("Extracting SDK");

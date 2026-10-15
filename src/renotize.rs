@@ -5,7 +5,7 @@ use apple_codesign::{
     AppleCodesignError, CodeSignatureFlags, NotarizationUpload, Notarizer, SettingsScope,
     SigningSettings, UnifiedSigner,
     cli::{
-        certificate_source::{CertificateDerSigningKey, CertificateSource, PemSigningKey},
+        certificate_source::{CertificateDerSigningKey, PemSigningKey},
         config::SignConfig,
     },
     stapling::Stapler,
@@ -14,14 +14,14 @@ use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use jwalk::WalkDir;
 use plist::Value;
-use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey};
+use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey, pkcs8::EncodePrivateKey};
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
     process::Command,
     time::Duration,
 };
-use x509_certificate::X509CertificateBuilder;
+use x509_certificate::{InMemorySigningKeyPair, X509CertificateBuilder};
 use zip::CompressionMethod;
 
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
@@ -395,24 +395,14 @@ pub fn provision() -> Result<()> {
     let cert_dir = Path::new("certificates");
     fs::create_dir_all(cert_dir)?;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rsa::rand_core::OsRng;
     let priv_key = RsaPrivateKey::new(&mut rng, 2048)?;
 
     let data = priv_key.to_pkcs1_pem(rsa::pkcs8::LineEnding::LF)?;
     let private_key_path = cert_dir.join("private-key.pem");
     fs::write(&private_key_path, data)?;
 
-    let pem_key = PemSigningKey {
-        paths: vec![private_key_path],
-    };
-
-    let cert_source = CertificateSource {
-        pem_path_key: Some(pem_key),
-        ..Default::default()
-    };
-
-    let certs = cert_source.resolve_certificates(false)?;
-    let private_key = certs.private_key()?;
+    let private_key = InMemorySigningKeyPair::from_pkcs8_der(priv_key.to_pkcs8_der()?.as_bytes())?;
 
     let mut builder = X509CertificateBuilder::default();
     builder
@@ -420,9 +410,9 @@ pub fn provision() -> Result<()> {
         .append_common_name_utf8_string("Apple Code Signing CSR")
         .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{e:?}")))?;
 
-    println!("Generating CSR. You may be prompted to enter credentials to unlock the signing key.");
+    println!("Generating CSR.");
     let pem = builder
-        .create_certificate_signing_request(private_key.as_key_info_signer())?
+        .create_certificate_signing_request(&private_key)?
         .encode_pem()?;
 
     let csr_path = cert_dir.join("csr.pem");

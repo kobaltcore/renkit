@@ -13,13 +13,14 @@ use renkit::{
     renutil::{get_registry, install, launch},
     version::Version,
 };
+use rustpython::InterpreterConfig;
 use rustpython::vm::{
     builtins::{PyList, PyStr},
     convert::ToPyObject,
     function::FuncArgs,
 };
 use rustpython_vm::{
-    Interpreter, PyObjectRef, PyRef, Settings, VirtualMachine,
+    PyObjectRef, VirtualMachine,
     builtins::{PyDict, PyNone},
     import,
 };
@@ -97,7 +98,7 @@ fn to_pyobject(opt: &CustomOptionValue, vm: &VirtualMachine) -> PyObjectRef {
             PyList::from(val).to_pyobject(vm)
         }
         CustomOptionValue::Dict(val) => {
-            let dict = PyRef::new_ref(PyDict::default(), vm.ctx.types.dict_type.to_owned(), None);
+            let dict = PyDict::new_ref(&vm.ctx);
             for (key, value) in val {
                 dict.set_item(key, to_pyobject(value, vm), vm).unwrap();
             }
@@ -953,15 +954,60 @@ async fn build(
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    Interpreter::with_init(Settings::default(), |vm| {
-        vm.add_native_modules(rustpython_stdlib::get_module_inits());
-        vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
-    })
-    .enter(|vm| match &cli.command {
-        Commands::Build {
-            input_dir,
-            output_dir,
-            config_path,
-        } => build(vm, input_dir, output_dir, config_path.clone(), cli.registry),
-    })
+    InterpreterConfig::new()
+        .init_stdlib()
+        .interpreter()
+        .enter(|vm| match &cli.command {
+            Commands::Build {
+                input_dir,
+                output_dir,
+                config_path,
+            } => build(vm, input_dir, output_dir, config_path.clone(), cli.registry),
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frozen_python_loads_and_runs_custom_tasks() {
+        // RustPython's debug interpreter needs more than the test harness's 2 MiB stack.
+        thread::Builder::new()
+            .stack_size(8 * 1024 * 1024)
+            .spawn(|| {
+        InterpreterConfig::new()
+            .init_stdlib()
+            .interpreter()
+            .enter(|vm| {
+                let source = format!(
+                    "{RC_DISPATCH_SRC}\n{}",
+                    r#"
+import math
+import os
+import tempfile
+
+assert math.factorial(30) == 265252859812191058636308480000000
+assert math.gcd(2**100, 2**80) == 2**80
+with tempfile.TemporaryDirectory() as directory:
+    path = os.path.join(directory, "custom_task.py")
+    with open(path, "w") as file:
+        file.write("class ExampleTask:\n    def pre_build(self, builds):\n        return list(builds)\n")
+    tasks = dispatch([path])
+    assert len(tasks) == 1
+    assert tasks[0]["name_slug"] == "example"
+    task = tasks[0]["class"]()
+    assert task.pre_build({"linux": None}) == ["linux"]
+"#
+                );
+                if let Err(error) = import::import_source(vm, "test_custom_tasks", &source) {
+                    vm.print_exception(error);
+                    panic!("embedded Python custom task smoke test failed");
+                }
+            });
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
 }

@@ -150,7 +150,7 @@ mod tests {
         let v = super::Version::from_str("8.3.0").unwrap();
         assert_eq!(
             v.sdk_url().unwrap(),
-            "https://www.renpy.org/dl/8.3.0/renpy-8.3.0-sdk.zip"
+            "https://www.renpy.org/dl/8.3.0/renpy-8.3.0-sdkarm.tar.bz2"
                 .parse()
                 .unwrap()
         );
@@ -176,7 +176,7 @@ mod tests {
         let v = super::Version::from_str("8.3.0.24041601+nightly").unwrap();
         assert_eq!(
             v.sdk_url().unwrap(),
-            "https://nightly.renpy.org/8.3.0.24041601+nightly/renpy-8.3.0.24041601+nightly-sdk.zip"
+            "https://nightly.renpy.org/8.3.0.24041601+nightly/renpy-8.3.0.24041601+nightly-sdkarm.tar.bz2"
                 .parse()
                 .unwrap()
         );
